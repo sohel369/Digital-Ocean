@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdPlatform | Unified Command Center</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+
+<body class="terminal-theme">
+    <div id="app" class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">AdPlatform</div>
+            </div>
+            <nav>
+                <a href="#" class="nav-item active">DASHBOARD</a>
+                <a href="#" class="nav-item" id="createBtn">NEW_CAMPAIGN</a>
+                <a href="#" class="nav-item">GEO_TARGETING</a>
+                <a href="#" class="nav-item">ANALYTICS</a>
+                <a href="#" class="nav-item" id="logoutBtn">SIGN_OUT</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="content-header">
+                <div class="search-bar">SEARCH_SYSTEM_LOGS...</div>
+                <div class="user-profile">
+                    <span id="userName">OPERATOR_01</span>
+                    <div class="avatar"></div>
+                </div>
+            </header>
+
+            <section class="stat-grid">
+                <div class="stat-card">
+                    <p class="label">TOTAL_SPEND</p>
+                    <h2 id="totalSpend">$0.00</h2>
+                </div>
+                <div class="stat-card">
+                    <p class="label">IMPRESSIONS</p>
+                    <h2 id="totalImpressions">0</h2>
+                </div>
+                <div class="stat-card">
+                    <p class="label">AVG_CTR</p>
+                    <h2 id="avgCtr">0.0%</h2>
+                </div>
+                <div class="stat-card">
+                    <p class="label">BUDGET_REMAINING</p>
+                    <h2 id="budgetRem">$0.00</h2>
+                </div>
+            </section>
+
+            <section class="campaign-section">
+                <div class="section-header">
+                    <h3>ACTIVE_CAMPAIGNS</h3>
+                    <button class="btn-refresh" onclick="loadCampaigns()">RELOAD_DATA</button>
+                </div>
+                <table class="terminal-table">
+                    <thead>
+                        <tr>
+                            <th>NAME</th>
+                            <th>BUDGET</th>
+                            <th>STATUS</th>
+                            <th>START_DATE</th>
+                            <th>ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="campaignList">
+                        <!-- Loaded via JS -->
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+    <script src="/static/js/script.js"></script>
+</body>
+
+</html>

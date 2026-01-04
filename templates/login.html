@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdPlatform | Identity Verification</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+
+<body class="terminal-theme">
+    <div class="login-container">
+        <div class="terminal-card">
+            <div class="terminal-header">
+                <span class="dot red"></span>
+                <span class="dot yellow"></span>
+                <span class="dot green"></span>
+                <span class="terminal-title">AUTH_PROTOCOL_V2.0</span>
+            </div>
+            <div class="terminal-body">
+                <div class="logo-section">
+                    <h1>AdPlatform</h1>
+                    <p class="status-line">SYSTEM STATUS: <span class="online">ONLINE</span></p>
+                </div>
+
+                <form id="loginForm" class="auth-form">
+                    <div class="input-group">
+                        <label>OPERATOR_ID:</label>
+                        <input type="text" id="username" placeholder="Enter username..." required>
+                    </div>
+                    <div class="input-group">
+                        <label>ACCESS_KEY:</label>
+                        <input type="password" id="password" placeholder="Enter password..." required>
+                    </div>
+                    <button type="submit" class="terminal-btn">EXECUTE_LOGIN</button>
+                    <p id="errorMessage" class="error-text hidden"></p>
+                </form>
+
+                <div class="auth-footer">
+                    <p>EMERGENCY_CREDENTIALS: admin / admin123</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/static/js/script.js"></script>
+</body>
+
+</html>

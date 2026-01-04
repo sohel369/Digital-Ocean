@@ -22,9 +22,9 @@ const MainLayout = ({ children }) => {
     return (
         <div className="flex min-h-screen bg-background selection:bg-primary/30 selection:text-primary-light">
             <Sidebar />
-            <div className="flex-1 ml-0 md:ml-[288px] transition-all duration-300">
+            <div className="flex-1 ml-0 md:ml-72 transition-all duration-300">
                 <Header />
-                <main className="p-4 md:ml-8 md:p-8 pt-4 pb-12 min-h-screen">
+                <main className="p-4 md:p-8 pt-4 pb-12 min-h-screen">
                     {children}
                 </main>
             </div>

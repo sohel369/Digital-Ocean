@@ -76,7 +76,7 @@ const Header = () => {
     const currentCountryName = CONSTANTS.COUNTRIES.find(c => c.code === country)?.name || country;
 
     return (
-        <header className="h-16 sticky top-0 z-40 w-full px-6 flex items-center justify-between border-b border-white/5 bg-background/60 backdrop-blur-xl transition-all duration-300">
+        <header className="h-16 sticky top-0 z-40 w-full px-4 md:px-8 flex items-center justify-between border-b border-white/5 bg-background/60 backdrop-blur-xl transition-all duration-300">
 
             {/* Left: Context */}
             <div className="flex items-center gap-3 md:gap-6">
@@ -151,7 +151,7 @@ const Header = () => {
                         {showNotifs && (
                             <>
                                 <div className="fixed inset-0 z-[60]" onClick={() => setShowNotifs(false)}></div>
-                                <div className="absolute top-14 right-[-100px] w-[380px] bg-background-elevated rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-slate-700 z-[70] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                <div className="absolute top-14 right-0 sm:right-[-100px] w-[calc(100vw-2rem)] sm:w-[380px] bg-background-elevated rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-slate-700 z-[70] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                                     <div className="p-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-900/50">
                                         <div className="flex items-center gap-2">
                                             <h3 className="font-bold text-slate-100">Notifications</h3>

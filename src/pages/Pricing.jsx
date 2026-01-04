@@ -24,7 +24,7 @@ const Pricing = () => {
     const totalDueNow = totalMonthly * duration;
 
     return (
-        <div className="min-h-screen p-4 md:p-8 font-sans animate-in fade-in duration-500">
+        <div className="min-h-screen font-sans animate-in fade-in duration-500">
             <div className="max-w-5xl mx-auto">
                 <header className="mb-12 text-center">
                     <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-100 to-slate-400">

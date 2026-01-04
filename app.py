@@ -16,9 +16,18 @@ app = Flask(__name__)
 # SECURITY CONFIGURATION
 app.config['SECRET_KEY'] = 'super-secret-terminal-key-2024'
 app.config['JWT_SECRET_KEY'] = 'jwt-secret-key-999'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///terminal_dashboard.db'
+
+# Database configuration - Use /tmp for Vercel compatibility
+if os.environ.get('VERCEL'):
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/terminal_dashboard.db'
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///terminal_dashboard.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
+if os.environ.get('VERCEL'):
+    app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
+else:
+    app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB limit
 
 # Ensure upload directory exists

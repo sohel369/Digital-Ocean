@@ -5,3 +5,4 @@ flask-login
 flask-jwt-extended
 werkzeug
 stripe
+gunicorn

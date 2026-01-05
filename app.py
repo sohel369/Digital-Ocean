@@ -11,7 +11,7 @@ from werkzeug.utils import secure_filename
 from models import db, User, Campaign, Target, Pricing, Billing, Analytics, Notification
 
 # --- Flask Server Initialization ---
-app = Flask(__name__)
+app = Flask(__name__, static_folder='dist', static_url_path='/')
 
 # SECURITY CONFIGURATION
 app.config['SECRET_KEY'] = 'super-secret-terminal-key-2024'
@@ -74,6 +74,7 @@ with app.app_context():
 @app.route('/api/signup', methods=['POST'])
 def signup():
     data = request.json
+
     if User.query.filter(User.username.ilike(data.get('username'))).first():
         return jsonify({"success": False, "message": "Username taken"}), 400
     
@@ -115,6 +116,42 @@ def login():
             "token": access_token
         })
     return jsonify({"success": False, "message": "Invalid credentials"}), 401
+
+@app.route('/api/google-auth', methods=['POST'])
+def google_auth():
+    data = request.json
+    email = data.get('email')
+    username = data.get('username')
+    
+    if not email:
+        return jsonify({"success": False, "message": "Email is required"}), 400
+        
+    user = User.query.filter(User.email.ilike(email)).first()
+    
+    if not user:
+        # Create new user for social login
+        user = User(
+            username=username,
+            email=email,
+            password_hash=generate_password_hash(secrets.token_hex(16)),
+            role='advertiser'
+        )
+        db.session.add(user)
+        db.session.commit()
+        
+        # Create billing record
+        billing = Billing(user_id=user.id)
+        db.session.add(billing)
+        db.session.commit()
+        
+    login_user(user, remember=True)
+    access_token = create_access_token(identity=user.id)
+    
+    return jsonify({
+        "success": True, 
+        "user": user.to_dict(),
+        "token": access_token
+    })
 
 @app.route('/api/logout', methods=['POST'])
 @login_required
@@ -347,13 +384,22 @@ def dashboard_view():
 
 # --- Status / Root ---
 
-@app.route('/')
-def home():
+@app.route('/api/status')
+def api_status():
     return jsonify({
         "status": "online",
         "api": "AdPlatform V2",
         "auth": "Enabled (JWT & Session)"
     })
+
+# Catch-all route for React SPA
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve(path):
+    if path != "" and os.path.exists(app.static_folder + '/' + path):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, 'index.html')
 
 if __name__ == '__main__':
     app.run(debug=True, port=8000)

@@ -106,6 +106,36 @@ export const AppProvider = ({ children }) => {
         }
     };
 
+    const googleAuth = async (googleUser) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/google-auth`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    email: googleUser.email,
+                    username: googleUser.displayName || googleUser.email.split('@')[0],
+                    photoURL: googleUser.photoURL,
+                    uid: googleUser.uid
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                localStorage.setItem('user', JSON.stringify(data.user));
+                setUser(data.user);
+                await fetchData();
+                return { success: true, user: data.user };
+            } else {
+                return { success: false, message: data.message };
+            }
+        } catch (error) {
+            console.error("Google Auth Error:", error);
+            return { success: false, message: "Server Connection Failed" };
+        }
+    };
+
     const signup = async (username, email, password) => {
         try {
             const response = await fetch(`${API_BASE_URL}/signup`, {
@@ -278,7 +308,8 @@ export const AppProvider = ({ children }) => {
             markAllRead,
             logout,
             login,
-            signup
+            signup,
+            googleAuth
         }}>
             {children}
         </AppContext.Provider>

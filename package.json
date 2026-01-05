@@ -12,6 +12,7 @@
     "@stripe/stripe-js": "^8.5.3",
     "clsx": "^2.0.0",
     "date-fns": "^2.30.0",
+    "firebase": "^12.7.0",
     "framer-motion": "^10.16.4",
     "jspdf": "^3.0.4",
     "jspdf-autotable": "^5.0.2",

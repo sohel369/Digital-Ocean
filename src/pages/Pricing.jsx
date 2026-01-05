@@ -1,150 +1,285 @@
-import React, { useState } from 'react';
-import { SubscriptionSelector } from '../components/SubscriptionSelector';
+import React, { useState, useMemo } from 'react';
+import { useApp } from '../context/AppContext';
+import { MapPin, Globe, Layout, Building2, CheckCircle2, ChevronRight, Info } from 'lucide-react';
 import { PaymentModal } from '../components/PaymentCheckout';
 
 const Pricing = () => {
-    const [radius, setRadius] = useState(30);
-    const [duration, setDuration] = useState(6); // Default to 6 months
+    const { pricingData } = useApp();
+    const [selectedIndustry, setSelectedIndustry] = useState(pricingData.industries[0]);
+    const [selectedAdType, setSelectedAdType] = useState(pricingData.adTypes[0]);
+    const [coverageArea, setCoverageArea] = useState('radius'); // 'radius', 'state', 'national'
+    const [selectedState, setSelectedState] = useState(pricingData.states[0]);
+    const [postcode, setPostcode] = useState('');
     const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
-    // Constants
-    const BASE_FEE = 200;
-    const COST_PER_5_MILES = 50;
+    // Pricing Logic Constants
+    const RADIUS_AREA = 2827; // sq miles for 30 mile radius
 
-    // Logic
-    const radiusCost = Math.floor(radius / 5) * COST_PER_5_MILES;
-    const subtotal = BASE_FEE + radiusCost;
+    const calculation = useMemo(() => {
+        let sections = 1;
+        let discount = 0;
+        let areaDescription = "30 Mile Radius around postcode";
 
-    let discountPercent = 0;
-    if (duration === 6) discountPercent = 15;
-    if (duration === 12) discountPercent = 25;
+        if (coverageArea === 'state') {
+            const rawSections = selectedState.landMass / RADIUS_AREA;
+            sections = rawSections * selectedState.densityMultiplier;
+            discount = pricingData.discounts.state;
+            areaDescription = `Full coverage of ${selectedState.name}`;
+        } else if (coverageArea === 'national') {
+            // Aggregate all states for national
+            const totalSections = pricingData.states.reduce((acc, s) => acc + (s.landMass / RADIUS_AREA * s.densityMultiplier), 0);
+            sections = totalSections;
+            discount = pricingData.discounts.national;
+            areaDescription = "Nationwide coverage (All States)";
+        }
 
-    const discountAmount = Math.floor(subtotal * (discountPercent / 100));
-    const totalMonthly = subtotal - discountAmount;
-    const totalDueNow = totalMonthly * duration;
+        const basePrice = sections * selectedAdType.baseRate * selectedIndustry.multiplier;
+        const discountAmount = basePrice * discount;
+        const finalPrice = basePrice - discountAmount;
+
+        return {
+            basePrice: Math.round(basePrice),
+            discountAmount: Math.round(discountAmount),
+            finalPrice: Math.round(finalPrice),
+            sections: sections.toFixed(2),
+            discountPercent: (discount * 100).toFixed(0),
+            areaDescription
+        };
+    }, [coverageArea, selectedState, selectedAdType, selectedIndustry, pricingData]);
 
     return (
-        <div className="min-h-screen font-sans animate-in fade-in duration-500">
-            <div className="max-w-5xl mx-auto">
-                <header className="mb-12 text-center">
-                    <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-100 to-slate-400">
-                        Campaign Pricing
-                    </h1>
-                    <p className="text-slate-400 mt-2">Transparent, radius-based pricing tailored to your reach.</p>
-                </header>
+        <div className="max-w-7xl mx-auto px-4 py-8 animate-in fade-in duration-700">
+            <header className="mb-12">
+                <h1 className="text-4xl font-extrabold text-white tracking-tight mb-3">
+                    Dynamic <span className="text-primary">Campaign Pricing</span>
+                </h1>
+                <p className="text-slate-400 max-w-2xl text-lg">
+                    Rule 7 Media's algorithm calculates fair pricing based on land mass, population density,
+                    and industry value. Choose your reach below.
+                </p>
+            </header>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Configuration Panel */}
+                <div className="lg:col-span-12 xl:col-span-8 space-y-6 md:space-y-8">
 
-                    {/* Configuration Panel */}
-                    <div className="glass-panel rounded-2xl p-8 shadow-2xl">
-                        <h2 className="text-xl font-bold mb-8 pb-4 border-b border-white/5 text-slate-100">Campaign Configuration</h2>
+                    {/* Step 1: Industry & Ad Type */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                        <div className="glass-panel p-5 md:p-6 rounded-3xl">
+                            <label className="flex items-center gap-2 text-slate-100 font-bold mb-4 text-sm md:text-base">
+                                <Building2 size={18} className="text-primary" />
+                                1. Select Industry
+                            </label>
+                            <select
+                                className="w-full bg-slate-900/50 border border-slate-700/50 rounded-2xl px-4 py-3 md:py-4 text-slate-200 text-sm md:text-base outline-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer"
+                                value={selectedIndustry.name}
+                                onChange={(e) => setSelectedIndustry(pricingData.industries.find(i => i.name === e.target.value))}
+                            >
+                                {pricingData.industries.map(i => (
+                                    <option key={i.name} value={i.name}>{i.name} (x{i.multiplier})</option>
+                                ))}
+                            </select>
+                        </div>
 
-                        <div className="space-y-8">
-                            {/* Radius Slider */}
-                            <div>
-                                <div className="flex justify-between mb-4">
-                                    <label className="text-slate-300 font-medium">Target Radius</label>
-                                    <span className="text-primary-light font-bold">{radius} miles</span>
-                                </div>
-                                <input
-                                    type="range"
-                                    min="5"
-                                    max="50"
-                                    step="5"
-                                    value={radius}
-                                    onChange={(e) => setRadius(parseInt(e.target.value))}
-                                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary-light"
-                                />
-                                <div className="flex justify-between mt-2 text-xs text-slate-500">
-                                    <span>5 mi</span>
-                                    <span>50 mi</span>
-                                </div>
-
-                                {/* Visual Radius Indicator (Simple CSS Circle) */}
-                                <div className="mt-6 flex justify-center items-center h-32 relative border border-slate-800 rounded-xl bg-slate-950/50 overflow-hidden">
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <div className="w-2 h-2 bg-indigo-500 rounded-full z-10"></div>
-                                        <div
-                                            className="border border-indigo-500/30 bg-indigo-500/10 rounded-full transition-all duration-300"
-                                            style={{ width: `${(radius / 50) * 100}%`, height: `${(radius / 50) * 100}%` }}
-                                        ></div>
-                                    </div>
-                                    <span className="absolute bottom-2 right-2 text-[10px] text-slate-600">Coverage Map Preview</span>
-                                </div>
-                            </div>
-
-                            {/* Subscription Selector */}
-                            <div>
-                                <label className="block text-slate-300 font-medium mb-4">Subscription Duration</label>
-                                <SubscriptionSelector
-                                    selectedDuration={duration}
-                                    onChange={setDuration}
-                                />
-                            </div>
+                        <div className="glass-panel p-5 md:p-6 rounded-3xl">
+                            <label className="flex items-center gap-2 text-slate-100 font-bold mb-4 text-sm md:text-base">
+                                <Layout size={18} className="text-primary" />
+                                2. Advert Format
+                            </label>
+                            <select
+                                className="w-full bg-slate-900/50 border border-slate-700/50 rounded-2xl px-4 py-3 md:py-4 text-slate-200 text-sm md:text-base outline-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer"
+                                value={selectedAdType.name}
+                                onChange={(e) => setSelectedAdType(pricingData.adTypes.find(a => a.name === e.target.value))}
+                            >
+                                {pricingData.adTypes.map(a => (
+                                    <option key={a.name} value={a.name}>{a.name} - ${a.baseRate} base</option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 
-                    {/* Cost Breakdown Panel */}
-                    <div className="glass-panel border-primary/20 rounded-2xl p-8 relative overflow-hidden">
-                        {/* Gradient Glow */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[80px] -translate-y-1/2 translate-x-1/2 rounded-full pointer-events-none" />
+                    {/* Step 2: Coverage Area */}
+                    <div className="glass-panel p-6 md:p-8 rounded-3xl">
+                        <label className="flex items-center gap-2 text-slate-100 font-bold mb-6 text-lg md:text-xl">
+                            <MapPin size={22} className="text-primary" />
+                            3. Select Coverage Area
+                        </label>
 
-                        <h2 className="text-xl font-bold mb-6 pb-4 border-b border-white/5 relative z-10">Cost Breakdown</h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-8">
+                            {[
+                                { id: 'radius', label: '30 Mile Radius', icon: MapPin, desc: 'Local targeting' },
+                                { id: 'state', label: 'State Wide', icon: Layout, desc: 'Full state reach' },
+                                { id: 'national', label: 'Country Wide', icon: Globe, desc: 'Maximum exposure' }
+                            ].map(option => (
+                                <button
+                                    key={option.id}
+                                    onClick={() => setCoverageArea(option.id)}
+                                    className={`relative p-4 md:p-5 rounded-2xl text-left transition-all border-2 flex flex-col gap-1 md:gap-2 ${coverageArea === option.id
+                                        ? 'bg-primary/10 border-primary shadow-[0_0_20px_rgba(59,130,246,0.2)]'
+                                        : 'bg-slate-900/40 border-slate-800 hover:border-slate-700'
+                                        }`}
+                                >
+                                    {coverageArea === option.id && <CheckCircle2 size={18} className="absolute top-3 md:top-4 right-3 md:right-4 text-primary" />}
+                                    <option.icon size={24} className={coverageArea === option.id ? 'text-primary' : 'text-slate-500'} />
+                                    <span className="font-bold text-slate-100 text-sm md:text-base">{option.label}</span>
+                                    <span className="text-[10px] md:text-xs text-slate-500">{option.desc}</span>
+                                </button>
+                            ))}
+                        </div>
 
-                        <div className="space-y-4 relative z-10">
-                            <div className="flex justify-between text-slate-400">
-                                <span>Base Platform Fee</span>
-                                <span>${BASE_FEE}</span>
-                            </div>
-                            <div className="flex justify-between text-slate-400">
-                                <span>Radius Cost ({radius} miles)</span>
-                                <span>${radiusCost}</span>
-                            </div>
-
-                            <div className="pt-4 mt-2 border-t border-white/5 flex justify-between font-semibold text-slate-200">
-                                <span>Subtotal (Monthly)</span>
-                                <span>${subtotal}</span>
-                            </div>
-
-                            {/* Dynamic Discount Row */}
-                            <div className={`flex justify-between transition-colors duration-300 ${discountAmount > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>
-                                <span>Duration Discount ({discountPercent}%)</span>
-                                <span>-${discountAmount}</span>
-                            </div>
-
-                            {/* Total */}
-                            <div className="pt-6 mt-2 border-t border-white/10">
-                                <div className="flex justify-between items-baseline">
-                                    <span className="text-slate-400 font-medium">Monthly Total</span>
-                                    <span className="text-4xl font-bold text-primary-light">${totalMonthly}</span>
+                        {/* Dynamic Inputs Based on Selection */}
+                        <div className="animate-in slide-in-from-top-2 duration-300">
+                            {coverageArea === 'radius' && (
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Target Postcode</label>
+                                    <input
+                                        type="text"
+                                        className="w-full sm:w-64 bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-3 text-slate-200 outline-none focus:ring-2 focus:ring-primary/50"
+                                        placeholder="e.g. 90210"
+                                        value={postcode}
+                                        onChange={(e) => setPostcode(e.target.value)}
+                                    />
+                                    <p className="text-[10px] md:text-xs text-slate-500 mt-2 flex items-center gap-1 font-medium">
+                                        <Info size={12} /> Pricing is calculated for a 30-mile radius (approx. 2,827 sq mi)
+                                    </p>
                                 </div>
-                                <div className="flex justify-between items-baseline mt-2 text-sm text-slate-500">
-                                    <span>Total Due ({duration} months)</span>
-                                    <span>${totalDueNow}</span>
+                            )}
+
+                            {coverageArea === 'state' && (
+                                <div className="space-y-3">
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Select State</label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-3">
+                                        {pricingData.states.map(state => (
+                                            <button
+                                                key={state.name}
+                                                onClick={() => setSelectedState(state)}
+                                                className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all border ${selectedState.name === state.name
+                                                    ? 'bg-white text-slate-950 border-white'
+                                                    : 'bg-slate-800/50 text-slate-400 border-slate-700/50 hover:bg-slate-800'
+                                                    }`}
+                                            >
+                                                {state.name}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                                <p className="text-right text-xs text-slate-600 mt-2">All prices in USD. Tax calculated at checkout.</p>
+                            )}
+
+                            {coverageArea === 'national' && (
+                                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 md:p-6 flex gap-3 md:gap-4 items-center">
+                                    <div className="w-10 h-10 md:w-12 md:h-12 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400 shrink-0">
+                                        <Globe size={20} md:size={24} />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-emerald-400 text-sm md:text-base">Nationwide Optimal Pricing</h4>
+                                        <p className="text-[10px] md:text-sm text-slate-400 font-medium leading-relaxed">
+                                            A 30% discount is automatically applied for campaigns spanning all states.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Pricing Summary Side Card */}
+                <div className="lg:col-span-12 xl:col-span-4">
+                    <div className="glass-panel p-6 md:p-8 rounded-3xl sticky top-24 overflow-hidden group">
+                        {/* Glow Gradient */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 blur-[100px] -translate-y-1/2 translate-x-1/2 rounded-full pointer-events-none group-hover:bg-primary/30 transition-all duration-500" />
+
+                        <h3 className="text-lg md:text-xl font-bold mb-6 text-slate-100 flex items-center justify-between">
+                            Order Summary
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Rule 7 Ops</span>
+                        </h3>
+
+                        <div className="space-y-6 relative z-10">
+                            {/* Summary Rows */}
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="text-[10px] text-slate-500 uppercase font-black tracking-tight">Format</p>
+                                        <p className="text-slate-200 font-bold text-sm">{selectedAdType.name}</p>
+                                    </div>
+                                    <span className="text-slate-200 font-black">${selectedAdType.baseRate}</span>
+                                </div>
+
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="text-[10px] text-slate-500 uppercase font-black tracking-tight">Reach</p>
+                                        <p className="text-slate-200 font-bold text-sm line-clamp-1">{calculation.areaDescription}</p>
+                                    </div>
+                                    <span className="text-slate-200 font-black">x{calculation.sections}</span>
+                                </div>
+
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="text-[10px] text-slate-500 uppercase font-black tracking-tight">Industry</p>
+                                        <p className="text-slate-200 font-bold text-sm">{selectedIndustry.name}</p>
+                                    </div>
+                                    <span className="text-slate-200 font-black">x{selectedIndustry.multiplier}</span>
+                                </div>
+                            </div>
+
+                            <div className="h-px bg-slate-800" />
+
+                            {/* Totals */}
+                            <div className="space-y-3 font-bold">
+                                <div className="flex justify-between text-slate-200 text-sm">
+                                    <span className="text-slate-400">Base Calculation</span>
+                                    <span>${calculation.basePrice.toLocaleString()}</span>
+                                </div>
+                                {calculation.discountAmount > 0 && (
+                                    <div className="flex justify-between text-emerald-400 text-sm italic">
+                                        <span className="flex items-center gap-1.5 uppercase tracking-tighter">
+                                            Bulk Discount ({calculation.discountPercent}%)
+                                        </span>
+                                        <span>-${calculation.discountAmount.toLocaleString()}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="pt-4 md:pt-6 relative group/price">
+                                <div className="absolute inset-0 bg-primary/20 blur-2xl opacity-0 group-hover/price:opacity-100 transition-opacity" />
+                                <div className="relative">
+                                    <div className="flex flex-col sm:flex-row justify-between items-baseline gap-1 mb-2">
+                                        <span className="text-slate-100 font-bold text-base md:text-lg">Total Monthly</span>
+                                        <span className="text-4xl md:text-5xl font-black text-white tracking-tighter shadow-sm">
+                                            ${calculation.finalPrice.toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <p className="text-right text-[10px] text-slate-500 font-bold uppercase tracking-tight">Dynamic Rate Applied</p>
+                                </div>
                             </div>
 
                             <button
                                 onClick={() => setIsCheckoutOpen(true)}
-                                className="w-full mt-8 premium-btn text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-blue-900/20 transition-all active:scale-[0.98]"
+                                className="w-full premium-btn py-4 md:py-5 rounded-2xl text-base md:text-lg group/btn"
                             >
-                                Proceed to Checkout
+                                Confirm & Pay
+                                <ChevronRight size={18} md:size={20} className="group-hover/btn:translate-x-1 transition-transform" />
                             </button>
+
+                            <div className="flex items-center justify-center gap-3 pt-2 grayscale opacity-30">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg" alt="Stripe" className="h-4" />
+                                <div className="w-px h-3 bg-slate-700" />
+                                <span className="text-[8px] text-slate-500 uppercase tracking-widest font-black">Secure Payment</span>
+                            </div>
                         </div>
                     </div>
-
                 </div>
             </div>
+
 
             {/* Payment Modal */}
             <PaymentModal
                 isOpen={isCheckoutOpen}
                 onClose={() => setIsCheckoutOpen(false)}
-                amount={totalDueNow}
+                amount={calculation.finalPrice}
             />
         </div>
     );
 };
 
 export default Pricing;
+

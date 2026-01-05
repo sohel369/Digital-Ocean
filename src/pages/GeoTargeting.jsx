@@ -150,10 +150,10 @@ const GeoTargeting = () => {
                         <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                             <MapPin size={16} /> Location
                         </h2>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2 items-stretch">
                             <input
                                 type="text"
-                                className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-slate-500"
+                                className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-slate-500"
                                 placeholder="Enter Postcode or City"
                                 value={settings.postcode}
                                 onChange={(e) => setSettings(p => ({ ...p, postcode: e.target.value }))}
@@ -161,8 +161,9 @@ const GeoTargeting = () => {
                             />
                             <button
                                 onClick={handlePostcodeSearch}
-                                className="bg-blue-600 text-white p-2.5 rounded-xl hover:bg-blue-700 transition-colors"
+                                className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center shrink-0 shadow-lg shadow-blue-900/10 active:scale-95 transition-transform"
                             >
+                                <span className="sm:hidden mr-2 font-bold text-xs uppercase">Search Location</span>
                                 <Navigation size={18} />
                             </button>
                         </div>
@@ -207,14 +208,15 @@ const GeoTargeting = () => {
                     </button>
                 </div>
 
-                {/* Map Container */}
-                <div className="lg:col-span-2 h-[600px] bg-slate-200 rounded-3xl overflow-hidden border border-slate-200 shadow-sm relative">
+                {/* Map Container - Responsive Height */}
+                <div className="lg:col-span-2 h-[400px] md:h-[600px] bg-slate-200 rounded-3xl overflow-hidden border border-slate-200 shadow-sm relative">
                     <div id="map" ref={mapRef} className="w-full h-full z-0" />
 
                     {/* Info Overlay */}
-                    <div className="absolute top-4 left-4 bg-slate-900/90 backdrop-blur px-4 py-2 rounded-lg text-xs font-medium text-slate-300 shadow-sm border border-slate-700 flex items-center gap-2 z-[1000]">
+                    <div className="absolute top-4 left-4 bg-slate-900/90 backdrop-blur px-4 py-2 rounded-lg text-[10px] md:text-xs font-medium text-slate-300 shadow-sm border border-slate-700 flex items-center gap-2 z-[1000]">
                         <Info size={14} className="text-primary-light" />
-                        Interactive Map: Drag to pan, scroll to zoom
+                        <span className="hidden sm:inline">Interactive Map: Drag to pan, scroll to zoom</span>
+                        <span className="sm:hidden">Interactive Map</span>
                     </div>
                 </div>
             </div>

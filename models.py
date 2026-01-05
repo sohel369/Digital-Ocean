@@ -41,11 +41,13 @@ class Campaign(db.Model):
     status = db.Column(db.String(20), default='draft') # 'live', 'review', 'draft', 'paused'
     start_date = db.Column(db.String(50))
     
-    # Creative Fields
+    # Creative & Business Fields
     ad_format = db.Column(db.String(50)) # 'display', 'video', 'social'
     headline = db.Column(db.String(200))
     description = db.Column(db.Text)
     media_url = db.Column(db.String(255))
+    industry = db.Column(db.String(100))
+    coverage_area = db.Column(db.String(50)) # 'radius', 'state', 'national'
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -66,7 +68,14 @@ class Campaign(db.Model):
             'headline': self.headline,
             'description': self.description,
             'media_url': self.media_url,
-            'created_at': self.created_at.isoformat()
+            'industry': self.industry,
+            'coverage_area': self.coverage_area,
+            'created_at': self.created_at.isoformat(),
+            'stats': {
+                'clicks': 0,
+                'ctr': 0.0,
+                'impressions': 0
+            }
         }
 
 class Target(db.Model):

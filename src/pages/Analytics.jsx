@@ -63,53 +63,53 @@ const Analytics = () => {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="flex justify-between items-end">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-100">Performance Analytics</h1>
                     <p className="text-slate-400 mt-1">Deep dive into your campaign metrics with live updates.</p>
                 </div>
-                <div className="flex gap-2">
-                    <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm font-medium hover:bg-slate-700 text-slate-200 transition-colors">
+                <div className="flex gap-2 w-full sm:w-auto">
+                    <button onClick={handleExportCSV} className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-xs sm:text-sm font-medium hover:bg-slate-700 text-slate-200 transition-colors">
                         <Download size={16} /> CSV
                     </button>
-                    <button onClick={handleExportPDF} className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-dark transition-colors shadow-lg shadow-blue-900/20">
+                    <button onClick={handleExportPDF} className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-xs sm:text-sm font-medium hover:bg-primary-dark transition-colors shadow-lg shadow-blue-900/20">
                         <Download size={16} /> PDF
                     </button>
                 </div>
             </div>
 
             {/* Metrics Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 min-w-0">
 
-                {/* 1. CTR Trends (Line Chart) */}
-                <div className="glass-panel p-6 rounded-3xl shadow-sm">
-                    <h3 className="text-sm font-bold text-slate-100 mb-6">CTR Trends (Live)</h3>
-                    <div className="h-[300px]">
+                {/* 1. CTR Trends (Live) */}
+                <div className="glass-panel p-5 md:p-6 rounded-3xl shadow-sm min-w-0">
+                    <h3 className="text-xs font-black text-slate-100 italic uppercase tracking-widest mb-6 px-1">CTR Trends (Live)</h3>
+                    <div className="h-[250px] md:h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={dailyData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} domain={[0, 6]} />
+                                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} domain={[0, 6]} />
                                 <Tooltip
                                     contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }}
                                     labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
                                 />
-                                <Legend verticalAlign="top" height={36} />
+                                <Legend verticalAlign="top" height={36} iconType="circle" />
                                 <Line type="monotone" dataKey="ctr" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} name="CTR %" animationDuration={1000} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* 2. Impressions (Bar Chart) */}
-                <div className="glass-panel p-6 rounded-3xl shadow-sm">
-                    <h3 className="text-sm font-bold text-slate-100 mb-6">Daily Impressions</h3>
-                    <div className="h-[300px]">
+                {/* 2. Impressions */}
+                <div className="glass-panel p-5 md:p-6 rounded-3xl shadow-sm">
+                    <h3 className="text-xs font-black text-slate-100 italic uppercase tracking-widest mb-6 px-1">Daily Impressions</h3>
+                    <div className="h-[250px] md:h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={dailyData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
                                 <Tooltip cursor={{ fill: '#1e293b' }} contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }} />
                                 <Bar dataKey="imp" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Impressions" animationDuration={1000} />
                             </BarChart>
@@ -117,10 +117,10 @@ const Analytics = () => {
                     </div>
                 </div>
 
-                {/* 3. Budget Utilization (Area Chart) */}
-                <div className="glass-panel p-6 rounded-3xl shadow-sm">
-                    <h3 className="text-sm font-bold text-slate-100 mb-6">Budget Utilization (%)</h3>
-                    <div className="h-[300px]">
+                {/* 3. Budget Utilization */}
+                <div className="glass-panel p-5 md:p-6 rounded-3xl shadow-sm">
+                    <h3 className="text-xs font-black text-slate-100 italic uppercase tracking-widest mb-6 px-1">Budget Utilization</h3>
+                    <div className="h-[250px] md:h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={dailyData}>
                                 <defs>
@@ -130,8 +130,8 @@ const Analytics = () => {
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} unit="%" />
+                                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} unit="%" />
                                 <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }} />
                                 <Area type="monotone" dataKey="budget" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorBudget)" name="Budget Used" />
                             </AreaChart>
@@ -139,16 +139,16 @@ const Analytics = () => {
                     </div>
                 </div>
 
-                {/* 4. Traffic by Device (Pie Chart) */}
-                <div className="glass-panel p-6 rounded-3xl shadow-sm">
-                    <h3 className="text-sm font-bold text-slate-100 mb-6">Traffic by Device</h3>
-                    <div className="h-[300px] flex items-center justify-center relative">
+                {/* 4. Traffic by Device */}
+                <div className="glass-panel p-5 md:p-6 rounded-3xl shadow-sm">
+                    <h3 className="text-xs font-black text-slate-100 italic uppercase tracking-widest mb-6 px-1">Traffic Share</h3>
+                    <div className="h-[250px] md:h-[300px] flex items-center justify-center relative">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
                                     data={deviceData}
-                                    innerRadius={80}
-                                    outerRadius={100}
+                                    innerRadius="65%"
+                                    outerRadius="85%"
                                     paddingAngle={5}
                                     dataKey="value"
                                     stroke="none"
@@ -160,24 +160,25 @@ const Analytics = () => {
                                 <Tooltip />
                             </PieChart>
                         </ResponsiveContainer>
-                        {/* Legend */}
+                        {/* Legend Overlay Center */}
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <div className="text-center">
-                                <p className="text-3xl font-bold text-slate-100">65%</p>
-                                <p className="text-xs text-slate-500">Mobile</p>
+                                <p className="text-2xl md:text-3xl font-black text-white italic">65%</p>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Mobile</p>
                             </div>
                         </div>
                     </div>
-                    <div className="flex justify-center gap-6 mt-4">
+                    <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mt-4">
                         {deviceData.map((d) => (
                             <div key={d.name} className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: d.color }}></div>
-                                <span className="text-sm text-slate-400">{d.name} ({d.value}%)</span>
+                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }}></div>
+                                <span className="text-[10px] md:text-xs text-slate-400 font-bold uppercase tracking-tight">{d.name} ({d.value}%)</span>
                             </div>
                         ))}
                     </div>
                 </div>
             </div>
+
         </div>
     );
 };

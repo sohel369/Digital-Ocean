@@ -51,27 +51,27 @@ export const AdPreview = ({
     ];
 
     return (
-        <div className="w-full glass-panel rounded-2xl overflow-hidden flex flex-col h-full min-h-[600px]">
+        <div className="w-full glass-panel rounded-2xl overflow-hidden flex flex-col h-full min-h-[500px] md:min-h-[600px]">
 
             {/* Header / Tabs */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/50 bg-slate-900/50">
-                <h3 className="font-semibold text-slate-200">Ad Preview</h3>
+            <div className="flex flex-col sm:flex-row items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-700/50 bg-slate-900/50 gap-4">
+                <h3 className="font-bold text-slate-200 text-sm sm:text-base border-l-2 border-primary pl-3">Ad Creative Preview</h3>
 
-                <div className="flex p-1 bg-slate-800 rounded-lg border border-slate-700/50">
+                <div className="flex p-0.5 sm:p-1 bg-slate-800 rounded-xl border border-slate-700/50 w-full sm:w-auto">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`
-                flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200
+                flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-2.5 sm:px-4 py-2 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all duration-200 uppercase tracking-tighter sm:tracking-normal
                 ${activeTab === tab.id
-                                    ? 'bg-primary text-white shadow-sm shadow-blue-900/20'
-                                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
+                                    ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]'
+                                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700'
                                 }
               `}
                         >
-                            {tab.icon}
-                            <span>{tab.label}</span>
+                            <span className="shrink-0 scale-90 sm:scale-100">{tab.icon}</span>
+                            <span className="truncate">{tab.label.split(' ')[0]}</span>
                         </button>
                     ))}
                 </div>
@@ -87,14 +87,23 @@ export const AdPreview = ({
 
                 {/* Content Container */}
                 <div className={`
-          relative bg-white text-slate-900 shadow-2xl transition-all duration-500 ease-in-out origin-top border border-slate-200 overflow-hidden
+          relative bg-white text-slate-900 shadow-2xl transition-all duration-500 ease-in-out origin-top border border-slate-200 overflow-hidden mx-auto
           ${format === 'Mobile Banner' ? 'w-[320px] h-[50px] rounded-none' : ''}
           ${format === 'Medium Rectangle' || format === 'Rectangle' ? 'w-[300px] h-[250px] rounded-sm' : ''}
-          ${format === 'Leaderboard' ? 'w-[728px] h-[90px] rounded-none' : ''}
-          ${!format && activeTab === 'mobile' ? 'w-[375px] rounded-3xl min-h-[600px]' : ''}
-          ${!format && activeTab === 'desktop' ? 'w-[800px] rounded-lg min-h-[400px]' : ''}
-          ${activeTab === 'email' ? 'w-[600px] rounded-none min-h-[500px] border-t-4 border-indigo-500' : ''}
-        `}>
+          ${format === 'Leaderboard' ? 'w-[728px] h-[90px] rounded-none max-w-full' : ''}
+          ${!format && activeTab === 'mobile' ? 'w-[375px] max-w-full rounded-3xl min-h-[600px]' : ''}
+          ${!format && activeTab === 'desktop' ? 'w-[800px] max-w-full rounded-lg min-h-[400px]' : ''}
+          ${activeTab === 'email' ? 'w-[600px] max-w-full rounded-none min-h-[500px] border-t-4 border-indigo-500' : ''}
+        `} style={{ transform: 'scale(var(--preview-scale, 1))', transformOrigin: 'top center' }}>
+                    <style dangerouslySetInnerHTML={{
+                        __html: `
+                        @media (max-width: 450px) {
+                            :root { --preview-scale: 0.8; }
+                        }
+                        @media (max-width: 380px) {
+                            :root { --preview-scale: 0.7; }
+                        }
+                    `}} />
 
                     {/* Email Header (Only for Email Tab) */}
                     {activeTab === 'email' && (

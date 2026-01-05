@@ -7,14 +7,14 @@ import {
     CreditCard,
     BarChart3,
     LogOut,
-    X
+    X,
+    Settings
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 const Sidebar = () => {
     const { sidebarOpen, setSidebarOpen, logout } = useApp();
 
-    // Close sidebar on route change (mobile)
     const handleNavClick = () => {
         if (window.innerWidth < 768) {
             setSidebarOpen(false);
@@ -22,77 +22,95 @@ const Sidebar = () => {
     };
 
     const navItems = [
-        { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-        { to: "/campaigns/new", icon: PlusCircle, label: "Create Campaign" },
-        { to: "/geo-targeting", icon: Map, label: "Geo-Targeting" },
-        { to: "/pricing", icon: CreditCard, label: "Pricing & Billing" },
-        { to: "/analytics", icon: BarChart3, label: "Analytics" },
+        { to: "/", icon: LayoutDashboard, label: "Overview" },
+        { to: "/campaigns/new", icon: PlusCircle, label: "New Campaign" },
+        { to: "/geo-targeting", icon: Map, label: "Geofencing" },
+        { to: "/pricing", icon: CreditCard, label: "Pricing Matrix" },
+        { to: "/analytics", icon: BarChart3, label: "Performance" },
     ];
 
-    const activeClass = "flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl bg-gradient-to-r from-primary/20 to-primary/5 text-primary-light border-l-2 border-accent shadow-[0_0_15px_rgba(30,64,175,0.3)] transition-all";
-    const inactiveClass = "flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 rounded-xl transition-all hover:pl-5";
+    const activeClass = "flex items-center gap-3 px-5 py-4 text-sm font-bold rounded-2xl bg-primary text-white shadow-[0_10px_20px_rgba(59,130,246,0.3)] transition-all scale-[1.02]";
+    const inactiveClass = "flex items-center gap-3 px-5 py-4 text-sm font-bold text-slate-400 hover:text-slate-200 rounded-2xl transition-all hover:bg-slate-800/40 hover:pl-6";
 
     return (
         <>
             {/* Mobile Backdrop */}
             {sidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden animate-in fade-in"
+                    className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-40 md:hidden animate-in fade-in duration-500"
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
 
             <aside className={`
-                w-64 fixed left-4 top-4 bottom-4 h-[calc(100vh-2rem)] bg-background-elevated/90 backdrop-blur-2xl border border-slate-700/50 rounded-3xl z-50 flex flex-col shadow-2xl shadow-black/50
-                transition-transform duration-300 ease-in-out
+                w-64 fixed left-1 md:left-4 top-4 bottom-4 h-[calc(100vh-2rem)] bg-slate-950 border border-white/5 md:rounded-[2.5rem] z-50 flex flex-col shadow-2xl
+                transition-transform duration-500 ease-in-out
                 ${sidebarOpen ? 'translate-x-0' : '-translate-x-[120%] md:translate-x-0'}
             `}>
-                {/* Logo */}
-                <div className="h-20 flex items-center justify-between px-6 border-b border-slate-700/50">
-                    <div className="flex items-center gap-2 font-bold text-xl text-slate-100">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-accent-dark flex items-center justify-center text-white shadow-[0_0_15px_rgba(217,119,6,0.4)]">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-                            </svg>
+                {/* Logo Section */}
+                <div className="h-28 flex flex-col justify-center px-8 border-b border-white/5">
+                    <div className="flex items-center gap-3 font-black text-2xl tracking-tighter text-white">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white shadow-[0_0_20px_rgba(59,130,246,0.5)]">
+                            <span className="text-xl italic">R</span>
                         </div>
-                        AdPlatform
+                        <div className="flex flex-col -space-y-1">
+                            <span>RULE 7</span>
+                            <span className="text-xs font-bold text-primary tracking-widest opacity-80">MEDIA</span>
+                        </div>
                     </div>
                     {/* Close Button (Mobile) */}
                     <button
                         onClick={() => setSidebarOpen(false)}
-                        className="p-1 text-slate-400 hover:text-slate-600 md:hidden"
+                        className="absolute top-8 right-6 p-1 text-slate-500 hover:text-white md:hidden"
                     >
                         <X size={24} />
                     </button>
                 </div>
 
-                {/* Nav */}
-                <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
+                {/* Navigation Items */}
+                <nav className="flex-1 p-6 space-y-2 overflow-y-auto custom-scrollbar">
+                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-4 pl-2">Menu</p>
                     {navItems.map((item) => (
                         <NavLink
                             key={item.to}
                             to={item.to}
                             onClick={handleNavClick}
                             className={({ isActive }) => {
-                                // For root path, exact match, for others, partial
                                 if (item.to === "/" && window.location.pathname !== "/") return inactiveClass;
                                 return isActive ? activeClass : inactiveClass;
                             }}
                         >
-                            <item.icon size={20} />
+                            <item.icon size={22} className={({ isActive }) => isActive ? 'text-white' : 'text-slate-500'} />
                             {item.label}
                         </NavLink>
                     ))}
+
+                    <div className="pt-8">
+                        <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-4 pl-2">System</p>
+                        <NavLink
+                            to="/admin/pricing"
+                            onClick={handleNavClick}
+                            className={inactiveClass}
+                        >
+                            <Settings size={22} className="text-slate-500" />
+                            Admin Controls
+                        </NavLink>
+                    </div>
                 </nav>
 
-                {/* Footer / User */}
-                <div className="p-4 border-t border-slate-700/50">
+                {/* Footer User Profile */}
+                <div className="p-6 border-t border-white/5">
                     <button
                         onClick={logout}
-                        className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-400 hover:bg-red-900/20 rounded-xl w-full transition-all active:scale-95"
+                        className="group flex items-center gap-4 p-3 hover:bg-red-500/10 rounded-2xl w-full transition-all"
                     >
-                        <LogOut size={20} />
-                        Sign Out
+                        <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-red-500 group-hover:bg-red-500 group-hover:text-white transition-colors">
+                            <LogOut size={20} />
+                        </div>
+                        <div className="text-left">
+                            <p className="text-sm font-bold text-slate-100 italic">Sign Out</p>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase">End Session</p>
+                        </div>
                     </button>
                 </div>
             </aside>
@@ -101,3 +119,4 @@ const Sidebar = () => {
 };
 
 export default Sidebar;
+

@@ -20,9 +20,7 @@ export const AppProvider = ({ children }) => {
     const [notifications, setNotifications] = useState([]);
     const [user, setUser] = useState(null);
 
-    const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'http://localhost:8000/api'
-        : '/api';
+    const API_BASE_URL = '/api';
 
     const fetchData = async () => {
         const storedUser = localStorage.getItem('user');
@@ -130,6 +128,56 @@ export const AppProvider = ({ children }) => {
     const [country, setCountry] = useState('US');
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
+    // Dynamic Pricing Data
+    const pricingData = {
+        industries: [
+            { name: "Tyres and wheels", multiplier: 1 },
+            { name: "Vehicle servicing and maintenance", multiplier: 2 },
+            { name: "Panel beating and smash repairs", multiplier: 3 },
+            { name: "Automotive finance solutions", multiplier: 4 },
+            { name: "Vehicle insurance products", multiplier: 3 },
+            { name: "Auto parts, tools, and accessories", multiplier: 1 },
+            { name: "Fleet management tools", multiplier: 2 },
+            { name: "Workshop technology and equipment", multiplier: 2 },
+            { name: "Telematics systems and vehicle tracking solutions", multiplier: 2 },
+            { name: "Fuel cards and fuel management services", multiplier: 1 },
+            { name: "Vehicle cleaning and detailing services", multiplier: 1 },
+            { name: "Logistics and scheduling software", multiplier: 2 },
+            { name: "Safety and compliance solutions", multiplier: 1 },
+            { name: "Driver training and induction programs", multiplier: 1 },
+            { name: "Roadside assistance programs", multiplier: 1 },
+            { name: "GPS navigation and route optimisation tools", multiplier: 2 },
+            { name: "EV charging infrastructure and electric vehicle solutions", multiplier: 1 },
+            { name: "Mobile device integration and communications equipment", multiplier: 1 },
+            { name: "Asset recovery and anti-theft technologies", multiplier: 2 }
+        ],
+        adTypes: [
+            { name: "Mobile Leaderboard", baseRate: 125 },
+            { name: "Medium Rectangle", baseRate: 150 },
+            { name: "Leaderboard (Header)", baseRate: 180 },
+            { name: "Leaderboard (Footer)", baseRate: 100 },
+            { name: "Skyscraper", baseRate: 150 }
+        ],
+        discounts: {
+            state: 0.15,
+            national: 0.30
+        },
+        states: [
+            { name: "California", landMass: 155779, densityMultiplier: 1.2 },
+            { name: "Texas", landMass: 261232, densityMultiplier: 1.0 },
+            { name: "Florida", landMass: 53625, densityMultiplier: 1.2 },
+            { name: "New York", landMass: 47126, densityMultiplier: 1.2 },
+            { name: "Pennsylvania", landMass: 44743, densityMultiplier: 1.0 },
+            { name: "Illinois", landMass: 55519, densityMultiplier: 1.0 },
+            { name: "Ohio", landMass: 40861, densityMultiplier: 1.0 },
+            { name: "Georgia", landMass: 57513, densityMultiplier: 1.0 },
+            { name: "North Carolina", landMass: 48618, densityMultiplier: 1.0 },
+            { name: "Michigan", landMass: 56539, densityMultiplier: 1.0 },
+            { name: "Wyoming", landMass: 97093, densityMultiplier: 0.8 },
+            { name: "Montana", landMass: 145546, densityMultiplier: 0.8 }
+        ]
+    };
+
     const CONSTANTS = {
         COUNTRIES: SUPPORTED_COUNTRIES,
         CURRENCIES: SUPPORTED_CURRENCIES,
@@ -225,6 +273,7 @@ export const AppProvider = ({ children }) => {
             sidebarOpen,
             setSidebarOpen,
             CONSTANTS,
+            pricingData,
             addCampaign,
             markAllRead,
             logout,
@@ -235,3 +284,4 @@ export const AppProvider = ({ children }) => {
         </AppContext.Provider>
     );
 };
+

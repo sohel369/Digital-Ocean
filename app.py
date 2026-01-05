@@ -33,8 +33,8 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB limit
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Enable CORS for React frontend
-CORS(app, supports_credentials=True, origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174", "http://localhost:5175", "http://127.0.0.1:5175", "http://localhost:3000"])
+# Enable CORS for frontend
+CORS(app, supports_credentials=True, origins=["*"])
 
 # Initialize Database
 db.init_app(app)
@@ -143,6 +143,8 @@ def list_campaigns():
 @login_required
 def create_campaign():
     data = request.json
+    meta = data.get('meta', {})
+    
     new_campaign = Campaign(
         user_id=current_user.id,
         name=data.get('name'),
@@ -151,18 +153,37 @@ def create_campaign():
         start_date=data.get('startDate', datetime.now().strftime('%Y-%m-%d')),
         ad_format=data.get('ad_format', 'display'),
         headline=data.get('headline', ''),
-        description=data.get('description', '')
+        description=data.get('description', ''),
+        media_url=data.get('image'),
+        industry=meta.get('industry', 'Tyres and wheels'),
+        coverage_area=meta.get('coverage', 'radius')
     )
     db.session.add(new_campaign)
     db.session.commit()
     
-    # Add initial targeting
-    target = Target(campaign_id=new_campaign.id, city="New York", radius=25)
+    # Add targeting based on frontend meta
+    location = meta.get('location', '')
+    target = Target(
+        campaign_id=new_campaign.id, 
+        city=location if meta.get('coverage') == 'state' else 'Radius Area',
+        postcode=location if meta.get('coverage') == 'radius' else '',
+        radius=30 if meta.get('coverage') == 'radius' else 0
+    )
     db.session.add(target)
     
     # Add initial pricing
     pricing = Pricing(campaign_id=new_campaign.id, base_fee=100.0, total=new_campaign.budget)
     db.session.add(pricing)
+    
+    # Add a notification for the user
+    notif = Notification(
+        user_id=current_user.id,
+        type='approval',
+        title="Campaign Submitted",
+        message=f"'{new_campaign.name}' is now under review by Rule 7 AdOps.",
+        time="Just now"
+    )
+    db.session.add(notif)
     
     db.session.commit()
     return jsonify(new_campaign.to_dict()), 201

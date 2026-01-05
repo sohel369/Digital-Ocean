@@ -151,7 +151,7 @@ const Header = () => {
                         {showNotifs && (
                             <>
                                 <div className="fixed inset-0 z-[60]" onClick={() => setShowNotifs(false)}></div>
-                                <div className="absolute top-14 right-0 sm:right-[-100px] w-[calc(100vw-2rem)] sm:w-[380px] bg-background-elevated rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-slate-700 z-[70] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                <div className="absolute top-14 right-0 w-[calc(100vw-2rem)] sm:w-[380px] bg-background-elevated rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-slate-700 z-[70] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                                     <div className="p-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-900/50">
                                         <div className="flex items-center gap-2">
                                             <h3 className="font-bold text-slate-100">Notifications</h3>
@@ -187,9 +187,9 @@ const Header = () => {
                         )}
                     </div>
 
-                    <Link to="/campaigns/new" className="hidden sm:flex items-center gap-2 premium-btn text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all active:scale-95">
-                        <PlusCircle size={16} />
-                        <span>New Campaign</span>
+                    <Link to="/campaigns/new" className="flex items-center gap-1 sm:gap-2 premium-btn text-white text-[10px] sm:text-sm font-semibold px-2 sm:px-4 py-1.5 sm:py-2.5 rounded-xl transition-all active:scale-95 shadow-lg shadow-primary/25">
+                        <PlusCircle size={14} className="sm:w-4 sm:h-4" />
+                        <span className="hidden xs:inline">New Campaign</span>
                     </Link>
 
                     {/* User Menu */}
@@ -211,6 +211,28 @@ const Header = () => {
                                         <p className="font-bold text-slate-100">{user?.username || 'Operator'}</p>
                                         <p className="text-xs text-slate-400 truncate">{user?.email || 'authenticated_user'}</p>
                                     </div>
+
+                                    {/* Mobile Only: Quick Selectors */}
+                                    <div className="lg:hidden p-3 border-b border-slate-700/50 space-y-2">
+                                        <p className="text-[10px] font-bold text-slate-500 uppercase px-2 mb-1">Preferences</p>
+                                        <div className="flex gap-1 overflow-x-auto pb-1 no-scrollbar">
+                                            <Dropdown
+                                                label="Country"
+                                                options={CONSTANTS.COUNTRIES}
+                                                value={country}
+                                                onChange={setCountry}
+                                                icon={<Globe size={14} />}
+                                            />
+                                            <Dropdown
+                                                label="Currency"
+                                                options={CONSTANTS.CURRENCIES}
+                                                value={currency}
+                                                onChange={setCurrency}
+                                                icon={<span className="font-mono text-xs font-bold">{CONSTANTS.CURRENCIES.find(c => c.code === currency)?.symbol}</span>}
+                                            />
+                                        </div>
+                                    </div>
+
                                     <div className="p-2 space-y-1">
                                         <button className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition-colors flex items-center gap-2">
                                             <UserIcon size={16} />

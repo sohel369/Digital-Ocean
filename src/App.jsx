@@ -7,6 +7,7 @@ import CampaignCreation from './pages/CampaignCreation';
 import GeoTargeting from './pages/GeoTargeting';
 import Pricing from './pages/Pricing';
 import Analytics from './pages/Analytics';
+import AdminPricing from './pages/AdminPricing';
 
 import { Toaster } from 'sonner';
 
@@ -20,11 +21,11 @@ const MainLayout = ({ children }) => {
     }
 
     return (
-        <div className="flex min-h-screen bg-background selection:bg-primary/30 selection:text-primary-light">
+        <div className="flex min-h-screen bg-background selection:bg-primary/30 selection:text-primary-light overflow-x-hidden">
             <Sidebar />
-            <div className="flex-1 ml-0 md:ml-72 transition-all duration-300">
+            <div className="flex-1 flex flex-col min-w-0 max-w-full ml-0 md:ml-72 transition-all duration-300 overflow-x-hidden">
                 <Header />
-                <main className="p-4 md:p-8 pt-4 pb-12 min-h-screen">
+                <main className="flex-1 p-4 md:p-8 pt-4 pb-12 w-full max-w-full overflow-x-hidden">
                     {children}
                 </main>
             </div>
@@ -35,7 +36,7 @@ const MainLayout = ({ children }) => {
 function App() {
     return (
         <Router>
-            <Toaster position="top-right" richColors closeButton />
+            <Toaster position="top-right" richColors closeButton theme="dark" />
             <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route
@@ -48,6 +49,7 @@ function App() {
                                 <Route path="/geo-targeting" element={<GeoTargeting />} />
                                 <Route path="/pricing" element={<Pricing />} />
                                 <Route path="/analytics" element={<Analytics />} />
+                                <Route path="/admin/pricing" element={<AdminPricing />} />
                                 <Route path="*" element={<Navigate to="/" replace />} />
                             </Routes>
                         </MainLayout>
@@ -59,3 +61,4 @@ function App() {
 }
 
 export default App;
+

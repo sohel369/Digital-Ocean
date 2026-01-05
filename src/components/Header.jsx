@@ -199,7 +199,11 @@ const Header = () => {
                             className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 p-0.5 shadow-md hover:shadow-lg transition-transform hover:scale-105 active:scale-95"
                         >
                             <div className="w-full h-full rounded-full bg-white border-2 border-transparent overflow-hidden">
-                                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSgYYED46R5puH88P1qic_RXu3sSoyfjyO3Pw&s" alt="User" />
+                                <img
+                                    src={user?.avatar || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSgYYED46R5puH88P1qic_RXu3sSoyfjyO3Pw&s"}
+                                    alt="User"
+                                    className="w-full h-full object-cover"
+                                />
                             </div>
                         </button>
 

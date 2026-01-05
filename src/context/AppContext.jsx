@@ -1,7 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getCountryDefaults, SUPPORTED_COUNTRIES, SUPPORTED_CURRENCIES, SUPPORTED_LANGUAGES } from '../config/i18nConfig';
-
 import { toast } from 'sonner';
+import {
+    auth,
+    loginWithEmail,
+    registerWithEmail,
+    onAuthStateChanged,
+    signOut
+} from '../firebase';
 
 const AppContext = createContext();
 
@@ -18,16 +24,18 @@ export const AppProvider = ({ children }) => {
 
     const [campaigns, setCampaigns] = useState([]);
     const [notifications, setNotifications] = useState([]);
-    const [user, setUser] = useState(null);
+    const [user, setUser] = useState(() => {
+        const stored = localStorage.getItem('user');
+        try {
+            return stored ? JSON.parse(stored) : null;
+        } catch (e) {
+            return null;
+        }
+    });
 
     const API_BASE_URL = '/api';
 
     const fetchData = async () => {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
-
         try {
             // Fetch basic data in parallel
             const [statsRes, campaignsRes, notifRes] = await Promise.all([
@@ -74,82 +82,90 @@ export const AppProvider = ({ children }) => {
 
     // Fetch initial data from API
     useEffect(() => {
-        fetchData();
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                // Sync with backend to get local user data/role
+                const result = await firebaseSync(firebaseUser);
+                if (result.success) {
+                    setUser(result.user);
+                    localStorage.setItem('user', JSON.stringify(result.user));
+                    fetchData();
+                }
+            } else {
+                setUser(null);
+                localStorage.removeItem('user');
+            }
+        });
 
         // Polling for new notifications every 30 seconds
         const interval = setInterval(fetchData, 30000);
-        return () => clearInterval(interval);
+        return () => {
+            unsubscribe();
+            clearInterval(interval);
+        };
     }, []);
 
-    const login = async (username, password) => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ username, password })
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                localStorage.setItem('user', JSON.stringify(data.user));
-                setUser(data.user);
-                await fetchData(); // Refresh data immediately
-                return { success: true, user: data.user };
-            } else {
-                return { success: false, message: data.message };
-            }
-        } catch (error) {
-            console.error("Login Error:", error);
-            return { success: false, message: "System Offline" };
-        }
-    };
-
-    const googleAuth = async (googleUser) => {
+    const firebaseSync = async (fbUser) => {
         try {
             const response = await fetch(`${API_BASE_URL}/google-auth`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify({
-                    email: googleUser.email,
-                    username: googleUser.displayName || googleUser.email.split('@')[0],
-                    photoURL: googleUser.photoURL,
-                    uid: googleUser.uid
+                    email: fbUser.email,
+                    username: fbUser.displayName || fbUser.email.split('@')[0],
+                    photoURL: fbUser.photoURL,
+                    uid: fbUser.uid
                 })
             });
-
             const data = await response.json();
-
-            if (data.success) {
-                localStorage.setItem('user', JSON.stringify(data.user));
-                setUser(data.user);
-                await fetchData();
-                return { success: true, user: data.user };
-            } else {
-                return { success: false, message: data.message };
-            }
+            return data;
         } catch (error) {
-            console.error("Google Auth Error:", error);
-            return { success: false, message: "Server Connection Failed" };
+            console.error("Firebase Sync Error:", error);
+            return { success: false };
         }
+    };
+
+    const login = async (email, password) => {
+        try {
+            const fbUser = await loginWithEmail(email, password);
+            const result = await firebaseSync(fbUser);
+            if (result.success) {
+                setUser(result.user);
+                localStorage.setItem('user', JSON.stringify(result.user));
+                await fetchData();
+                return { success: true, user: result.user };
+            }
+            return { success: false, message: "Sync failed" };
+        } catch (error) {
+            console.error("Login Error:", error);
+            return { success: false, message: error.message };
+        }
+    };
+
+    const googleAuth = async (googleUser) => {
+        const result = await firebaseSync(googleUser);
+        if (result.success) {
+            setUser(result.user);
+            localStorage.setItem('user', JSON.stringify(result.user));
+            await fetchData();
+        }
+        return result;
     };
 
     const signup = async (username, email, password) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/signup`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ username, email, password })
-            });
-
-            const data = await response.json();
-            return data;
+            const fbUser = await registerWithEmail(email, password, username);
+            const result = await firebaseSync(fbUser);
+            if (result.success) {
+                setUser(result.user);
+                localStorage.setItem('user', JSON.stringify(result.user));
+                await fetchData();
+            }
+            return result;
         } catch (error) {
             console.error("Signup Error:", error);
-            return { success: false, message: "System Offline" };
+            return { success: false, message: error.message };
         }
     };
 
@@ -275,6 +291,7 @@ export const AppProvider = ({ children }) => {
 
     const logout = async () => {
         try {
+            await signOut(auth); // Terminate Firebase session
             await fetch(`${API_BASE_URL}/logout`, {
                 method: 'POST',
                 credentials: 'include'

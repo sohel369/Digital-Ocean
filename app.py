@@ -122,6 +122,7 @@ def google_auth():
     data = request.json
     email = data.get('email')
     username = data.get('username')
+    photo_url = data.get('photoURL')
     
     if not email:
         return jsonify({"success": False, "message": "Email is required"}), 400
@@ -134,7 +135,8 @@ def google_auth():
             username=username,
             email=email,
             password_hash=generate_password_hash(secrets.token_hex(16)),
-            role='advertiser'
+            role='advertiser',
+            avatar=photo_url
         )
         db.session.add(user)
         db.session.commit()
@@ -142,6 +144,12 @@ def google_auth():
         # Create billing record
         billing = Billing(user_id=user.id)
         db.session.add(billing)
+        db.session.commit()
+    else:
+        # Update existing user info from social provider
+        user.avatar = photo_url
+        if username:
+            user.username = username
         db.session.commit()
         
     login_user(user, remember=True)

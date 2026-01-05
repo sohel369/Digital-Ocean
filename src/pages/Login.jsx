@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Terminal } from 'lucide-react';
@@ -7,13 +7,19 @@ import { useApp } from '../context/AppContext';
 import { signInWithGoogle } from '../firebase';
 
 const Login = () => {
-    const { login, signup, googleAuth } = useApp();
+    const { login, signup, googleAuth, user } = useApp();
     const [isLogin, setIsLogin] = useState(true);
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if (user) {
+            navigate('/');
+        }
+    }, [user, navigate]);
 
     const handleGoogleSignIn = async () => {
         setLoading(true);
@@ -40,7 +46,7 @@ const Login = () => {
 
         try {
             if (isLogin) {
-                const result = await login(username, password);
+                const result = await login(email, password);
                 if (result.success) {
                     toast.success('Access Granted', { description: `Authorized as ${result.user.username}` });
                     navigate('/');
@@ -50,8 +56,8 @@ const Login = () => {
             } else {
                 const result = await signup(username, email, password);
                 if (result.success) {
-                    toast.success('Account Created', { description: 'You can now log in with your credentials.' });
-                    setIsLogin(true);
+                    toast.success('Account Created', { description: 'Welcome to the platform!' });
+                    navigate('/'); // Go directly to dashboard
                 } else {
                     toast.error('Registration Error', { description: result.message });
                 }
@@ -110,17 +116,31 @@ const Login = () => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
-                    <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Username</label>
-                        <input
-                            type="text"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-3 text-slate-100 outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition-all font-mono text-sm"
-                            placeholder="OPERATOR_ID"
-                            required
-                        />
-                    </div>
+                    {isLogin ? (
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Email Address</label>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-3 text-slate-100 outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition-all font-mono text-sm"
+                                placeholder="operator@adplatform.net"
+                                required
+                            />
+                        </div>
+                    ) : (
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Username</label>
+                            <input
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-3 text-slate-100 outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition-all font-mono text-sm"
+                                placeholder="OPERATOR_ID"
+                                required
+                            />
+                        </div>
+                    )}
 
                     {!isLogin && (
                         <div className="animate-in slide-in-from-top-2 duration-300">

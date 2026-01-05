@@ -11,10 +11,12 @@ import AdminPricing from './pages/AdminPricing';
 
 import { Toaster } from 'sonner';
 
+import { useApp } from './context/AppContext';
 import Login from './pages/Login';
 
 const MainLayout = ({ children }) => {
-    const isAuthenticated = !!localStorage.getItem('user');
+    const { user } = useApp();
+    const isAuthenticated = !!user;
 
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;

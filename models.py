@@ -15,6 +15,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), default='advertiser') # 'admin' or 'advertiser'
+    avatar = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -27,6 +28,7 @@ class User(db.Model, UserMixin):
             'username': self.username,
             'email': self.email,
             'role': self.role,
+            'avatar': self.avatar,
             'created_at': self.created_at.isoformat()
         }
 

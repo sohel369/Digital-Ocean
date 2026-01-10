@@ -54,16 +54,17 @@ export const AdPreview = ({
         <div className="w-full glass-panel rounded-2xl overflow-hidden flex flex-col h-full min-h-[500px] md:min-h-[600px]">
 
             {/* Header / Tabs */}
-            <div className="flex flex-col sm:flex-row items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-700/50 bg-slate-900/50 gap-4">
-                <h3 className="font-bold text-slate-200 text-sm sm:text-base border-l-2 border-primary pl-3">Ad Creative Preview</h3>
+            {/* Header / Tabs */}
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-700/50 bg-slate-900/50 gap-4 flex-wrap">
+                <h3 className="font-bold text-slate-200 text-sm sm:text-base border-l-2 border-primary pl-3 whitespace-nowrap">Ad Creative Preview</h3>
 
-                <div className="flex p-0.5 sm:p-1 bg-slate-800 rounded-xl border border-slate-700/50 w-full sm:w-auto">
+                <div className="flex p-0.5 sm:p-1 bg-slate-800 rounded-xl border border-slate-700/50">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`
-                flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-2.5 sm:px-4 py-2 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all duration-200 uppercase tracking-tighter sm:tracking-normal
+                flex flex-col sm:flex-row items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all duration-200 uppercase tracking-tighter sm:tracking-normal
                 ${activeTab === tab.id
                                     ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]'
                                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700'
@@ -71,7 +72,8 @@ export const AdPreview = ({
               `}
                         >
                             <span className="shrink-0 scale-90 sm:scale-100">{tab.icon}</span>
-                            <span className="truncate">{tab.label.split(' ')[0]}</span>
+                            <span className="hidden sm:inline">{tab.label.split(' ')[0]}</span>
+                            <span className="sm:hidden">{tab.label.split(' ')[0].substring(0, 1)}</span>
                         </button>
                     ))}
                 </div>

@@ -151,7 +151,7 @@ const Header = () => {
                         {showNotifs && (
                             <>
                                 <div className="fixed inset-0 z-[60]" onClick={() => setShowNotifs(false)}></div>
-                                <div className="absolute top-14 right-0 w-[calc(100vw-2rem)] sm:w-[380px] bg-background-elevated rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-slate-700 z-[70] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                <div className="fixed left-4 right-4 top-20 sm:absolute sm:top-14 sm:right-0 sm:left-auto sm:w-[380px] bg-background-elevated rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-slate-700 z-[70] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                                     <div className="p-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-900/50">
                                         <div className="flex items-center gap-2">
                                             <h3 className="font-bold text-slate-100">Notifications</h3>

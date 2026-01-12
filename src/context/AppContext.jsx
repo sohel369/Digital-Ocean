@@ -262,6 +262,9 @@ export const AppProvider = ({ children }) => {
 
     const addCampaign = async (campaign) => {
         try {
+            console.log('Creating campaign at:', `${API_BASE_URL}/campaigns`);
+            console.log('Campaign data:', JSON.stringify(campaign, null, 2));
+
             const response = await fetch(`${API_BASE_URL}/campaigns`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -269,8 +272,27 @@ export const AppProvider = ({ children }) => {
                 body: JSON.stringify(campaign)
             });
 
+            console.log('Response status:', response.status);
+            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+            // Get response text first to handle empty responses
+            const responseText = await response.text();
+            console.log('Response text:', responseText);
+
+            if (!responseText) {
+                throw new Error(`Empty response from server (status: ${response.status}). This may be a CORS or server error.`);
+            }
+
+            let responseData;
+            try {
+                responseData = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('JSON parse error:', parseError);
+                throw new Error(`Invalid JSON response: ${responseText.substring(0, 200)}`);
+            }
+
             if (response.ok) {
-                const newCamp = await response.json();
+                const newCamp = responseData;
 
                 // Ensure the new campaign is added to the local state immediately
                 const formattedNewCamp = {
@@ -297,12 +319,16 @@ export const AppProvider = ({ children }) => {
                 window.location.href = '/login';
                 throw new Error("Session expired. Please log in again.");
             } else {
-                const errorData = await response.json();
-                throw new Error(errorData.message || "Failed to create campaign");
+                throw new Error(responseData.message || responseData.error || `Server error: ${response.status}`);
             }
         } catch (error) {
             console.error("API Error:", error);
-            toast.error("Sync Error", { description: error.message || "Campaign not saved to backend." });
+            // Check for network/CORS errors
+            if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                toast.error("Network Error", { description: "Cannot connect to server. Check if CORS is configured correctly." });
+            } else {
+                toast.error("Sync Error", { description: error.message || "Campaign not saved to backend." });
+            }
             throw error;
         }
     };

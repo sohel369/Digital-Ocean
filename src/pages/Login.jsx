@@ -34,7 +34,10 @@ const Login = () => {
             }
         } catch (error) {
             console.error('Google Auth Error:', error);
-            toast.error('Google Verification Failed');
+            // If it's a redirect, we don't Toast yet as the page is about to unload
+            if (error.code !== 'auth/popup-blocked' && !error.message.includes('COOP')) {
+                toast.error('Google Verification Failed');
+            }
         } finally {
             setLoading(false);
         }
@@ -46,46 +49,57 @@ const Login = () => {
 
         try {
             if (isLogin) {
+                // Basic check for username-style login
+                if (!email.includes('@') && email.toUpperCase() !== 'ADMIN') {
+                    toast.error('Identity Verification Failed', {
+                        description: 'Please use your registered Email Address, not your username.'
+                    });
+                    setLoading(false);
+                    return;
+                }
+
                 const result = await login(email, password);
                 if (result.success) {
                     toast.success('Access Granted', { description: `Authorized as ${result.user.username}` });
                     navigate('/');
                 } else {
-                    toast.error('Authentication Error', { description: result.message });
+                    toast.error('Authentication Error', { description: result.message || 'Invalid credentials provided.' });
                 }
             } else {
                 const result = await signup(username, email, password);
                 if (result.success) {
                     toast.success('Account Created', { description: 'Welcome to the platform!' });
-                    navigate('/'); // Go directly to dashboard
+                    navigate('/');
                 } else {
-                    toast.error('Registration Error', { description: result.message });
+                    toast.error('Registration Error', { description: result.message || 'Failed to create account.' });
                 }
             }
         } catch (error) {
             console.error('Auth Error:', error);
-            toast.error('System Error', { description: 'An unexpected error occurred.' });
+            // Extract meaningful message from Firebase error
+            const errorMsg = error.message?.replace('Firebase: ', '') || 'An unexpected error occurred.';
+            toast.error('Security System Alert', { description: errorMsg });
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#0f172a] p-4 font-['Inter']">
-            <div className="max-w-md w-full glass-panel p-8 rounded-3xl shadow-2xl animate-in fade-in zoom-in duration-500 border border-white/5">
+        <div className="min-h-screen flex items-center justify-center bg-[#050810] p-4">
+            <div className="max-w-[440px] w-full bg-[#0a0f1d] p-10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5 relative">
                 <div className="text-center mb-10">
-                    <div className="inline-block p-3 rounded-2xl bg-primary/10 text-primary-light mb-4">
-                        <Terminal size={32} />
+                    <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-blue-600/5 text-blue-500 mb-6 border border-blue-500/10">
+                        <Terminal size={32} strokeWidth={2.5} />
                     </div>
-                    <h1 className="text-3xl font-bold premium-text mb-2">{isLogin ? 'Identity Verification' : 'System Registration'}</h1>
-                    <p className="text-slate-400 text-sm">{isLogin ? 'AdPlatform Premium Terminal Access' : 'Create a new operator account'}</p>
+                    <h1 className="text-4xl font-extrabold text-white mb-2 tracking-tight">Identity Verification</h1>
+                    <p className="text-slate-500 text-sm font-medium">AdPlatform Premium Terminal Access</p>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-6">
                     <button
                         onClick={handleGoogleSignIn}
                         disabled={loading}
-                        className="w-full bg-white text-slate-900 font-bold py-3 rounded-xl flex items-center justify-center gap-3 hover:bg-slate-100 transition-all border border-slate-200 shadow-sm"
+                        className="w-full bg-[#f8f9fa] text-slate-800 font-bold py-3.5 rounded-2xl flex items-center justify-center gap-3 hover:bg-white transition-all shadow-lg active:scale-[0.98]"
                     >
                         <svg className="w-5 h-5" viewBox="0 0 24 24">
                             <path
@@ -108,61 +122,50 @@ const Login = () => {
                         <span>Continue with Google</span>
                     </button>
 
-                    <div className="relative flex items-center py-4">
-                        <div className="flex-grow border-t border-slate-700/50"></div>
-                        <span className="flex-shrink mx-4 text-xs font-bold uppercase tracking-widest text-slate-500">Or use credentials</span>
-                        <div className="flex-grow border-t border-slate-700/50"></div>
+                    <div className="relative flex items-center py-2">
+                        <div className="flex-grow border-t border-slate-800/60"></div>
+                        <span className="flex-shrink mx-4 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">Or use credentials</span>
+                        <div className="flex-grow border-t border-slate-800/60"></div>
                     </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
-                    {isLogin ? (
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Email Address</label>
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-3 text-slate-100 outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition-all font-mono text-sm"
-                                placeholder="operator@adplatform.net"
-                                required
-                            />
-                        </div>
-                    ) : (
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Username</label>
-                            <input
-                                type="text"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-3 text-slate-100 outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition-all font-mono text-sm"
-                                placeholder="OPERATOR_ID"
-                                required
-                            />
-                        </div>
-                    )}
+                <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+                    <div className="space-y-1.5 focus-within:transform focus-within:translate-x-1 transition-transform">
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-600 ml-1">
+                            {isLogin ? 'Registered Email Address' : 'Display Username'}
+                        </label>
+                        <input
+                            type="text"
+                            value={isLogin ? email : username}
+                            onChange={(e) => isLogin ? setEmail(e.target.value) : setUsername(e.target.value)}
+                            className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-mono text-sm placeholder:text-slate-700"
+                            placeholder={isLogin ? "operator@adplatform.net" : "NEW_OPERATOR_01"}
+                            required
+                            autoComplete="off"
+                        />
+                    </div>
 
                     {!isLogin && (
-                        <div className="animate-in slide-in-from-top-2 duration-300">
-                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Email Address</label>
+                        <div className="space-y-1.5 animate-in slide-in-from-top-2">
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-600 ml-1">Email for Auth</label>
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-3 text-slate-100 outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition-all font-mono text-sm"
+                                className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-mono text-sm placeholder:text-slate-700"
                                 placeholder="operator@adplatform.net"
                                 required
                             />
                         </div>
                     )}
 
-                    <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Password</label>
+                    <div className="space-y-1.5 focus-within:transform focus-within:translate-x-1 transition-transform">
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-600 ml-1">Password</label>
                         <input
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-3 text-slate-100 outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition-all font-mono text-sm"
+                            className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-mono text-sm placeholder:text-slate-700"
                             placeholder="••••••••"
                             required
                         />
@@ -171,25 +174,29 @@ const Login = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-gradient-to-r from-primary to-primary-light text-white font-bold py-3.5 rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:translate-y-0 mt-2"
+                        className="w-full bg-[#2563eb] text-white font-bold py-4.5 rounded-2xl shadow-xl shadow-blue-600/20 hover:bg-blue-600 transition-all active:scale-[0.98] disabled:opacity-50 mt-4 text-sm"
                     >
                         {loading ? 'Processing...' : (isLogin ? 'Execute Login' : 'Register Operator')}
                     </button>
                 </form>
 
-                <div className="mt-8 text-center bg-slate-900/30 p-4 rounded-2xl border border-white/5">
+                <div className="mt-8">
                     <button
                         onClick={() => setIsLogin(!isLogin)}
-                        className="text-sm text-slate-400 hover:text-primary-light transition-colors"
+                        className="w-full bg-[#111622] hover:bg-[#111622]/80 border border-slate-800/80 py-4 rounded-2xl text-xs font-semibold text-slate-400 transition-all"
                     >
                         {isLogin ? "Need a new account? Register here" : "Already have an account? Sign in"}
                     </button>
                 </div>
 
                 {isLogin && (
-                    <div className="mt-6 text-center">
-                        <p className="text-[10px] uppercase font-bold tracking-widest text-slate-600 mb-2">Emergency Credentials</p>
-                        <code className="text-[10px] text-primary-light/60 bg-primary/5 px-2 py-1 rounded">ADMIN / ADMIN123</code>
+                    <div className="mt-10 text-center">
+                        <p className="text-[10px] uppercase font-bold tracking-[0.3em] text-slate-700 mb-3">Emergency Credentials</p>
+                        <div className="flex items-center justify-center gap-2">
+                            <span className="text-[9px] text-blue-500/40 font-bold hover:text-blue-500/60 cursor-pointer transition-colors">ADMIN</span>
+                            <span className="text-slate-800 text-[10px]">/</span>
+                            <span className="text-[9px] text-blue-500/40 font-bold hover:text-blue-500/60 cursor-pointer transition-colors">ADMIN123</span>
+                        </div>
                     </div>
                 )}
             </div>

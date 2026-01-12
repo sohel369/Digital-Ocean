@@ -7,7 +7,9 @@ import {
     signInWithEmailAndPassword,
     updateProfile,
     onAuthStateChanged,
-    signOut
+    signOut,
+    signInWithRedirect,
+    getRedirectResult
 } from "firebase/auth";
 
 const firebaseConfig = {
@@ -30,6 +32,10 @@ export const signInWithGoogle = async () => {
         return result.user;
     } catch (error) {
         console.error("Google Sign-In Error:", error);
+        // Fallback to redirect if popup is blocked or fails due to COOP
+        if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request' || error.message.includes('COOP')) {
+            await signInWithRedirect(auth, googleProvider);
+        }
         throw error;
     }
 };
@@ -37,10 +43,11 @@ export const signInWithGoogle = async () => {
 export const registerWithEmail = async (email, password, displayName) => {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
         if (displayName) {
-            await updateProfile(userCredential.user, { displayName });
+            await updateProfile(user, { displayName });
         }
-        return userCredential.user;
+        return user;
     } catch (error) {
         throw error;
     }
@@ -55,4 +62,4 @@ export const loginWithEmail = async (email, password) => {
     }
 };
 
-export { onAuthStateChanged, signOut };
+export { onAuthStateChanged, signOut, signInWithPopup, signInWithRedirect, getRedirectResult };

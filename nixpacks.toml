@@ -1,8 +1,8 @@
 [phases.setup]
-nixPkgs = ["python311", "nodejs"]
+nixPkgs = ["python311", "gcc", "postgresql", "file"]
 
-[phases.build]
-cmds = ["pip install -r requirements.txt", "npm install", "npm run build"]
+[phases.install]
+cmds = ["cd backend && python3 -m pip install -r requirements.txt"]
 
 [start]
-cmd = "gunicorn app:app"
+cmd = "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT"

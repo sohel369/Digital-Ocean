@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     STRIPE_WEBHOOK_SECRET: str = ""
     
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
+    CORS_ORIGINS: Any = ["http://localhost:3000", "http://localhost:5173"]
     
     # Security
     RATE_LIMIT_PER_MINUTE: int = 100
@@ -66,12 +66,22 @@ class Settings(BaseSettings):
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
-    def assemble_cors_origins(cls, v: Any) -> Union[List[str], str]:
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
+    def assemble_cors_origins(cls, v: Any) -> List[str]:
+        if isinstance(v, str):
+            if v.startswith("[") and v.endswith("]"):
+                try:
+                    return json.loads(v)
+                except:
+                    # If JSON parsing fails, treat it as a raw string and split
+                    v = v.strip("[]").replace("'", "").replace('"', "")
+            
+            if v == "*" or v == "":
+                return ["*"]
+            
+            return [i.strip() for i in v.split(",") if i.strip()]
+        elif isinstance(v, list):
             return v
-        return v
+        return ["*"] # Fallback to allow all
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

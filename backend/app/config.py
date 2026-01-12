@@ -3,8 +3,10 @@ Configuration settings for the application.
 Loads environment variables and provides typed configuration.
 """
 from pydantic_settings import BaseSettings
-from typing import List
+from pydantic import field_validator
+from typing import List, Any, Union
 import os
+import json
 
 
 class Settings(BaseSettings):
@@ -61,6 +63,15 @@ class Settings(BaseSettings):
         env_file = ".env"
         case_sensitive = True
         extra = "ignore"
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Any) -> Union[List[str], str]:
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(",")]
+        elif isinstance(v, (list, str)):
+            return v
+        return v
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

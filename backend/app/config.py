@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     STRIPE_PUBLISHABLE_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
     
-    # CORS - Default to allow all origins for production flexibility
+    # CORS - Default to allow all origins for production
     CORS_ORIGINS: Any = ["*"]
     
     # Security

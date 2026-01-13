@@ -99,7 +99,7 @@ const Login = () => {
                     <button
                         onClick={handleGoogleSignIn}
                         disabled={loading}
-                        className="w-full bg-[#f8f9fa] text-slate-800 font-bold py-3.5 rounded-2xl flex items-center justify-center gap-3 hover:bg-white transition-all shadow-lg active:scale-[0.98]"
+                        className="w-full bg-[#f8f9fa] text-slate-800 font-bold py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-white transition-all shadow-lg active:scale-[0.98]"
                     >
                         <svg className="w-5 h-5" viewBox="0 0 24 24">
                             <path
@@ -119,7 +119,7 @@ const Login = () => {
                                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                             />
                         </svg>
-                        <span>Continue with Google</span>
+                        <span>{isLogin ? 'Continue with Google' : 'Sign up with Google'}</span>
                     </button>
 
                     <div className="relative flex items-center py-2">
@@ -174,10 +174,11 @@ const Login = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-[#2563eb] text-white font-bold py-4.5 rounded-2xl shadow-xl shadow-blue-600/20 hover:bg-blue-600 transition-all active:scale-[0.98] disabled:opacity-50 mt-4 text-sm"
+                        className="w-full bg-[#2563eb] text-white font-bold py-4 rounded-2xl shadow-xl shadow-blue-600/20 hover:bg-blue-600 transition-all active:scale-[0.98] disabled:opacity-50 text-sm"
                     >
                         {loading ? 'Processing...' : (isLogin ? 'Execute Login' : 'Register Operator')}
                     </button>
+
                 </form>
 
                 <div className="mt-8">

@@ -1,18 +1,9 @@
 [build]
 builder = "nixpacks"
-
-[build.nixpacks]
-providers = ["python"]
-nixPkgs = ["python311", "python311Packages.pip", "python311Packages.virtualenv"]
-installPlan = { cmds = [
-    "cd backend && python -m venv /opt/venv",
-    "cd backend && /opt/venv/bin/pip install --upgrade pip",
-    "cd backend && /opt/venv/bin/pip install -r requirements.txt"
-] }
+nixpacksConfigPath = "nixpacks.toml"
 
 [deploy]
 startCommand = "cd backend && /opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/health"
-healthcheckTimeout = 300
+healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 3

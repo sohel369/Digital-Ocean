@@ -32,10 +32,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Create database tables
-# Note: In production, consider using Alembic migrations for more control
-# Tables are created at startup - this is idempotent (safe to run multiple times)
-Base.metadata.create_all(bind=engine)
+# Database initialization is handled in startup_event
+# Base.metadata.create_all(bind=engine)
 
 # Initialize FastAPI app
 app = FastAPI(

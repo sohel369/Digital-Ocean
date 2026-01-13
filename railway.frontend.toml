@@ -1,0 +1,14 @@
+# Railway configuration for Frontend deployment ONLY
+# This is for the "Digital-Ocean" service
+
+[build]
+builder = "nixpacks"
+nixpacksConfigPath = "nixpacks.frontend.toml"
+
+[deploy]
+# Frontend start command
+startCommand = "npm run start"
+healthcheckPath = "/"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

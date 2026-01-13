@@ -1,12 +1,13 @@
-# Railway configuration for Backend deployment
-# This configures the Python FastAPI backend ONLY
+# Railway configuration for Backend deployment ONLY
+# Frontend service should use Dashboard settings or railway.frontend.toml
 
 [build]
 builder = "nixpacks"
 nixpacksConfigPath = "nixpacks.toml"
 
 [deploy]
-startCommand = "npm run start"
+# Backend start command - for balanced-wholeness service
+startCommand = "cd backend && /opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

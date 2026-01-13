@@ -1,0 +1,17 @@
+# Nixpacks configuration for Frontend deployment
+# This is for the "Digital-Ocean" service on Railway
+
+# Force Node.js provider only - ignore Python
+providers = ["node"]
+
+[phases.install]
+cmds = ["npm install"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "npm run start"
+
+[variables]
+NODE_ENV = "production"

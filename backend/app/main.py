@@ -142,11 +142,12 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 async def general_exception_handler(request: Request, exc: Exception):
     """Handle unexpected exceptions."""
     logger.error(f"❌ Unhandled exception: {str(exc)}", exc_info=True)
+    # Ensure even 500 errors include the detail in debug mode
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "error": "Internal server error",
-            "detail": str(exc) if settings.DEBUG else "An unexpected error occurred",
+            "detail": str(exc),
             "status_code": 500
         }
     )

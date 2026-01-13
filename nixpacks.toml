@@ -1,12 +1,12 @@
 # Nixpacks configuration for Railway deployment
 # This file supports BOTH Python backend AND Node.js frontend
 
-# Don't force any specific provider - let Railway auto-detect
-providers = []
+# Force Python provider for backend
+providers = ["python"]
 
 [phases.setup]
-# nodejs_20 includes npm, python311 for backend
-nixPkgs = ["python311", "python311Packages.pip", "python311Packages.virtualenv", "nodejs_20"]
+# python311 for backend
+nixPkgs = ["python311", "python311Packages.pip", "python311Packages.virtualenv"]
 
 [phases.install]
 cmds = [
@@ -15,12 +15,8 @@ cmds = [
     "cd backend && /opt/venv/bin/pip install -r requirements.txt"
 ]
 
-# Build phase - empty by default, can be overridden per service
-[phases.build]
-cmds = []
-
-# [start]
-# cmd = "cd backend && /opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
+[start]
+cmd = "cd backend && /opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
 
 [variables]
 PYTHONUNBUFFERED = "1"

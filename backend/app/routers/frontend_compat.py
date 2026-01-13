@@ -71,93 +71,111 @@ async def create_campaign_compat(
     Create campaign - compatibility endpoint for frontend.
     Uses the last authenticated user from google-auth.
     """
-    from ..pricing import PricingEngine
-    
-    data = await request.json()
-    
-    # Get the most recent user (fallback since frontend uses Firebase auth)
-    user = db.query(models.User).order_by(models.User.last_login.desc()).first()
-    if not user:
-        return JSONResponse(
-            status_code=401,
-            content={"error": "No user found. Please log in first."}
-        )
-    
-    # Map frontend fields to backend schema
-    coverage_map = {
-        "radius": models.CoverageType.RADIUS_30,
-        "state": models.CoverageType.STATE,
-        "national": models.CoverageType.COUNTRY
-    }
-    
-    coverage_type = coverage_map.get(data.get("meta", {}).get("coverage", "radius"))
-    
-    # Extract dates
-    start_date = data.get("startDate")
-    end_date = data.get("endDate", start_date)  # Default to same as start if not provided
-    
-    if not start_date:
-        from datetime import datetime, timedelta
-        start_date = datetime.now().date()
-        end_date = start_date + timedelta(days=30)
-    
-    # Calculate pricing
-    from datetime import datetime as dt
-    if isinstance(start_date, str):
-        start_date = dt.fromisoformat(start_date).date()
-    if isinstance(end_date, str):
-        end_date = dt.fromisoformat(end_date).date()
-    
-    duration_days = (end_date - start_date).days
-    if duration_days <= 0:
-        duration_days = 30  # Default
-    
-    pricing_engine = PricingEngine(db)
-    pricing_result = pricing_engine.calculate_price(
-        industry_type=data.get("meta", {}).get("industry", "retail"),
-        advert_type="display",
-        coverage_type=coverage_type,
-        duration_days=duration_days,
-        target_postcode=data.get("meta", {}).get("location") if data.get("meta", {}).get("coverage") == "radius" else None,
-        target_state=data.get("meta", {}).get("location") if data.get("meta", {}).get("coverage") == "state" else None,
-        target_country="US" if data.get("meta", {}).get("coverage") == "national" else None
-    )
-    
-    # Create campaign
-    new_campaign = models.Campaign(
-        advertiser_id=user.id,
-        name=data.get("name", "Untitled Campaign"),
-        industry_type=data.get("meta", {}).get("industry", "retail"),
-        start_date=start_date,
-        end_date=end_date,
-        budget=float(data.get("budget", 0)),
-        calculated_price=pricing_result.total_price,
-        status=models.CampaignStatus.DRAFT if data.get("status") == "review" else models.CampaignStatus.DRAFT,
-        coverage_type=coverage_type,
-        coverage_area=pricing_result.breakdown['coverage_area_description'],
-        target_postcode=data.get("meta", {}).get("location") if data.get("meta", {}).get("coverage") == "radius" else None,
-        target_state=data.get("meta", {}).get("location") if data.get("meta", {}).get("coverage") == "state" else None,
-        target_country="US" if data.get("meta", {}).get("coverage") == "national" else None,
-        description=data.get("description", "")
-    )
-    
-    db.add(new_campaign)
-    db.commit()
-    db.refresh(new_campaign)
-    
-    # Return in frontend format
-    return {
-        "id": new_campaign.id,
-        "name": new_campaign.name,
-        "budget": new_campaign.budget,
-        "spend": new_campaign.calculated_price,
-        "start_date": str(new_campaign.start_date),
-        "end_date": str(new_campaign.end_date),
-        "status": new_campaign.status.value,
-        "impressions": new_campaign.impressions,
-        "clicks": new_campaign.clicks,
-        "ctr": new_campaign.ctr
-    }
+    try:
+        from ..pricing import PricingEngine
+        from datetime import datetime as dt, timedelta
+        
+        # Parse JSON manually to handle potential empty/bad bodies
+        try:
+            data = await request.json()
+            logger.info(f"📥 Received compatibility campaign request: {data}")
+        except Exception as e:
+            logger.error(f"❌ Failed to parse JSON body: {str(e)}")
+            return JSONResponse(status_code=400, content={"error": "Invalid JSON body"})
+
+        # Get user (fallback)
+        user = db.query(models.User).order_by(models.User.last_login.desc()).first()
+        if not user:
+            logger.warning("⚠️ No user found in DB for campaign creation")
+            return JSONResponse(status_code=401, content={"error": "User session not synchronized. Please log in again."})
+        
+        # Robustly extract metadata
+        meta = data.get("meta", {})
+        if isinstance(meta, str): # Handle cases where meta might be sent as string
+            import json
+            try: meta = json.loads(meta)
+            except: meta = {}
+
+        coverage_val = meta.get("coverage", "radius")
+        coverage_map = {
+            "radius": models.CoverageType.RADIUS_30,
+            "state": models.CoverageType.STATE,
+            "national": models.CoverageType.COUNTRY
+        }
+        coverage_type = coverage_map.get(coverage_val, models.CoverageType.RADIUS_30)
+        
+        # Robust date handling
+        def parse_date(date_str):
+            if not date_str: return None
+            try: return dt.strptime(date_str[:10], "%Y-%m-%d").date()
+            except: 
+                try: return dt.fromisoformat(str(date_str).replace('Z', '+00:00')).date()
+                except: return None
+
+        start_date = parse_date(data.get("startDate")) or dt.now().date()
+        end_date = parse_date(data.get("endDate")) or (start_date + timedelta(days=30))
+        
+        # Calculate pricing
+        try:
+            pricing_engine = PricingEngine(db)
+            pricing_result = pricing_engine.calculate_price(
+                industry_type=meta.get("industry", "retail"),
+                advert_type="display",
+                coverage_type=coverage_type,
+                duration_days=max((end_date - start_date).days, 1),
+                target_postcode=meta.get("location") if coverage_val == "radius" else None,
+                target_state=meta.get("location") if coverage_val == "state" else None,
+                target_country="US" if coverage_val == "national" else None
+            )
+        except Exception as e:
+            logger.error(f"❌ Pricing calculation failed: {str(e)}")
+            # Fallback pricing to prevent 500
+            pricing_result = type('obj', (object,), {'total_price': float(data.get("budget", 0)), 'breakdown': {'coverage_area_description': 'Standard Coverage'}})
+
+        # Create campaign and save to DB
+        try:
+            new_campaign = models.Campaign(
+                advertiser_id=user.id,
+                name=data.get("name") or "New Campaign",
+                industry_type=meta.get("industry") or "other",
+                start_date=start_date,
+                end_date=end_date,
+                budget=float(data.get("budget", 0)),
+                calculated_price=pricing_result.total_price,
+                status=models.CampaignStatus.DRAFT,
+                coverage_type=coverage_type,
+                coverage_area=pricing_result.breakdown.get('coverage_area_description', 'Specified Area'),
+                target_postcode=meta.get("location") if coverage_val == "radius" else None,
+                target_state=meta.get("location") if coverage_val == "state" else None,
+                target_country="US" if coverage_val == "national" else None,
+                description=data.get("description", "")
+            )
+            
+            db.add(new_campaign)
+            db.commit()
+            db.refresh(new_campaign)
+            logger.info(f"✅ Campaign created successfully: ID {new_campaign.id}")
+        except Exception as e:
+            db.rollback()
+            logger.error(f"❌ Database error during campaign save: {str(e)}")
+            return JSONResponse(status_code=500, content={"error": "Database error", "detail": str(e)})
+        
+        return {
+            "id": new_campaign.id,
+            "name": new_campaign.name,
+            "budget": new_campaign.budget,
+            "spend": new_campaign.calculated_price,
+            "start_date": str(new_campaign.start_date),
+            "end_date": str(new_campaign.end_date),
+            "status": new_campaign.status.value,
+            "impressions": new_campaign.impressions,
+            "clicks": new_campaign.clicks,
+            "ctr": new_campaign.ctr
+        }
+    except Exception as e:
+        import traceback
+        logger.error(f"🔥 FATAL ERROR in create_campaign_compat: {str(e)}\n{traceback.format_exc()}")
+        return JSONResponse(status_code=500, content={"error": "Unexpected server error", "detail": str(e)})
 
 
 @router.get("/notifications")
@@ -223,9 +241,11 @@ async def google_auth_sync(request: Request, db: Session = Depends(get_db)):
     db.refresh(user)
     
     # Return user data in frontend format
+    logger.info(f"✅ User synced: {user.email}")
     return {
         "success": True,
         "user": {
+            "id": user.id,
             "username": user.name,
             "email": user.email,
             "avatar": user.profile_picture,

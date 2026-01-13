@@ -1,5 +1,9 @@
 # Nixpacks configuration for Railway deployment
 # This file configures the Python backend build and deployment
+# IMPORTANT: Force Python provider to ignore package.json
+
+# Force Python provider only - ignore Node.js
+providers = ["python"]
 
 [phases.setup]
 nixPkgs = ["python311", "python311Packages.pip", "python311Packages.virtualenv"]
@@ -10,6 +14,10 @@ cmds = [
     "cd backend && /opt/venv/bin/pip install --upgrade pip",
     "cd backend && /opt/venv/bin/pip install -r requirements.txt"
 ]
+
+# Skip the build phase (no need for npm build)
+[phases.build]
+cmds = []
 
 [start]
 cmd = "cd backend && /opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"

@@ -1,8 +1,9 @@
 # Railway configuration for Backend deployment
-# This configures the Python FastAPI backend
+# This configures the Python FastAPI backend ONLY
 
 [build]
 builder = "nixpacks"
+nixpacksConfigPath = "nixpacks.toml"
 
 [deploy]
 startCommand = "cd backend && /opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port $PORT"

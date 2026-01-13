@@ -13,7 +13,7 @@ import {
 import { useApp } from '../context/AppContext';
 
 const Sidebar = () => {
-    const { sidebarOpen, setSidebarOpen, logout } = useApp();
+    const { sidebarOpen, setSidebarOpen, logout, user } = useApp();
 
     const handleNavClick = () => {
         if (window.innerWidth < 768) {
@@ -85,18 +85,21 @@ const Sidebar = () => {
                         </NavLink>
                     ))}
 
-                    <div className="pt-8">
-                        <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-4 pl-2">System</p>
-                        <NavLink
-                            to="/admin/pricing"
-                            onClick={handleNavClick}
-                            className={inactiveClass}
-                        >
-                            <Settings size={22} className="text-slate-500" />
-                            Admin Controls
-                        </NavLink>
-                    </div>
+                    {user?.role === 'admin' && (
+                        <div className="pt-8">
+                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-4 pl-2">System</p>
+                            <NavLink
+                                to="/admin/pricing"
+                                onClick={handleNavClick}
+                                className={inactiveClass}
+                            >
+                                <Settings size={22} className="text-slate-500" />
+                                Admin Controls
+                            </NavLink>
+                        </div>
+                    )}
                 </nav>
+
 
                 {/* Footer User Profile */}
                 <div className="p-6 border-t border-white/5">

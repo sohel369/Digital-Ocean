@@ -39,14 +39,31 @@ export const AppProvider = ({ children }) => {
             ? 'https://balanced-wholeness-production-ca00.up.railway.app/api'
             : '/api');
 
+    // Auth header helper
+    const getAuthHeaders = () => {
+        const token = localStorage.getItem('access_token');
+        return token ? { 'Authorization': `Bearer ${token}` } : {};
+    };
+
+
     const fetchData = async () => {
         try {
             // Fetch basic data in parallel
             const [statsRes, campaignsRes, notifRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/stats`, { credentials: 'include' }),
-                fetch(`${API_BASE_URL}/campaigns`, { credentials: 'include' }),
-                fetch(`${API_BASE_URL}/notifications`, { credentials: 'include' })
+                fetch(`${API_BASE_URL}/stats`, {
+                    headers: { ...getAuthHeaders() },
+                    credentials: 'include'
+                }),
+                fetch(`${API_BASE_URL}/campaigns`, {
+                    headers: { ...getAuthHeaders() },
+                    credentials: 'include'
+                }),
+                fetch(`${API_BASE_URL}/notifications`, {
+                    headers: { ...getAuthHeaders() },
+                    credentials: 'include'
+                })
             ]);
+
 
             // Clear session if any core request is unauthorized
             if (statsRes.status === 401 || campaignsRes.status === 401) {
@@ -123,7 +140,12 @@ export const AppProvider = ({ children }) => {
                 })
             });
             if (response.ok) {
-                return await response.json();
+                const data = await response.json();
+                if (data.access_token) {
+                    localStorage.setItem('access_token', data.access_token);
+                    localStorage.setItem('refresh_token', data.refresh_token);
+                }
+                return data;
             }
             throw new Error('Backend sync failed');
         } catch (error) {
@@ -142,6 +164,7 @@ export const AppProvider = ({ children }) => {
         }
     };
 
+
     const login = async (email, password) => {
         // Handle Emergency Credentials locally
         const cleanEmail = (email || '').trim().toUpperCase();
@@ -149,6 +172,47 @@ export const AppProvider = ({ children }) => {
         console.log('Login attempt:', { email: cleanEmail, password: cleanPassword });
 
         if (cleanEmail === 'ADMIN' && cleanPassword === 'ADMIN123') {
+            try {
+                // Attempt real backend authentication for emergency bypass
+                const formData = new FormData();
+                formData.append('username', 'admin@adplatform.com'); // Match seeded admin
+                formData.append('password', 'admin123');
+
+                const response = await fetch(`${API_BASE_URL.replace('/api', '/auth')}/login`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('access_token', data.access_token);
+                    localStorage.setItem('refresh_token', data.refresh_token);
+
+                    // Fetch real admin data
+                    const meRes = await fetch(`${API_BASE_URL.replace('/api', '/auth')}/me`, {
+                        headers: { 'Authorization': `Bearer ${data.access_token}` }
+                    });
+                    const adminData = await meRes.json();
+
+                    const userObj = {
+                        id: adminData.id,
+                        username: adminData.name,
+                        email: adminData.email,
+                        role: adminData.role,
+                        avatar: adminData.profile_picture
+                    };
+
+                    setUser(userObj);
+                    localStorage.setItem('user', JSON.stringify(userObj));
+                    toast.success('System Access Granted', { description: 'Authenticated via emergency bypass.' });
+                    await fetchData();
+                    return { success: true, user: userObj };
+                }
+            } catch (err) {
+                console.warn("Emergency bypass backend sync failed, using mock data.", err);
+            }
+
+            // Extreme fallback if backend init_db hasn't run or is offline
             const adminUser = {
                 username: 'Administrator',
                 email: 'admin@adplatform.net',
@@ -160,6 +224,7 @@ export const AppProvider = ({ children }) => {
             toast.success('System Access Granted', { description: 'Authenticated via emergency bypass.' });
             return { success: true, user: adminUser };
         }
+
 
         try {
             const fbUser = await loginWithEmail(email, password);
@@ -271,10 +336,14 @@ export const AppProvider = ({ children }) => {
 
             const response = await fetch(`${API_BASE_URL}/campaigns`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...getAuthHeaders()
+                },
                 credentials: 'include',
                 body: JSON.stringify(campaign)
             });
+
 
             console.log('Response status:', response.status);
             console.log('Response headers:', Object.fromEntries(response.headers.entries()));
@@ -341,8 +410,10 @@ export const AppProvider = ({ children }) => {
         try {
             await fetch(`${API_BASE_URL}/notifications/read`, {
                 method: 'POST',
+                headers: { ...getAuthHeaders() },
                 credentials: 'include'
             });
+
             setNotifications(prev => prev.map(n => ({ ...n, read: true })));
         } catch (error) {
             console.error("Error marking as read:", error);
@@ -354,15 +425,20 @@ export const AppProvider = ({ children }) => {
             await signOut(auth); // Terminate Firebase session
             await fetch(`${API_BASE_URL}/logout`, {
                 method: 'POST',
+                headers: { ...getAuthHeaders() },
                 credentials: 'include'
             });
+
         } catch (error) {
             console.error("Logout error:", error);
         } finally {
             localStorage.removeItem('user');
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
             setUser(null);
             window.location.href = '/login';
         }
+
     };
 
     return (

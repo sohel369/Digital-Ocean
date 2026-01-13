@@ -11,7 +11,9 @@ from enum import Enum
 # ==================== Enums ====================
 class UserRole(str, Enum):
     ADVERTISER = "advertiser"
+    USER = "user"
     ADMIN = "admin"
+
 
 
 class CampaignStatus(str, Enum):

@@ -19,27 +19,61 @@ router = APIRouter(prefix="/api", tags=["Frontend Compatibility"])
 
 
 @router.get("/stats")
-async def get_stats(db: Session = Depends(get_db)):
+async def get_stats(
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
     """
-    Get dashboard statistics.
-    Returns empty stats (frontend uses Firebase auth only).
+    Get dashboard statistics for the authenticated user.
     """
+    # If admin, show system-wide stats or just 0s as per original compat intent
+    # But for advertiser, show their own stats
+    if current_user.role == models.UserRole.ADMIN:
+        from sqlalchemy import func
+        total_spend = db.query(func.sum(models.Campaign.calculated_price)).scalar() or 0
+        impressions = db.query(func.sum(models.Campaign.impressions)).scalar() or 0
+        clicks = db.query(func.sum(models.Campaign.clicks)).scalar() or 0
+        return {
+            "totalSpend": round(float(total_spend), 2),
+            "impressions": int(impressions),
+            "clicks": int(clicks),
+            "ctr": round((clicks / impressions * 100) if impressions > 0 else 0, 2),
+            "budgetRemaining": 0
+        }
+    
+    # Calculate for specific user
+    user_campaigns = db.query(models.Campaign).filter(models.Campaign.advertiser_id == current_user.id).all()
+    total_spend = sum(c.calculated_price for c in user_campaigns if c.calculated_price)
+    impressions = sum(c.impressions for c in user_campaigns)
+    clicks = sum(c.clicks for c in user_campaigns)
+    
     return {
-        "totalSpend": 0,
-        "impressions": 0,
-        "clicks": 0,
-        "ctr": 0.0,
-        "budgetRemaining": 0
+        "totalSpend": round(float(total_spend), 2),
+        "impressions": int(impressions),
+        "clicks": int(clicks),
+        "ctr": round((clicks / impressions * 100) if impressions > 0 else 0, 2),
+        "budgetRemaining": sum(c.budget for c in user_campaigns) - total_spend
     }
 
 
+
 @router.get("/campaigns")
-async def list_campaigns_compat(db: Session = Depends(get_db)):
+async def list_campaigns_compat(
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
     """
-    List campaigns.
-    Returns all campaigns (frontend handles filtering via Firebase auth).
+    List campaigns with strict data isolation.
+    If admin -> all campaigns. If advertiser -> only own campaigns.
     """
-    campaigns = db.query(models.Campaign).order_by(models.Campaign.created_at.desc()).limit(50).all()
+    query = db.query(models.Campaign)
+    
+    # Role-based filtering
+    if current_user.role != models.UserRole.ADMIN:
+        query = query.filter(models.Campaign.advertiser_id == current_user.id)
+        
+    campaigns = query.order_by(models.Campaign.created_at.desc()).limit(50).all()
+
     
     # Transform to frontend format
     return [
@@ -71,39 +105,24 @@ async def list_campaigns_compat(db: Session = Depends(get_db)):
 @router.post("/campaigns")
 async def create_campaign_compat(
     request: Request,
+    current_user: models.User = Depends(auth.get_current_active_user),
     db: Session = Depends(get_db)
 ):
     """
     Create campaign - compatibility endpoint for frontend.
-    Uses the last authenticated user from google-auth.
+    Strictly uses the authenticated user as the owner.
     """
     try:
         from ..pricing import PricingEngine
         from datetime import datetime as dt, timedelta
         
-        # Parse JSON manually to handle potential empty/bad bodies
+        # Parse JSON manually
         try:
             data = await request.json()
-            logger.info(f"📥 Received compatibility campaign request: {data}")
-        except Exception as e:
-            logger.error(f"❌ Failed to parse JSON body: {str(e)}")
+        except Exception:
             return JSONResponse(status_code=400, content={"error": "Invalid JSON body"})
 
-        # Get user (fallback)
-        email_from_data = data.get("email") or data.get("user", {}).get("email") or "default@example.com"
-        user = db.query(models.User).filter(models.User.email == email_from_data).first()
-        
-        if not user:
-            # Create a default user if none exists to prevent 500
-            user = models.User(
-                email=email_from_data,
-                name="Default Advertiser",
-                role=models.UserRole.ADVERTISER
-            )
-            db.add(user)
-            db.commit()
-            db.refresh(user)
-            logger.info(f"🆕 Created auto-user for campaign: {email_from_data}")
+        user = current_user
 
         # Extract meta and provide defaults
         meta = data.get("meta", {})
@@ -201,20 +220,20 @@ async def create_campaign_compat(
 
 
 @router.get("/notifications")
-async def get_notifications():
+async def get_notifications(current_user: models.User = Depends(auth.get_current_active_user)):
     """
-    Get notifications.
-    Returns empty array (not implemented yet in backend).
+    Get notifications for the authenticated user.
     """
     return []
 
 
 @router.post("/notifications/read")
-async def mark_notifications_read():
+async def mark_notifications_read(current_user: models.User = Depends(auth.get_current_active_user)):
     """
-    Mark all notifications as read.
+    Mark all notifications as read for current user.
     """
     return {"message": "Marked as read"}
+
 
 
 @router.post("/google-auth")
@@ -262,10 +281,15 @@ async def google_auth_sync(request: Request, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
     
-    # Return user data in frontend format
+    # Return user data in frontend format + JWT tokens
     logger.info(f"✅ User synced: {user.email}")
+    tokens = auth.create_user_tokens(user)
+    
     return {
         "success": True,
+        "access_token": tokens.access_token,
+        "refresh_token": tokens.refresh_token,
+        "token_type": "bearer",
         "user": {
             "id": user.id,
             "username": user.name,
@@ -274,6 +298,7 @@ async def google_auth_sync(request: Request, db: Session = Depends(get_db)):
             "role": user.role.value
         }
     }
+
 
 
 @router.post("/logout")

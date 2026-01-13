@@ -16,7 +16,9 @@ from .database import Base
 class UserRole(str, enum.Enum):
     """User role enumeration."""
     ADVERTISER = "advertiser"
+    USER = "user"
     ADMIN = "admin"
+
 
 
 class CampaignStatus(str, enum.Enum):

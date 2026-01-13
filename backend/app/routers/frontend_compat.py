@@ -84,7 +84,15 @@ async def create_campaign_compat(
             return JSONResponse(status_code=400, content={"error": "Invalid JSON body"})
 
         # Get user (fallback)
-        user = db.query(models.User).order_by(models.User.last_login.desc()).first()
+        # Try to find user by email from data if possible, otherwise use most recent
+        email_from_data = data.get("email") or data.get("user", {}).get("email")
+        user = None
+        if email_from_data:
+            user = db.query(models.User).filter(models.User.email == email_from_data).first()
+        
+        if not user:
+            user = db.query(models.User).order_by(models.User.last_login.desc()).first()
+            
         if not user:
             logger.warning("⚠️ No user found in DB for campaign creation")
             return JSONResponse(status_code=401, content={"error": "User session not synchronized. Please log in again."})

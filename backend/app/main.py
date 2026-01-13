@@ -65,32 +65,6 @@ app = FastAPI(
 # CORS configuration
 # Note: When allow_credentials=True, cannot use allow_origins=["*"]
 # So we handle wildcard specially
-cors_origins = settings.CORS_ORIGINS
-allow_all_origins = cors_origins == ["*"] or "*" in cors_origins
-
-if allow_all_origins:
-    # When allowing all origins with credentials, use regex instead
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origin_regex=".*",  # Match any origin
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-else:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=cors_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
-
-# Request logging middleware
-# @app.middleware("http")
-# async def log_requests(request: Request, call_next):
-#     """Log all incoming requests and their processing time."""
 #     start_time = time.time()
 #     
 #     # Log request
@@ -199,13 +173,16 @@ async def startup_event():
     Run on application startup.
     Initialize database, connections, etc.
     """
+    # Initialize database immediately (creates tables if they don't exist)
+    init_db()
+    logger.info("✅ Database tables initialized successfully")
+    
     logger.info("🚀 Starting Advertiser Dashboard API")
     logger.info(f"📍 Environment: {'Development' if settings.DEBUG else 'Production'}")
-    logger.info(f"🗄️  Database: {settings.DATABASE_URL.split('@')[1] if '@' in settings.DATABASE_URL else 'configured'}")
-    
-    # Initialize database (creates tables if they don't exist - idempotent)
-    init_db()
-    logger.info("✅ Database tables initialized")
+    if '@' in settings.DATABASE_URL:
+        logger.info(f"🗄️  Database: {settings.DATABASE_URL.split('@')[1]}")
+    else:
+        logger.info("🗄️  Database: configured")
 
 
 @app.on_event("shutdown")

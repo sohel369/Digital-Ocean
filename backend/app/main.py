@@ -2,15 +2,24 @@
 FastAPI Application - Advertiser Dashboard Backend
 Main application entry point with router configuration and middleware.
 """
+import logging
+import time
+
+from .config import settings
+
+# Configure logging at the very top
+logging.basicConfig(
+    level=getattr(logging, settings.LOG_LEVEL, logging.INFO),
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
+
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-import time
-import logging
 
-from .config import settings
 from .database import engine, Base, init_db
 
 # Import routers
@@ -25,12 +34,6 @@ from .routers import (
     frontend_compat
 )
 
-# Configure logging
-logging.basicConfig(
-    level=getattr(logging, settings.LOG_LEVEL),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 # Database initialization is handled in startup_event
 # Base.metadata.create_all(bind=engine)

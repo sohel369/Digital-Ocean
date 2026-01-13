@@ -9,6 +9,12 @@ from datetime import datetime
 from .. import models, auth
 from ..database import get_db
 
+import logging
+
+# Ensure logger is defined at module level
+logger = logging.getLogger(__name__)
+
+
 router = APIRouter(prefix="/api", tags=["Frontend Compatibility"])
 
 
@@ -99,7 +105,18 @@ async def create_campaign_compat(
             db.refresh(user)
             logger.info(f"🆕 Created auto-user for campaign: {email_from_data}")
 
-        # ... rest of the logic ...
+        # Extract meta and provide defaults
+        meta = data.get("meta", {})
+        if not isinstance(meta, dict):
+            meta = {}
+            
+        # Ensure we have some basic meta values even if data format is flat
+        if not meta:
+            meta = {
+                "coverage": data.get("coverage", "radius"),
+                "industry": data.get("ad_format", "retail"),  # Use ad_format as industry fallback for compatibility
+                "location": data.get("location", "Standard")
+            }
         coverage_val = meta.get("coverage", "radius")
         coverage_map = {
             "radius": models.CoverageType.RADIUS_30,

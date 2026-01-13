@@ -65,22 +65,33 @@ app = FastAPI(
 # CORS configuration
 # Note: When allow_credentials=True, cannot use allow_origins=["*"]
 # So we handle wildcard specially
-#     start_time = time.time()
-#     
-#     # Log request
-#     logger.info(f"📨 {request.method} {request.url.path}")
-#     
-#     # Process request
-#     response = await call_next(request)
-#     
-#     # Calculate processing time
-#     process_time = time.time() - start_time
-#     response.headers["X-Process-Time"] = str(process_time)
-#     
-#     # Log response
-#     logger.info(f"✅ {request.method} {request.url.path} - {response.status_code} ({process_time:.3f}s)")
-#     
-#     return response
+# Request Logger Middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Detailed logging for debugging 500 errors."""
+    logger.info(f"🔍 [REQUEST] {request.method} {request.url.path}")
+    logger.debug(f"📋 Headers: {dict(request.headers)}")
+    
+    try:
+        response = await call_next(request)
+        logger.info(f"✅ [RESPONSE] Status: {response.status_code}")
+        return response
+    except Exception as exc:
+        logger.error(f"🔥 [CRASH] Unhandled exception: {str(exc)}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Internal server error", "detail": str(exc)}
+        )
+
+# Fixed CORS Middleware - Mandatory for 'credentials: include'
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex="https?://.*", # Safely allow any origin with credentials
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"]
+)
 
 
 # ==================== Exception Handlers ====================

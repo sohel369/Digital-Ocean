@@ -1,9 +1,18 @@
-# Force Railway to use Python instead of Node.js
+# Nixpacks configuration for Railway deployment
+# This file configures the Python backend build and deployment
+
 [phases.setup]
-nixPkgs = ["python311", "python311Packages.pip"]
+nixPkgs = ["python311", "python311Packages.pip", "python311Packages.virtualenv"]
 
 [phases.install]
-cmds = ["cd backend && pip install -r requirements.txt"]
+cmds = [
+    "cd backend && python -m venv /opt/venv",
+    "cd backend && /opt/venv/bin/pip install --upgrade pip",
+    "cd backend && /opt/venv/bin/pip install -r requirements.txt"
+]
 
 [start]
-cmd = "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+cmd = "cd backend && /opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
+
+[variables]
+PYTHONUNBUFFERED = "1"

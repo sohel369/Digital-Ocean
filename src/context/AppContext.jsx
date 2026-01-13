@@ -262,10 +262,10 @@ export const AppProvider = ({ children }) => {
 
     const addCampaign = async (campaign) => {
         try {
-            console.log('Creating campaign at:', `${API_BASE_URL}/campaigns`);
+            console.log('Creating campaign at:', `${API_BASE_URL}/campaigns/create`);
             console.log('Campaign data:', JSON.stringify(campaign, null, 2));
 
-            const response = await fetch(`${API_BASE_URL}/campaigns`, {
+            const response = await fetch(`${API_BASE_URL}/campaigns/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',

@@ -50,8 +50,8 @@ class Settings(BaseSettings):
     STRIPE_PUBLISHABLE_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
     
-    # CORS
-    CORS_ORIGINS: Any = ["http://localhost:3000", "http://localhost:5173"]
+    # CORS - Default to allow all origins for production flexibility
+    CORS_ORIGINS: Any = ["*"]
     
     # Security
     RATE_LIMIT_PER_MINUTE: int = 100

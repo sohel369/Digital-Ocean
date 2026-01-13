@@ -1,12 +1,12 @@
 # Nixpacks configuration for Railway deployment
-# This file now supports BOTH Python backend AND Node.js frontend
-# Railway will use the correct parts based on build/start commands
+# This file supports BOTH Python backend AND Node.js frontend
 
-# Include both Python and Node.js
+# Don't force any specific provider - let Railway auto-detect
 providers = []
 
 [phases.setup]
-nixPkgs = ["python311", "python311Packages.pip", "python311Packages.virtualenv", "nodejs_20", "npm"]
+# nodejs_20 includes npm, python311 for backend
+nixPkgs = ["python311", "python311Packages.pip", "python311Packages.virtualenv", "nodejs_20"]
 
 [phases.install]
 cmds = [

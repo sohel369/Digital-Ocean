@@ -1,8 +1,12 @@
 # Nixpacks configuration for Frontend deployment
 # This is for the "Digital-Ocean" service on Railway
 
-# Force Node.js provider only - ignore Python
+# Force Node.js provider only
 providers = ["node"]
+
+[phases.setup]
+# nodejs_20 includes npm, no need for separate npm package
+nixPkgs = ["nodejs_20"]
 
 [phases.install]
 cmds = ["npm install"]

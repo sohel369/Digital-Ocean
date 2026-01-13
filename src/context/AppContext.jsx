@@ -33,7 +33,11 @@ export const AppProvider = ({ children }) => {
         }
     });
 
-    const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+    // Base URL configuration for API calls
+    const API_BASE_URL = import.meta.env.VITE_API_URL ||
+        (window.location.hostname !== 'localhost'
+            ? 'https://balanced-wholeness-production-ca00.up.railway.app/api'
+            : '/api');
 
     const fetchData = async () => {
         try {

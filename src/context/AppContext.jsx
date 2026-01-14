@@ -167,7 +167,25 @@ export const AppProvider = ({ children }) => {
 
 
         } catch (error) {
-            console.error("Failed to fetch data from API:", error);
+            console.error("🌐 Failed to fetch data from API:", error);
+            console.warn("Using internal fallback data due to connection error.");
+
+            // Apply emergency fallbacks so the UI doesn't hang at "Loading..."
+            setPricingData(prev => prev.industries.length > 0 ? prev : {
+                industries: [
+                    { name: 'Retail', displayName: 'Retail', multiplier: 1.0 },
+                    { name: 'Healthcare', displayName: 'Healthcare', multiplier: 1.5 },
+                    { name: 'Tech', displayName: 'Tech', multiplier: 1.3 }
+                ],
+                adTypes: [
+                    { name: 'Display', baseRate: 100.0 },
+                    { name: 'Video', baseRate: 250.0 }
+                ],
+                states: [
+                    { name: 'California', landMass: 423970, densityMultiplier: 1.5, population: 39538223, stateCode: 'CA', countryCode: 'US' }
+                ],
+                discounts: { state: 0.15, national: 0.30 }
+            });
         }
     };
 

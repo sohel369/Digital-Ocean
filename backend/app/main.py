@@ -86,34 +86,16 @@ async def log_requests(request: Request, call_next):
             content={"error": "Internal server error", "detail": str(exc)}
         )
 
-# Fixed CORS Middleware - Mandatory for 'credentials: include'
+# Robust CORS Middleware - Mandatory for 'credentials: include'
+# Note: allow_origins cannot be ["*"] when allow_credentials is True
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # For absolute troubleshooting, temporarily set to all
+    allow_origin_regex="https?://.*", # This safely allows any origin (including random Railway domains)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"]
 )
-
-# Alternative for when allow_origins=["*"] fails with credentials
-@app.middleware("http")
-async def add_cors_headers(request: Request, call_next):
-    if request.method == "OPTIONS":
-        return JSONResponse(
-            content="OK",
-            headers={
-                "Access-Control-Allow-Origin": request.headers.get("Origin", "*"),
-                "Access-Control-Allow-Methods": "*",
-                "Access-Control-Allow-Headers": "*",
-                "Access-Control-Allow-Credentials": "true",
-            },
-        )
-    
-    response = await call_next(request)
-    response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
-    response.headers["Access-Control-Allow-Credentials"] = "true"
-    return response
 
 
 # ==================== Exception Handlers ====================

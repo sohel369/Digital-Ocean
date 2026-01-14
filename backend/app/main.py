@@ -192,6 +192,41 @@ async def startup_event():
     init_db()
     logger.info("✅ Database tables initialized successfully")
     
+    # Schema Migration: Add missing columns if they don't exist (Production Fix)
+    from .database import engine, SessionLocal
+    from sqlalchemy import text
+    
+    with engine.connect() as conn:
+        logger.info("🛠️ Checking for schema migrations...")
+        try:
+            # 1. Add missing columns to campaigns table
+            columns_to_add = [
+                ("headline", "VARCHAR(500)"),
+                ("landing_page_url", "VARCHAR(500)"),
+                ("ad_format", "VARCHAR(100)"),
+                ("description", "TEXT"),
+                ("tags", "JSON")
+            ]
+            
+            for col_name, col_type in columns_to_add:
+                try:
+                    conn.execute(text(f"ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
+                    conn.commit()
+                except Exception as col_err:
+                    logger.warning(f"Note: Column {col_name} check: {col_err}")
+            
+            # 2. Add missing columns to users table (if any)
+            try:
+                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE"))
+                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture VARCHAR(500)"))
+                conn.commit()
+            except Exception:
+                pass
+                
+            logger.info("✅ Schema migrations checked/applied")
+        except Exception as e:
+            logger.error(f"❌ Migration check failed: {e}")
+    
     # Ensure admin user exists for production login
     from .database import SessionLocal
     from . import models, auth

@@ -140,19 +140,17 @@ async def create_campaign_compat(
 
         user = current_user
 
-        # Extract meta and provide defaults
-        meta = data.get("meta", {})
+        # Extract meta and provide robust defaults
+        meta = data.get("meta") or {}
         if not isinstance(meta, dict):
             meta = {}
             
-        # Ensure we have some basic meta values even if data format is flat
-        if not meta:
-            meta = {
-                "coverage": data.get("coverage", "radius"),
-                "industry": data.get("ad_format", "retail"),  # Use ad_format as industry fallback for compatibility
-                "location": data.get("location", "Standard")
-            }
-        coverage_val = meta.get("coverage", "radius")
+        # Handle cases where industry might be an empty string
+        industry_val = meta.get("industry")
+        if not industry_val:
+            industry_val = "Retail" # Standard default
+            
+        coverage_val = meta.get("coverage") or "radius"
         coverage_map = {
             "radius": models.CoverageType.RADIUS_30,
             "state": models.CoverageType.STATE,

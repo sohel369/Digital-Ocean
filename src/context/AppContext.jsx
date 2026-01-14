@@ -46,7 +46,7 @@ export const AppProvider = ({ children }) => {
         (window.location.hostname.includes('railway.app')
             ? `${window.location.protocol}//${window.location.hostname.replace('digital-ocean', 'balanced-wholeness')}/api`
             : (window.location.hostname !== 'localhost'
-                ? 'https://balanced-wholeness-production-01ee.up.railway.app/api'
+                ? 'https://balanced-wholeness-production-ca00.up.railway.app/api' // Original known prod URL
                 : '/api'));
 
     // Debugging helper

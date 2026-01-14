@@ -43,19 +43,13 @@ export const AppProvider = ({ children }) => {
 
     // Base URL configuration for API calls
     const API_BASE_URL = import.meta.env.VITE_API_URL ||
-        (window.location.hostname.includes('railway.app')
-            ? `${window.location.protocol}//${window.location.hostname.replace('digital-ocean', 'balanced-wholeness')}/api`
-            : (window.location.hostname !== 'localhost'
-                ? 'https://balanced-wholeness-production-ca00.up.railway.app/api' // Original known prod URL
-                : '/api'));
+        (window.location.hostname === 'localhost'
+            ? '/api'
+            : 'https://balanced-wholeness-production-ca00.up.railway.app/api');
 
     // Debugging helper
     useEffect(() => {
-        console.log('🌐 API Configuration:', {
-            baseUrl: API_BASE_URL,
-            envUrl: import.meta.env.VITE_API_URL,
-            hostname: window.location.hostname
-        });
+        console.log('🚀 Final API Base URL:', API_BASE_URL);
     }, [API_BASE_URL]);
 
     // Auth header helper
@@ -150,7 +144,7 @@ export const AppProvider = ({ children }) => {
                         { name: 'Tech', multiplier: 1.3 },
                         { name: 'Real Estate', multiplier: 1.2 },
                         { name: 'Finance', multiplier: 1.4 }
-                    ].map(i => ({ ...i, name: formatIndustryName(i.name) })),
+                    ].map(i => ({ ...i, displayName: formatIndustryName(i.name) })),
                     adTypes: [
                         { name: 'Display', baseRate: 100.0 },
                         { name: 'Video', baseRate: 250.0 },

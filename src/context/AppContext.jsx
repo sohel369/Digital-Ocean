@@ -78,13 +78,14 @@ export const AppProvider = ({ children }) => {
 
 
 
-            // Clear session if any core request is unauthorized
+            // Clear session only if we HAD a token and it's now invalid
             if (statsRes.status === 401 || campaignsRes.status === 401) {
-                if (localStorage.getItem('user')) {
+                const hasToken = localStorage.getItem('access_token');
+                if (hasToken && localStorage.getItem('user')) {
                     console.warn("Session expired. Clearing local user data.");
                     localStorage.removeItem('user');
+                    localStorage.removeItem('access_token');
                     setUser(null);
-                    // Only redirect if we are not already on the login page
                     if (window.location.pathname !== '/login') {
                         window.location.href = '/login';
                     }
@@ -230,14 +231,15 @@ export const AppProvider = ({ children }) => {
 
         if (cleanEmail === 'ADMIN' && cleanPassword === 'ADMIN123') {
             try {
-                // Attempt real backend authentication for emergency bypass
-                const formData = new FormData();
-                formData.append('username', 'admin@adplatform.com'); // Match seeded admin
-                formData.append('password', 'admin123');
+                // Attempt real backend authentication for emergency bypass using URLSearchParams (Form Data)
+                const params = new URLSearchParams();
+                params.append('username', 'admin@adplatform.com');
+                params.append('password', 'admin123');
 
                 const response = await fetch(`${API_BASE_URL}/auth/login`, {
                     method: 'POST',
-                    body: formData
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params
                 });
 
                 if (response.ok) {

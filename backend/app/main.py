@@ -191,6 +191,35 @@ async def startup_event():
     init_db()
     logger.info("✅ Database tables initialized successfully")
     
+    # Ensure admin user exists for production login
+    from .database import SessionLocal
+    from . import models, auth
+    db = SessionLocal()
+    try:
+        admin = db.query(models.User).filter(models.User.email == "admin@adplatform.com").first()
+        if not admin:
+            logger.info("📦 Seeding essential admin user...")
+            admin_user = models.User(
+                name="Admin User",
+                email="admin@adplatform.com",
+                password_hash=auth.get_password_hash("admin123"),
+                role=models.UserRole.ADMIN,
+                country="US"
+            )
+            db.add(admin_user)
+            db.commit()
+            logger.info("✅ Admin user created: admin@adplatform.com")
+        else:
+            # Ensure it has the admin role
+            if admin.role != models.UserRole.ADMIN:
+                admin.role = models.UserRole.ADMIN
+                db.commit()
+                logger.info("✅ Updated user to ADMIN role")
+    except Exception as e:
+        logger.error(f"❌ Error during auto-seeding: {e}")
+    finally:
+        db.close()
+    
     logger.info("🚀 Starting Advertiser Dashboard API")
     logger.info(f"📍 Environment: {'Development' if settings.DEBUG else 'Production'}")
     if '@' in settings.DATABASE_URL:

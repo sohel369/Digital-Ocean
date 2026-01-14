@@ -175,18 +175,7 @@ const Login = () => {
 
                 {isLogin && (
                     <div className="mt-10 text-center">
-                        <p className="text-[10px] uppercase font-bold tracking-[0.3em] text-slate-700 mb-3">{t('auth.emergency')}</p>
-                        <div className="flex items-center justify-center gap-2">
-                            <span className="text-[9px] text-blue-500/40 font-bold hover:text-blue-500/60 cursor-pointer transition-colors">ADMIN</span>
-                            <span className="text-slate-800 text-[10px]">/</span>
-                            <span className="text-[9px] text-blue-500/40 font-bold hover:text-blue-500/60 cursor-pointer transition-colors">ADMIN123</span>
-                        </div>
-                    </div>
-                )}
-
-                {isLogin && (
-                    <div className="mt-10 text-center">
-                        <p className="text-[10px] uppercase font-bold tracking-[0.3em] text-slate-700 mb-3">Emergency Credentials</p>
+                        <p className="text-[10px] uppercase font-bold tracking-[0.3em] text-slate-700 mb-3">{t('auth.emergency') || 'Emergency Credentials'}</p>
                         <div className="flex items-center justify-center gap-2">
                             <span className="text-[9px] text-blue-500/40 font-bold hover:text-blue-500/60 cursor-pointer transition-colors">ADMIN</span>
                             <span className="text-slate-800 text-[10px]">/</span>

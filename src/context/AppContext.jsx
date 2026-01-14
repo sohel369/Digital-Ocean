@@ -43,9 +43,20 @@ export const AppProvider = ({ children }) => {
 
     // Base URL configuration for API calls
     const API_BASE_URL = import.meta.env.VITE_API_URL ||
-        (window.location.hostname !== 'localhost'
-            ? 'https://balanced-wholeness-production-ca00.up.railway.app/api'
-            : '/api');
+        (window.location.hostname.includes('railway.app')
+            ? `${window.location.protocol}//${window.location.hostname.replace('digital-ocean', 'balanced-wholeness')}/api`
+            : (window.location.hostname !== 'localhost'
+                ? 'https://balanced-wholeness-production-01ee.up.railway.app/api'
+                : '/api'));
+
+    // Debugging helper
+    useEffect(() => {
+        console.log('🌐 API Configuration:', {
+            baseUrl: API_BASE_URL,
+            envUrl: import.meta.env.VITE_API_URL,
+            hostname: window.location.hostname
+        });
+    }, [API_BASE_URL]);
 
     // Auth header helper
     const getAuthHeaders = () => {
@@ -116,7 +127,8 @@ export const AppProvider = ({ children }) => {
                 setPricingData({
                     industries: (rawPricing.industries || []).map(i => ({
                         ...i,
-                        name: formatIndustryName(i.name)
+                        displayName: formatIndustryName(i.name), // Format for UI
+                        name: i.name // Keep raw for database
                     })),
                     adTypes: (rawPricing.ad_types || []).map(a => ({ name: a.name, baseRate: a.base_rate })),
                     states: (rawPricing.states || []).map(s => ({
@@ -501,8 +513,14 @@ export const AppProvider = ({ children }) => {
 
                 // Refresh stats and notifications in parallel
                 const [statsRes, notifRes] = await Promise.all([
-                    fetch(`${API_BASE_URL}/stats`, { credentials: 'include' }),
-                    fetch(`${API_BASE_URL}/notifications`, { credentials: 'include' })
+                    fetch(`${API_BASE_URL}/stats`, {
+                        headers: { ...getAuthHeaders() },
+                        credentials: 'include'
+                    }),
+                    fetch(`${API_BASE_URL}/notifications`, {
+                        headers: { ...getAuthHeaders() },
+                        credentials: 'include'
+                    })
                 ]);
 
                 if (statsRes.ok) setStats(await statsRes.json());

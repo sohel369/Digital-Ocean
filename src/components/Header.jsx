@@ -155,7 +155,7 @@ const Header = () => {
                                     <div className="p-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-900/50">
                                         <div className="flex items-center gap-2">
                                             <h3 className="font-bold text-slate-100">{t('dashboard.approval_status')}</h3>
-                                            <span className="bg-primary/20 text-primary-light text-xs font-bold px-2 py-0.5 rounded-full">{unreadCount} {t('common.loading')}</span>
+                                            <span className="bg-primary/20 text-primary-light text-xs font-bold px-2 py-0.5 rounded-full">{unreadCount}</span>
                                         </div>
                                         <button onClick={markAllRead} className="text-xs text-primary-light font-medium hover:underline hover:text-primary">Mark all read</button>
                                     </div>

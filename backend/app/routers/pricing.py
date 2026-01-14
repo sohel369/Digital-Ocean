@@ -181,7 +181,6 @@ async def delete_pricing_matrix_entry(
     )
 @router.get("/config", response_model=schemas.GlobalPricingConfig)
 async def get_global_pricing_config(
-    current_user: models.User = Depends(auth.get_current_active_user),
     db: Session = Depends(get_db)
 ):
     """

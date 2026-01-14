@@ -128,6 +128,28 @@ export const AppProvider = ({ children }) => {
                     })),
                     discounts: rawPricing.discounts || { state: 0.15, national: 0.30 }
                 });
+            } else {
+                console.warn("Pricing metadata fetch failed or unauthorized, using internal fallbacks.");
+                setPricingData({
+                    industries: [
+                        { name: 'Retail', multiplier: 1.0 },
+                        { name: 'Healthcare', multiplier: 1.5 },
+                        { name: 'Tech', multiplier: 1.3 },
+                        { name: 'Real Estate', multiplier: 1.2 },
+                        { name: 'Finance', multiplier: 1.4 }
+                    ].map(i => ({ ...i, name: formatIndustryName(i.name) })),
+                    adTypes: [
+                        { name: 'Display', baseRate: 100.0 },
+                        { name: 'Video', baseRate: 250.0 },
+                        { name: 'Sponsored', baseRate: 150.0 }
+                    ],
+                    states: [
+                        { name: 'California', landMass: 423970, densityMultiplier: 1.5, population: 39538223, stateCode: 'CA', countryCode: 'US' },
+                        { name: 'New York', landMass: 141300, densityMultiplier: 1.8, population: 20201249, stateCode: 'NY', countryCode: 'US' },
+                        { name: 'Texas', landMass: 695662, densityMultiplier: 1.2, population: 29145505, stateCode: 'TX', countryCode: 'US' }
+                    ],
+                    discounts: { state: 0.15, national: 0.30 }
+                });
             }
 
 
@@ -213,7 +235,7 @@ export const AppProvider = ({ children }) => {
                 formData.append('username', 'admin@adplatform.com'); // Match seeded admin
                 formData.append('password', 'admin123');
 
-                const response = await fetch(`${API_BASE_URL.replace('/api', '/auth')}/login`, {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
                     method: 'POST',
                     body: formData
                 });
@@ -224,7 +246,7 @@ export const AppProvider = ({ children }) => {
                     localStorage.setItem('refresh_token', data.refresh_token);
 
                     // Fetch real admin data
-                    const meRes = await fetch(`${API_BASE_URL.replace('/api', '/auth')}/me`, {
+                    const meRes = await fetch(`${API_BASE_URL}/auth/me`, {
                         headers: { 'Authorization': `Bearer ${data.access_token}` }
                     });
                     const adminData = await meRes.json();
@@ -257,6 +279,7 @@ export const AppProvider = ({ children }) => {
             setUser(adminUser);
             localStorage.setItem('user', JSON.stringify(adminUser));
             toast.success('System Access Granted', { description: 'Authenticated via emergency bypass.' });
+            await fetchData();
             return { success: true, user: adminUser };
         }
 

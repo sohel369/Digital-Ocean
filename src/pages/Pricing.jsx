@@ -5,15 +5,35 @@ import { PaymentModal } from '../components/PaymentCheckout';
 
 const Pricing = () => {
     const { pricingData, formatCurrency, t } = useApp();
-    const [selectedIndustry, setSelectedIndustry] = useState(pricingData.industries[0] || { name: 'Tech', multiplier: 1.0 });
-    const [selectedAdType, setSelectedAdType] = useState(pricingData.adTypes[0] || { name: 'Display', baseRate: 15.0 });
+    const [selectedIndustry, setSelectedIndustry] = useState({ name: 'Tech', multiplier: 1.0 });
+    const [selectedAdType, setSelectedAdType] = useState({ name: 'Display', baseRate: 15.0 });
     const [coverageArea, setCoverageArea] = useState('radius'); // 'radius', 'state', 'national'
-    const [selectedState, setSelectedState] = useState(pricingData.states[0] || { name: 'New York', landMass: 54000, densityMultiplier: 1.2 });
+    const [selectedState, setSelectedState] = useState({ name: 'New York', landMass: 54000, densityMultiplier: 1.2 });
     const [postcode, setPostcode] = useState('');
     const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
+    // Sync defaults when data arrives
+    React.useEffect(() => {
+        if (pricingData.industries?.length > 0 && selectedIndustry.name === 'Tech') {
+            setSelectedIndustry(pricingData.industries[0]);
+        }
+        if (pricingData.adTypes?.length > 0 && selectedAdType.baseRate === 15.0) {
+            setSelectedAdType(pricingData.adTypes[0]);
+        }
+        if (pricingData.states?.length > 0 && selectedState.name === 'New York') {
+            setSelectedState(pricingData.states[0]);
+        }
+    }, [pricingData]);
+
     if (!pricingData.industries || pricingData.industries.length === 0) {
-        return <div className="p-8 text-white">{t('common.loading')}</div>;
+        return (
+            <div className="min-h-[400px] flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                    <p className="text-slate-400 font-medium animate-pulse">{t('common.loading')}...</p>
+                </div>
+            </div>
+        );
     }
 
     // Pricing Logic Constants

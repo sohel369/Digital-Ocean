@@ -207,11 +207,15 @@ class PricingEngine:
         return 0
     
     def _get_density_for_postcode(self, postcode: Optional[str]) -> float:
-        """Get population density for a postcode (simplified)."""
-        # In a real implementation, you'd look up the postcode's state/region
-        # and get the density from geodata
-        # For now, return average density
-        return self.RADIUS_30_REACH_PER_SQ_MILE
+        """Get population density for a postcode, falling back to national average."""
+        # For this implementation, we'll try to find any GeoData record to use as a density source
+        # or use the default national density.
+        avg_density = self.db.query(models.GeoData.density_multiplier).filter(
+            models.GeoData.state_code.is_(None)
+        ).scalar()
+        
+        return (avg_density or 1.0) * self.RADIUS_30_REACH_PER_SQ_MILE
+
     
     def _get_geodata_for_state(
         self, state_code: Optional[str], country_code: Optional[str]

@@ -7,7 +7,7 @@ import { useApp } from '../context/AppContext';
 import { signInWithGoogle } from '../firebase';
 
 const Login = () => {
-    const { login, signup, googleAuth, user } = useApp();
+    const { login, signup, googleAuth, user, t } = useApp();
     const [isLogin, setIsLogin] = useState(true);
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
@@ -27,16 +27,15 @@ const Login = () => {
             const googleUser = await signInWithGoogle();
             const result = await googleAuth(googleUser);
             if (result.success) {
-                toast.success('Authorized via Google', { description: `Welcome back, ${result.user.username}` });
+                toast.success(t('common.success'), { description: `Welcome back, ${result.user.username}` });
                 navigate('/');
             } else {
-                toast.error('Auth Sync Failed', { description: result.message });
+                toast.error(t('common.error'), { description: result.message });
             }
         } catch (error) {
             console.error('Google Auth Error:', error);
-            // If it's a redirect, we don't Toast yet as the page is about to unload
             if (error.code !== 'auth/popup-blocked' && !error.message.includes('COOP')) {
-                toast.error('Google Verification Failed');
+                toast.error(t('common.error'));
             }
         } finally {
             setLoading(false);
@@ -49,10 +48,9 @@ const Login = () => {
 
         try {
             if (isLogin) {
-                // Basic check for username-style login
                 if (!email.includes('@') && email.toUpperCase() !== 'ADMIN') {
-                    toast.error('Identity Verification Failed', {
-                        description: 'Please use your registered Email Address, not your username.'
+                    toast.error(t('common.error'), {
+                        description: t('auth.email_required_msg') || 'Please use your registered Email Address.'
                     });
                     setLoading(false);
                     return;
@@ -60,25 +58,24 @@ const Login = () => {
 
                 const result = await login(email, password);
                 if (result.success) {
-                    toast.success('Access Granted', { description: `Authorized as ${result.user.username}` });
+                    toast.success(t('common.success'), { description: `Authorized as ${result.user.username}` });
                     navigate('/');
                 } else {
-                    toast.error('Authentication Error', { description: result.message || 'Invalid credentials provided.' });
+                    toast.error(t('common.error'), { description: result.message || 'Invalid credentials provided.' });
                 }
             } else {
                 const result = await signup(username, email, password);
                 if (result.success) {
-                    toast.success('Account Created', { description: 'Welcome to the platform!' });
+                    toast.success(t('common.success'), { description: 'Welcome to the platform!' });
                     navigate('/');
                 } else {
-                    toast.error('Registration Error', { description: result.message || 'Failed to create account.' });
+                    toast.error(t('common.error'), { description: result.message || 'Failed to create account.' });
                 }
             }
         } catch (error) {
             console.error('Auth Error:', error);
-            // Extract meaningful message from Firebase error
             const errorMsg = error.message?.replace('Firebase: ', '') || 'An unexpected error occurred.';
-            toast.error('Security System Alert', { description: errorMsg });
+            toast.error(t('common.error'), { description: errorMsg });
         } finally {
             setLoading(false);
         }
@@ -91,8 +88,8 @@ const Login = () => {
                     <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-blue-600/5 text-blue-500 mb-6 border border-blue-500/10">
                         <Terminal size={32} strokeWidth={2.5} />
                     </div>
-                    <h1 className="text-4xl font-extrabold text-white mb-2 tracking-tight">Identity Verification</h1>
-                    <p className="text-slate-500 text-sm font-medium">AdPlatform Premium Terminal Access</p>
+                    <h1 className="text-4xl font-extrabold text-white mb-2 tracking-tight">{t('auth.title')}</h1>
+                    <p className="text-slate-500 text-sm font-medium">{t('auth.subtitle')}</p>
                 </div>
 
                 <div className="space-y-6">
@@ -102,29 +99,17 @@ const Login = () => {
                         className="w-full bg-[#f8f9fa] text-slate-800 font-bold py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-white transition-all shadow-lg active:scale-[0.98]"
                     >
                         <svg className="w-5 h-5" viewBox="0 0 24 24">
-                            <path
-                                fill="#4285F4"
-                                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                            />
-                            <path
-                                fill="#34A853"
-                                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                            />
-                            <path
-                                fill="#FBBC05"
-                                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
-                            />
-                            <path
-                                fill="#EA4335"
-                                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                            />
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                         </svg>
-                        <span>{isLogin ? 'Continue with Google' : 'Sign up with Google'}</span>
+                        <span>{isLogin ? t('auth.google_continue') : t('auth.google_signup')}</span>
                     </button>
 
                     <div className="relative flex items-center py-2">
                         <div className="flex-grow border-t border-slate-800/60"></div>
-                        <span className="flex-shrink mx-4 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">Or use credentials</span>
+                        <span className="flex-shrink mx-4 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">{t('auth.or_divider')}</span>
                         <div className="flex-grow border-t border-slate-800/60"></div>
                     </div>
                 </div>
@@ -132,7 +117,7 @@ const Login = () => {
                 <form onSubmit={handleSubmit} className="space-y-6 mt-6">
                     <div className="space-y-1.5 focus-within:transform focus-within:translate-x-1 transition-transform">
                         <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-600 ml-1">
-                            {isLogin ? 'Registered Email Address' : 'Display Username'}
+                            {isLogin ? t('auth.email_label') : t('auth.username_label')}
                         </label>
                         <input
                             type="text"
@@ -140,14 +125,13 @@ const Login = () => {
                             onChange={(e) => isLogin ? setEmail(e.target.value) : setUsername(e.target.value)}
                             className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-mono text-sm placeholder:text-slate-700"
                             placeholder={isLogin ? "operator@adplatform.net" : "NEW_OPERATOR_01"}
-                            required
-                            autoComplete="off"
+                            required autoComplete="off"
                         />
                     </div>
 
                     {!isLogin && (
                         <div className="space-y-1.5 animate-in slide-in-from-top-2">
-                            <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-600 ml-1">Email for Auth</label>
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-600 ml-1">{t('auth.email_label')}</label>
                             <input
                                 type="email"
                                 value={email}
@@ -160,7 +144,7 @@ const Login = () => {
                     )}
 
                     <div className="space-y-1.5 focus-within:transform focus-within:translate-x-1 transition-transform">
-                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-600 ml-1">Password</label>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-600 ml-1">{t('auth.password_label')}</label>
                         <input
                             type="password"
                             value={password}
@@ -176,9 +160,8 @@ const Login = () => {
                         disabled={loading}
                         className="w-full bg-[#2563eb] text-white font-bold py-4 rounded-2xl shadow-xl shadow-blue-600/20 hover:bg-blue-600 transition-all active:scale-[0.98] disabled:opacity-50 text-sm"
                     >
-                        {loading ? 'Processing...' : (isLogin ? 'Execute Login' : 'Register Operator')}
+                        {loading ? t('auth.processing') : (isLogin ? t('auth.login_btn') : t('auth.register_btn'))}
                     </button>
-
                 </form>
 
                 <div className="mt-8">
@@ -186,9 +169,20 @@ const Login = () => {
                         onClick={() => setIsLogin(!isLogin)}
                         className="w-full bg-[#111622] hover:bg-[#111622]/80 border border-slate-800/80 py-4 rounded-2xl text-xs font-semibold text-slate-400 transition-all"
                     >
-                        {isLogin ? "Need a new account? Register here" : "Already have an account? Sign in"}
+                        {isLogin ? t('auth.need_account') : t('auth.have_account')}
                     </button>
                 </div>
+
+                {isLogin && (
+                    <div className="mt-10 text-center">
+                        <p className="text-[10px] uppercase font-bold tracking-[0.3em] text-slate-700 mb-3">{t('auth.emergency')}</p>
+                        <div className="flex items-center justify-center gap-2">
+                            <span className="text-[9px] text-blue-500/40 font-bold hover:text-blue-500/60 cursor-pointer transition-colors">ADMIN</span>
+                            <span className="text-slate-800 text-[10px]">/</span>
+                            <span className="text-[9px] text-blue-500/40 font-bold hover:text-blue-500/60 cursor-pointer transition-colors">ADMIN123</span>
+                        </div>
+                    </div>
+                )}
 
                 {isLogin && (
                     <div className="mt-10 text-center">

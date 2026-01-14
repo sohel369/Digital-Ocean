@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useApp } from '../context/AppContext';
 import { MapPin, Navigation, Info } from 'lucide-react';
 
 const GeoTargeting = () => {
+    const { country, t } = useApp();
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
     const circleInstance = useRef(null);
@@ -64,7 +66,7 @@ const GeoTargeting = () => {
 
             // Add Marker
             markerInstance.current = window.L.marker([settings.lat, settings.lng]).addTo(mapInstance.current)
-                .bindPopup('Target Center');
+                .bindPopup(t('geo.target_center'));
 
             // Add Circle
             circleInstance.current = window.L.circle([settings.lat, settings.lng], {
@@ -78,11 +80,10 @@ const GeoTargeting = () => {
             // Interactions
             circleInstance.current.on('mouseover', function () {
                 this.setStyle({ fillOpacity: 0.35, weight: 3 });
-                this.bindPopup(`Radius: ${settings.radius} miles`).openPopup();
+                this.bindPopup(`${t('geo.radius')}: ${settings.radius} ${t('geo.miles')}`).openPopup();
             });
             circleInstance.current.on('mouseout', function () {
                 this.setStyle({ fillOpacity: 0.15, weight: 2 });
-                // this.closePopup();
             });
 
             // Update stats
@@ -118,27 +119,33 @@ const GeoTargeting = () => {
         if (!settings.postcode) return;
 
         // Use Nominatim OpenStreetMap Geocoding API (Free)
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(settings.postcode)}`)
+        const countryArg = country ? `&countrycodes=${country.toLowerCase()}` : '';
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(settings.postcode)}${countryArg}`)
             .then(res => res.json())
             .then(data => {
                 if (data && data.length > 0) {
+                    const match = data.find(d => d.address?.country_code?.toUpperCase() === country?.toUpperCase()) || data[0];
+
                     setSettings(prev => ({
                         ...prev,
-                        lat: parseFloat(data[0].lat),
-                        lng: parseFloat(data[0].lon)
+                        lat: parseFloat(match.lat),
+                        lng: parseFloat(match.lon)
                     }));
                 } else {
-                    alert('Location not found');
+                    alert(t('geo.not_found'));
                 }
             })
-            .catch(err => console.error(err));
+            .catch(err => {
+                console.error(err);
+                alert(t('geo.service_unavailable'));
+            });
     };
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div>
-                <h1 className="text-2xl font-bold text-slate-100">Geo-Targeting</h1>
-                <p className="text-slate-400 mt-1">Define your audience location and reach.</p>
+                <h1 className="text-2xl font-bold text-slate-100">{t('geo.title')}</h1>
+                <p className="text-slate-400 mt-1">{t('geo.subtitle')}</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -148,13 +155,13 @@ const GeoTargeting = () => {
                     {/* Location Input */}
                     <div className="space-y-3">
                         <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                            <MapPin size={16} /> Location
+                            <MapPin size={16} /> {t('geo.location')}
                         </h2>
                         <div className="flex flex-col sm:flex-row gap-2 items-stretch">
                             <input
                                 type="text"
                                 className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-slate-500"
-                                placeholder="Enter Postcode or City"
+                                placeholder={t('geo.placeholder')}
                                 value={settings.postcode}
                                 onChange={(e) => setSettings(p => ({ ...p, postcode: e.target.value }))}
                                 onKeyDown={(e) => e.key === 'Enter' && handlePostcodeSearch()}
@@ -163,7 +170,7 @@ const GeoTargeting = () => {
                                 onClick={handlePostcodeSearch}
                                 className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center shrink-0 shadow-lg shadow-blue-900/10 active:scale-95 transition-transform"
                             >
-                                <span className="sm:hidden mr-2 font-bold text-xs uppercase">Search Location</span>
+                                <span className="sm:hidden mr-2 font-bold text-xs uppercase">{t('geo.search')}</span>
                                 <Navigation size={18} />
                             </button>
                         </div>
@@ -172,8 +179,8 @@ const GeoTargeting = () => {
                     {/* Radius Slider */}
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
-                            <h2 className="text-sm font-bold text-slate-100">Radius</h2>
-                            <span className="text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded-md text-xs">{settings.radius} miles</span>
+                            <h2 className="text-sm font-bold text-slate-100">{t('geo.radius')}</h2>
+                            <span className="text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded-md text-xs">{settings.radius} {t('geo.miles')}</span>
                         </div>
                         <input
                             type="range" min="5" max="100"
@@ -182,29 +189,29 @@ const GeoTargeting = () => {
                             onChange={(e) => setSettings(p => ({ ...p, radius: parseInt(e.target.value) }))}
                         />
                         <div className="flex justify-between text-xs text-slate-400 font-medium">
-                            <span>5 mi</span>
-                            <span>100 mi</span>
+                            <span>5 {t('geo.mi')}</span>
+                            <span>100 {t('geo.mi')}</span>
                         </div>
                     </div>
 
                     {/* Stats Display */}
                     <div className="bg-slate-900/50 border border-slate-700/50 rounded-2xl p-6 text-white text-center space-y-6">
                         <div>
-                            <p className="text-slate-400 text-xs uppercase tracking-wider font-semibold mb-1">Estimated Reach</p>
+                            <p className="text-slate-400 text-xs uppercase tracking-wider font-semibold mb-1">{t('geo.est_reach')}</p>
                             <p className="text-3xl font-bold">{stats.reach.toLocaleString()}</p>
-                            <p className="text-sm text-slate-400">users</p>
+                            <p className="text-sm text-slate-400">{t('geo.users')}</p>
                         </div>
                         <div className="w-full h-px bg-slate-700"></div>
                         <div>
-                            <p className="text-slate-400 text-xs uppercase tracking-wider font-semibold mb-1">Coverage Area</p>
+                            <p className="text-slate-400 text-xs uppercase tracking-wider font-semibold mb-1">{t('geo.coverage_area')}</p>
                             <p className="text-2xl font-bold">{stats.area.toLocaleString()}</p>
-                            <p className="text-sm text-slate-400">sq miles</p>
+                            <p className="text-sm text-slate-400">{t('geo.sq_miles')}</p>
                         </div>
                     </div>
 
-                    <button className="w-full py-3 premium-btn rounded-xl font-bold shadow-lg shadow-blue-900/20 transition-all hover:scale-[1.02]"
-                        onClick={() => alert('Settings Saved')}>
-                        Apply Target
+                    <button className="w-full py-3 premium-btn rounded-xl font-bold shadow-lg shadow-blue-900/20 transition-all hover:scale-[1.02] italic uppercase"
+                        onClick={() => alert(t('geo.settings_saved'))}>
+                        {t('geo.apply')}
                     </button>
                 </div>
 
@@ -215,8 +222,8 @@ const GeoTargeting = () => {
                     {/* Info Overlay */}
                     <div className="absolute top-4 left-4 bg-slate-900/90 backdrop-blur px-4 py-2 rounded-lg text-[10px] md:text-xs font-medium text-slate-300 shadow-sm border border-slate-700 flex items-center gap-2 z-[1000]">
                         <Info size={14} className="text-primary-light" />
-                        <span className="hidden sm:inline">Interactive Map: Drag to pan, scroll to zoom</span>
-                        <span className="sm:hidden">Interactive Map</span>
+                        <span className="hidden sm:inline">{t('geo.map_info')}</span>
+                        <span className="sm:hidden">{t('geo.map_info_short')}</span>
                     </div>
                 </div>
             </div>

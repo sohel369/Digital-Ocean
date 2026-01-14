@@ -18,6 +18,22 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["Frontend Compatibility"])
 
 
+@router.get("/")
+async def api_root():
+    """
+    API Root endpoint.
+    """
+    return {
+        "message": "Advertiser Dashboard API - Compatibility Layer",
+        "endpoints": [
+            "/api/stats",
+            "/api/campaigns",
+            "/api/pricing/admin/config",
+            "/api/notifications"
+        ]
+    }
+
+
 @router.get("/stats")
 async def get_stats(
     current_user: models.User = Depends(auth.get_current_active_user),
@@ -190,7 +206,10 @@ async def create_campaign_compat(
                 target_postcode=meta.get("location") if coverage_val == "radius" else None,
                 target_state=meta.get("location") if coverage_val == "state" else None,
                 target_country="US" if coverage_val == "national" else None,
-                description=data.get("description", "")
+                description=data.get("description", ""),
+                headline=data.get("headline"),
+                landing_page_url=data.get("landing_page_url") or data.get("landingPageUrl"),
+                ad_format=data.get("ad_format") or data.get("format")
             )
             
             db.add(new_campaign)

@@ -106,6 +106,11 @@ class Campaign(Base):
     impressions = Column(Integer, default=0)
     clicks = Column(Integer, default=0)
     
+    # Creative details
+    headline = Column(String(500), nullable=True)
+    landing_page_url = Column(String(500), nullable=True)
+    ad_format = Column(String(100), nullable=True) # e.g., 'Leaderboard', 'Mobile Banner'
+    
     # Metadata
     description = Column(Text, nullable=True)
     tags = Column(JSON, nullable=True)  # Store as JSON array

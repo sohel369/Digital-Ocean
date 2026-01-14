@@ -13,7 +13,7 @@ import {
 import { useApp } from '../context/AppContext';
 
 const Sidebar = () => {
-    const { sidebarOpen, setSidebarOpen, logout, user } = useApp();
+    const { sidebarOpen, setSidebarOpen, logout, user, t } = useApp();
 
     const handleNavClick = () => {
         if (window.innerWidth < 768) {
@@ -22,11 +22,11 @@ const Sidebar = () => {
     };
 
     const navItems = [
-        { to: "/", icon: LayoutDashboard, label: "Overview" },
-        { to: "/campaigns/new", icon: PlusCircle, label: "New Campaign" },
-        { to: "/geo-targeting", icon: Map, label: "Geofencing" },
-        { to: "/pricing", icon: CreditCard, label: "Pricing Matrix" },
-        { to: "/analytics", icon: BarChart3, label: "Performance" },
+        { to: "/", icon: LayoutDashboard, label: t('sidebar.dashboard') },
+        { to: "/campaigns/new", icon: PlusCircle, label: t('sidebar.new_campaign') },
+        { to: "/geo-targeting", icon: Map, label: t('sidebar.geo_targeting') },
+        { to: "/pricing", icon: CreditCard, label: t('sidebar.pricing') },
+        { to: "/analytics", icon: BarChart3, label: t('sidebar.analytics') },
     ];
 
     const activeClass = "flex items-center gap-3 px-5 py-4 text-sm font-bold rounded-2xl bg-primary text-white shadow-[0_10px_20px_rgba(59,130,246,0.3)] transition-all scale-[1.02]";
@@ -80,7 +80,7 @@ const Sidebar = () => {
                                 return isActive ? activeClass : inactiveClass;
                             }}
                         >
-                            <item.icon size={22} className={({ isActive }) => isActive ? 'text-white' : 'text-slate-500'} />
+                            <item.icon size={22} />
                             {item.label}
                         </NavLink>
                     ))}
@@ -94,7 +94,7 @@ const Sidebar = () => {
                                 className={inactiveClass}
                             >
                                 <Settings size={22} className="text-slate-500" />
-                                Admin Controls
+                                {t('sidebar.admin_pricing')}
                             </NavLink>
                         </div>
                     )}
@@ -111,7 +111,7 @@ const Sidebar = () => {
                             <LogOut size={20} />
                         </div>
                         <div className="text-left">
-                            <p className="text-sm font-bold text-slate-100 italic">Sign Out</p>
+                            <p className="text-sm font-bold text-slate-100 italic">{t('sidebar.logout')}</p>
                             <p className="text-[10px] font-bold text-slate-500 uppercase">End Session</p>
                         </div>
                     </button>

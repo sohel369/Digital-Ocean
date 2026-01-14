@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useApp } from '../context/AppContext';
 
 // Icons
 const MonitorIcon = ({ className }) => (
@@ -27,36 +28,57 @@ const MailIcon = ({ className }) => (
  * AdPreview Component
  * 
  * Renders a live preview of the ad content in multiple formats (Desktop, Mobile, Email).
- * 
- * Props:
- * - headline: string
- * - description: string
- * - ctaText: string
- * - image: string (URL)
  */
-export const AdPreview = ({
-    headline = 'Summer Collection 2024',
-    description = 'Discover the latest trends in our new summer collection. Limited time offer on all swimsuits and accessories.',
-    ctaText = 'Shop Now',
-    image = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
-    format = ''
-}) => {
+export const AdPreview = ({ formData = {} }) => {
+    const { t } = useApp();
     const [activeTab, setActiveTab] = useState('desktop');
+
+    const {
+        headline = '',
+        description = '',
+        cta = 'Learn More',
+        image = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
+        format = ''
+    } = formData;
 
     // Tab Definitions
     const tabs = [
-        { id: 'desktop', label: 'Desktop', icon: <MonitorIcon className="w-4 h-4" /> },
-        { id: 'mobile', label: 'Mobile', icon: <SmartphoneIcon className="w-4 h-4" /> },
-        { id: 'email', label: 'Email Newsletter', icon: <MailIcon className="w-4 h-4" /> }
+        { id: 'desktop', label: t('campaign.desktop') || 'Desktop', icon: <MonitorIcon className="w-4 h-4" /> },
+        { id: 'mobile', label: t('campaign.mobile') || 'Mobile', icon: <SmartphoneIcon className="w-4 h-4" /> },
+        { id: 'email', label: t('campaign.email') || 'Email Newsletter', icon: <MailIcon className="w-4 h-4" /> }
     ];
+
+    // Helper for visual classes based on format and device
+    const getFormatStyles = () => {
+        const fmt = (format || '').toLowerCase();
+
+        if (fmt.includes('skyscraper')) {
+            return { w: 'w-[160px]', h: 'h-[600px]', layout: 'flex-col', imgH: 'h-1/3', text: 'p-4 text-center' };
+        }
+        if (fmt.includes('leaderboard') && !fmt.includes('mobile')) {
+            return { w: 'w-[728px]', h: 'h-[90px]', layout: 'flex-row', imgW: 'w-1/4', text: 'p-2 flex-row justify-between items-center' };
+        }
+        if (fmt.includes('mobile leaderboard')) {
+            return { w: 'w-[320px]', h: 'h-[50px]', layout: 'flex-row', imgW: 'w-[60px]', text: 'p-1 justify-center' };
+        }
+        if (fmt.includes('medium rectangle') || fmt.includes('rectangle')) {
+            return { w: 'w-[300px]', h: 'h-[250px]', layout: 'flex-col', imgH: 'h-1/2', text: 'p-4' };
+        }
+
+        // Defaults based on tab
+        if (activeTab === 'mobile') return { w: 'w-[375px]', h: 'min-h-[600px]', layout: 'flex-col', imgH: 'h-[250px]', text: 'p-8' };
+        if (activeTab === 'email') return { w: 'w-[600px]', h: 'min-h-[500px]', layout: 'flex-col', imgH: 'h-[300px]', text: 'p-10' };
+        return { w: 'w-full max-w-[800px]', h: 'min-h-[400px]', layout: 'flex-row', imgW: 'w-1/2', text: 'p-12' };
+    };
+
+    const styles = getFormatStyles();
 
     return (
         <div className="w-full glass-panel rounded-2xl overflow-hidden flex flex-col h-full min-h-[500px] md:min-h-[600px]">
 
             {/* Header / Tabs */}
-            {/* Header / Tabs */}
             <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-700/50 bg-slate-900/50 gap-4 flex-wrap">
-                <h3 className="font-bold text-slate-200 text-sm sm:text-base border-l-2 border-primary pl-3 whitespace-nowrap">Ad Creative Preview</h3>
+                <h3 className="font-bold text-slate-200 text-sm sm:text-base border-l-2 border-primary pl-3 whitespace-nowrap">{t('campaign.live_preview')}</h3>
 
                 <div className="flex p-0.5 sm:p-1 bg-slate-800 rounded-xl border border-slate-700/50">
                     {tabs.map((tab) => (
@@ -73,7 +95,6 @@ export const AdPreview = ({
                         >
                             <span className="shrink-0 scale-90 sm:scale-100">{tab.icon}</span>
                             <span className="hidden sm:inline">{tab.label.split(' ')[0]}</span>
-                            <span className="sm:hidden">{tab.label.split(' ')[0].substring(0, 1)}</span>
                         </button>
                     ))}
                 </div>
@@ -90,127 +111,56 @@ export const AdPreview = ({
                 {/* Content Container */}
                 <div className={`
           relative bg-white text-slate-900 shadow-2xl transition-all duration-500 ease-in-out origin-top border border-slate-200 overflow-hidden mx-auto
-          ${format === 'Mobile Banner' ? 'w-[320px] h-[50px] rounded-none' : ''}
-          ${format === 'Medium Rectangle' || format === 'Rectangle' ? 'w-[300px] h-[250px] rounded-sm' : ''}
-          ${format === 'Leaderboard' ? 'w-[728px] h-[90px] rounded-none max-w-full' : ''}
-          ${!format && activeTab === 'mobile' ? 'w-[375px] max-w-full rounded-3xl min-h-[600px]' : ''}
-          ${!format && activeTab === 'desktop' ? 'w-[800px] max-w-full rounded-lg min-h-[400px]' : ''}
-          ${activeTab === 'email' ? 'w-[600px] max-w-full rounded-none min-h-[500px] border-t-4 border-indigo-500' : ''}
+          ${styles.w} ${styles.h} ${activeTab === 'email' ? 'border-t-4 border-indigo-500 rounded-none' : 'rounded-lg'}
         `} style={{ transform: 'scale(var(--preview-scale, 1))', transformOrigin: 'top center' }}>
-                    <style dangerouslySetInnerHTML={{
-                        __html: `
-                        @media (max-width: 450px) {
-                            :root { --preview-scale: 0.8; }
-                        }
-                        @media (max-width: 380px) {
-                            :root { --preview-scale: 0.7; }
-                        }
-                    `}} />
 
-                    {/* Email Header (Only for Email Tab) */}
                     {activeTab === 'email' && (
                         <div className="p-8 pb-4 text-center border-b border-slate-100 mb-4 bg-slate-50">
-                            <div className="text-xs text-slate-500 uppercase tracking-widest font-semibold mb-2">My Newsletter</div>
-                            <div className="text-2xl font-serif text-slate-900">Your Brand Weekly</div>
+                            <div className="text-xs text-slate-500 uppercase tracking-widest font-semibold mb-2">Rule 7 Media Newsletter</div>
+                            <div className="text-2xl font-serif text-slate-900">Your Daily Update</div>
                         </div>
                     )}
 
-                    {/* Ad Content */}
-                    <div className={`
-            flex flex-col group
-            ${activeTab === 'desktop' ? 'flex-row h-full' : ''}
-          `}>
-
+                    <div className={`flex ${styles.layout} h-full group`}>
                         {/* Image Area */}
-                        <div className={`
-              relative overflow-hidden bg-slate-100
-              ${activeTab === 'desktop' && !format ? 'w-1/2 min-h-[400px]' : ''}
-              ${!format && activeTab !== 'desktop' ? 'w-full h-64' : ''}
-              ${format === 'Leaderboard' ? 'w-[120px] h-full' : ''}
-              ${format === 'Mobile Banner' ? 'w-[80px] h-full' : ''}
-              ${format === 'Medium Rectangle' ? 'h-[140px] w-full' : ''}
-            `}>
-                            <img
-                                src={image}
-                                alt="Ad Creative"
-                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                            />
-
-                            {/* Sponsored Banner (Desktop/Mobile Only) */}
+                        <div className={`relative overflow-hidden bg-slate-100 ${styles.imgW || 'w-full'} ${styles.imgH || 'h-full'}`}>
+                            <img src={image} alt="Ad" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
                             {activeTab !== 'email' && (
-                                <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">
+                                <div className="absolute top-2 left-2 bg-black/40 backdrop-blur-md text-white text-[8px] sm:text-[10px] font-bold px-2 py-1 rounded uppercase">
                                     Sponsored
                                 </div>
                             )}
                         </div>
 
-                        {/* Content Area */}
-                        <div className={`
-              flex flex-col justify-center p-8
-              ${activeTab === 'desktop' && !format ? 'w-1/2 p-12' : ''}
-              ${format === 'Leaderboard' ? 'w-3/4 p-2 justify-between flex-row items-center' : ''}
-              ${format === 'Mobile Banner' ? 'w-2/3 p-2 justify-center' : ''}
-              ${format === 'Medium Rectangle' ? 'p-4' : ''}
-            `}>
+                        {/* Text Area */}
+                        <div className={`flex flex-col ${styles.text}`}>
                             {activeTab !== 'email' && (
-                                <div className="text-indigo-600 text-xs font-bold uppercase tracking-wide mb-2">New Arrival</div>
+                                <div className="text-primary text-[10px] font-bold uppercase tracking-widest mb-1">Recommended</div>
                             )}
-
-                            <h2 className={`
-                font-bold text-slate-900 leading-tight
-                ${activeTab === 'desktop' && !format ? 'text-3xl mb-3' : 'text-2xl mb-3'}
-                ${format === 'Leaderboard' ? 'text-lg mb-0 truncate' : ''}
-                ${format === 'Mobile Banner' ? 'text-xs mb-0 line-clamp-1' : ''}
-                ${format === 'Medium Rectangle' ? 'text-lg mb-2' : ''}
-                ${activeTab === 'email' ? 'font-serif' : ''}
-              `}>
-                                {headline}
+                            <h2 className={`font-bold text-slate-900 leading-tight ${activeTab === 'email' ? 'font-serif' : ''} 
+                                ${styles.h === 'h-[50px]' ? 'text-xs mb-0 truncate' : styles.h === 'h-[90px]' ? 'text-sm mb-0' : 'text-xl sm:text-2xl mb-2'}`}>
+                                {headline || 'Catchy Headline Here'}
                             </h2>
-
-                            <p className={`
-                                text-slate-600 leading-relaxed
-                                ${format === 'Mobile Banner' || format === 'Leaderboard' ? 'hidden' : 'mb-6'}
-                                ${format === 'Medium Rectangle' ? 'text-xs mb-3 line-clamp-3' : ''}
-                            `}>
-                                {description}
+                            <p className={`text-slate-600 text-sm leading-relaxed mb-4 
+                                ${styles.h === 'h-[50px]' || styles.h === 'h-[90px]' ? 'hidden' : 'block'} 
+                                ${styles.h === 'h-[600px]' ? 'line-clamp-6' : 'line-clamp-3'}`}>
+                                {description || 'Add an engaging description to capture attention.'}
                             </p>
-
-                            <button className={`
-                font-semibold rounded-lg transition-colors
-                ${activeTab === 'email'
-                                    ? 'bg-indigo-600 text-white w-full shadow-lg rounded-none py-3 px-6'
-                                    : 'bg-slate-900 text-white hover:bg-slate-800 self-start'}
-                ${!format && activeTab !== 'email' ? 'py-3 px-6' : ''}
-                ${format === 'Leaderboard' ? 'py-1.5 px-4 text-xs ml-4' : ''}
-                ${format === 'Mobile Banner' ? 'py-1 px-3 text-[10px] ml-2' : ''}
-                ${format === 'Medium Rectangle' ? 'py-2 px-4 text-xs w-full mt-auto' : ''}
-              `}>
-                                {ctaText}
+                            <button className={`font-bold transition-all 
+                                ${activeTab === 'email' ? 'bg-indigo-600 text-white py-3 px-6' : 'bg-slate-950 text-white hover:bg-slate-800'}
+                                ${styles.h === 'h-[50px]' ? 'py-1.5 px-3 text-[10px] ml-2' : styles.h === 'h-[90px]' ? 'py-1.5 px-4 text-xs ml-4' : 'py-3 px-6 rounded-xl self-start'}`}>
+                                {cta}
                             </button>
-
-                            {/* Email Footer (Only for Email tab) */}
-                            {activeTab === 'email' && (
-                                <div className="mt-8 pt-6 border-t border-slate-100 text-center text-xs text-slate-400">
-                                    <p>You received this email because you subscribed to our list.</p>
-                                    <p className="mt-1 underline cursor-pointer">Unsubscribe</p>
-                                </div>
-                            )}
                         </div>
-
                     </div>
-
                 </div>
 
-                {/* Footer Helper Text */}
                 {activeTab === 'email' && (
-                    <div className="absolute bottom-6 bg-slate-800/90 text-slate-400 text-xs px-4 py-2 rounded-full backdrop-blur-md flex items-center gap-2 animate-in slide-in-from-bottom-4 fade-in duration-300">
-                        <MailIcon className="w-3 h-3" />
-                        <span className="font-medium">This format is optimised for email newsletter placements</span>
+                    <div className="mt-8 text-xs text-slate-500 text-center max-w-[600px] px-4">
+                        <p>Placing ads in newsletters increases click-through rates by up to 40%.</p>
                     </div>
                 )}
-
             </div>
-
         </div>
     );
 };

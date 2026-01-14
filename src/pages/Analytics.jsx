@@ -3,8 +3,11 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGri
 import { Download } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useApp } from '../context/AppContext';
 
 const Analytics = () => {
+    const { t } = useApp();
+
     // Simulated Live Data
     const [dailyData, setDailyData] = useState([
         { name: 'Mon', imp: 4000, clicks: 240, cost: 2400, ctr: 3.2, budget: 85 },
@@ -31,18 +34,18 @@ const Analytics = () => {
     }, []);
 
     const deviceData = [
-        { name: 'Mobile', value: 65, color: '#3b82f6' },
-        { name: 'Desktop', value: 25, color: '#8b5cf6' },
-        { name: 'Tablet', value: 10, color: '#10b981' },
+        { name: t('campaign.mobile') || 'Mobile', value: 65, color: '#3b82f6' },
+        { name: t('campaign.desktop') || 'Desktop', value: 25, color: '#8b5cf6' },
+        { name: t('common.tablet') || 'Tablet', value: 10, color: '#10b981' },
     ];
 
     const handleExportPDF = () => {
         const doc = new jsPDF();
-        doc.text('Performance Analytics Report', 14, 15);
+        doc.text(t('analytics.title') || 'Performance Analytics Report', 14, 15);
         doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 25);
 
         autoTable(doc, {
-            head: [['Day', 'Impressions', 'Clicks', 'CTR (%)', 'Cost ($)']],
+            head: [[t('analytics.day') || 'Day', t('dashboard.impressions'), t('dashboard.total_clicks'), 'CTR (%)', 'Cost ($)']],
             body: dailyData.map(d => [d.name, d.imp, d.clicks, d.ctr, d.cost]),
             startY: 35,
         });
@@ -65,15 +68,15 @@ const Analytics = () => {
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-100">Performance Analytics</h1>
-                    <p className="text-slate-400 mt-1">Deep dive into your campaign metrics with live updates.</p>
+                    <h1 className="text-2xl font-bold text-slate-100">{t('analytics.title')}</h1>
+                    <p className="text-slate-400 mt-1">{t('analytics.subtitle')}</p>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
                     <button onClick={handleExportCSV} className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-xs sm:text-sm font-medium hover:bg-slate-700 text-slate-200 transition-colors">
-                        <Download size={16} /> CSV
+                        <Download size={16} /> {t('analytics.export_csv')}
                     </button>
                     <button onClick={handleExportPDF} className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-xs sm:text-sm font-medium hover:bg-primary-dark transition-colors shadow-lg shadow-blue-900/20">
-                        <Download size={16} /> PDF
+                        <Download size={16} /> {t('analytics.export_pdf')}
                     </button>
                 </div>
             </div>
@@ -83,7 +86,7 @@ const Analytics = () => {
 
                 {/* 1. CTR Trends (Live) */}
                 <div className="glass-panel p-5 md:p-6 rounded-3xl shadow-sm min-w-0">
-                    <h3 className="text-xs font-black text-slate-100 italic uppercase tracking-widest mb-6 px-1">CTR Trends (Live)</h3>
+                    <h3 className="text-xs font-black text-slate-100 italic uppercase tracking-widest mb-6 px-1">{t('analytics.ctr_trends')}</h3>
                     <div className="h-[250px] md:h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={dailyData}>
@@ -103,7 +106,7 @@ const Analytics = () => {
 
                 {/* 2. Impressions */}
                 <div className="glass-panel p-5 md:p-6 rounded-3xl shadow-sm">
-                    <h3 className="text-xs font-black text-slate-100 italic uppercase tracking-widest mb-6 px-1">Daily Impressions</h3>
+                    <h3 className="text-xs font-black text-slate-100 italic uppercase tracking-widest mb-6 px-1">{t('analytics.daily_impressions')}</h3>
                     <div className="h-[250px] md:h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={dailyData}>
@@ -111,7 +114,7 @@ const Analytics = () => {
                                 <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
                                 <Tooltip cursor={{ fill: '#1e293b' }} contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }} />
-                                <Bar dataKey="imp" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Impressions" animationDuration={1000} />
+                                <Bar dataKey="imp" fill="#3b82f6" radius={[4, 4, 0, 0]} name={t('dashboard.impressions')} animationDuration={1000} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -119,7 +122,7 @@ const Analytics = () => {
 
                 {/* 3. Budget Utilization */}
                 <div className="glass-panel p-5 md:p-6 rounded-3xl shadow-sm">
-                    <h3 className="text-xs font-black text-slate-100 italic uppercase tracking-widest mb-6 px-1">Budget Utilization</h3>
+                    <h3 className="text-xs font-black text-slate-100 italic uppercase tracking-widest mb-6 px-1">{t('analytics.budget_utilization')}</h3>
                     <div className="h-[250px] md:h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={dailyData}>
@@ -133,7 +136,7 @@ const Analytics = () => {
                                 <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} unit="%" />
                                 <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }} />
-                                <Area type="monotone" dataKey="budget" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorBudget)" name="Budget Used" />
+                                <Area type="monotone" dataKey="budget" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorBudget)" name={t('dashboard.budget')} />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
@@ -141,7 +144,7 @@ const Analytics = () => {
 
                 {/* 4. Traffic by Device */}
                 <div className="glass-panel p-5 md:p-6 rounded-3xl shadow-sm">
-                    <h3 className="text-xs font-black text-slate-100 italic uppercase tracking-widest mb-6 px-1">Traffic Share</h3>
+                    <h3 className="text-xs font-black text-slate-100 italic uppercase tracking-widest mb-6 px-1">{t('analytics.traffic_share')}</h3>
                     <div className="h-[250px] md:h-[300px] flex items-center justify-center relative">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
@@ -164,7 +167,7 @@ const Analytics = () => {
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <div className="text-center">
                                 <p className="text-2xl md:text-3xl font-black text-white italic">65%</p>
-                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Mobile</p>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{t('campaign.mobile')}</p>
                             </div>
                         </div>
                     </div>
@@ -178,7 +181,6 @@ const Analytics = () => {
                     </div>
                 </div>
             </div>
-
         </div>
     );
 };

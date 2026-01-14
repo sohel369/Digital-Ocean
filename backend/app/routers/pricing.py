@@ -179,3 +179,167 @@ async def delete_pricing_matrix_entry(
     return schemas.MessageResponse(
         message="Pricing matrix entry deleted successfully"
     )
+@router.get("/config", response_model=schemas.GlobalPricingConfig)
+async def get_global_pricing_config(
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Fetch the entire pricing configuration for admin management.
+    Derives unique lists from PricingMatrix and GeoData.
+    """
+    from sqlalchemy import func
+    
+    # Get unique industries and their multipliers
+    industries_data = db.query(
+        models.PricingMatrix.industry_type,
+        func.max(models.PricingMatrix.multiplier).label('multiplier')
+    ).group_by(models.PricingMatrix.industry_type).all()
+    
+    industries = [
+        schemas.IndustryConfig(name=row.industry_type, multiplier=row.multiplier)
+        for row in industries_data
+    ]
+    
+    # Fallback if empty
+    if not industries:
+        industries = [
+            schemas.IndustryConfig(name="Retail", multiplier=1.0),
+            schemas.IndustryConfig(name="Healthcare", multiplier=1.5),
+            schemas.IndustryConfig(name="Tech", multiplier=1.3)
+        ]
+    
+    # Get unique ad types and their base rates
+    ad_types_data = db.query(
+        models.PricingMatrix.advert_type,
+        func.max(models.PricingMatrix.base_rate).label('base_rate')
+    ).group_by(models.PricingMatrix.advert_type).all()
+    
+    ad_types = [
+        schemas.AdTypeConfig(name=row.advert_type, base_rate=row.base_rate)
+        for row in ad_types_data
+    ]
+    
+    if not ad_types:
+        ad_types = [
+            schemas.AdTypeConfig(name="Display", base_rate=100.0),
+            schemas.AdTypeConfig(name="Video", base_rate=250.0)
+        ]
+    
+    # Get states/geo data
+    states_data = db.query(models.GeoData).all()
+    states = [
+        schemas.StateConfig(
+            name=row.state_name or row.country_code,
+            land_area=row.land_area_sq_km,
+            population=row.population,
+            density_multiplier=row.density_multiplier,
+            state_code=row.state_code,
+            country_code=row.country_code
+        )
+        for row in states_data
+    ]
+    
+    if not states:
+        states = [
+            schemas.StateConfig(name="California", land_area=423970, population=39538223, density_multiplier=1.5, state_code="CA", country_code="US")
+        ]
+    
+    # Get global discounts (from first available matrix entry or defaults)
+    first_matrix = db.query(models.PricingMatrix).first()
+    discounts = schemas.DiscountConfig(
+        state=first_matrix.state_discount if first_matrix else 0.15,
+        national=first_matrix.national_discount if first_matrix else 0.30
+    )
+    
+    return schemas.GlobalPricingConfig(
+        industries=industries,
+        ad_types=ad_types,
+        states=states,
+        discounts=discounts
+    )
+
+
+@router.post("/admin/config", response_model=schemas.MessageResponse)
+async def save_global_pricing_config(
+    config: schemas.GlobalPricingConfig,
+    current_user: models.User = Depends(auth.get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Save global pricing configuration.
+    Updates all relevant rows in PricingMatrix and GeoData in bulk.
+    Uses upsert logic to ensure data is created if missing.
+    """
+    # 1. Update/Upsert Industry Multipliers in PricingMatrix
+    # We'll update ALL entries that match this industry name
+    for ind in config.industries:
+        affected = db.query(models.PricingMatrix).filter(
+            models.PricingMatrix.industry_type == ind.name
+        ).update({"multiplier": ind.multiplier})
+        
+        if affected == 0:
+            # If no rows affected, create a default entry for US
+            # This ensures subsequent GET calls return the data
+            new_entry = models.PricingMatrix(
+                industry_type=ind.name,
+                advert_type="display",
+                coverage_type=models.CoverageType.RADIUS_30,
+                base_rate=100.0,
+                multiplier=ind.multiplier,
+                state_discount=config.discounts.state,
+                national_discount=config.discounts.national,
+                country_id="US"
+            )
+            db.add(new_entry)
+        
+    # 2. Update Ad Type Base Rates
+    for ad in config.ad_types:
+        affected = db.query(models.PricingMatrix).filter(
+            models.PricingMatrix.advert_type == ad.name
+        ).update({"base_rate": ad.base_rate})
+        
+        if affected == 0:
+            new_entry = models.PricingMatrix(
+                industry_type="Retail",  # Default industry
+                advert_type=ad.name,
+                coverage_type=models.CoverageType.RADIUS_30,
+                base_rate=ad.base_rate,
+                multiplier=1.0,
+                state_discount=config.discounts.state,
+                national_discount=config.discounts.national,
+                country_id="US"
+            )
+            db.add(new_entry)
+        
+    # 3. Update Discounts globally
+    db.query(models.PricingMatrix).update({
+        "state_discount": config.discounts.state,
+        "national_discount": config.discounts.national
+    })
+    
+    # 4. Update Geo Data / Density Multipliers
+    for state in config.states:
+        existing_geo = db.query(models.GeoData).filter(
+            models.GeoData.state_name == state.name
+        ).first()
+        
+        if existing_geo:
+            existing_geo.density_multiplier = state.density_multiplier
+            existing_geo.population = state.population
+            existing_geo.land_area_sq_km = state.land_area
+            existing_geo.state_code = state.state_code
+            existing_geo.country_code = state.country_code
+        else:
+            new_geo = models.GeoData(
+                state_name=state.name,
+                country_code=state.country_code,
+                state_code=state.state_code,
+                land_area_sq_km=state.land_area,
+                population=state.population,
+                density_multiplier=state.density_multiplier
+            )
+            db.add(new_geo)
+    
+    db.commit()
+    return schemas.MessageResponse(message="Global pricing configuration updated successfully")

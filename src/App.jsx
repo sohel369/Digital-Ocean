@@ -14,6 +14,14 @@ import { Toaster } from 'sonner';
 import { useApp } from './context/AppContext';
 import Login from './pages/Login';
 
+const AdminGuard = ({ children }) => {
+    const { user } = useApp();
+    if (user?.role !== 'admin') {
+        return <Navigate to="/" replace />;
+    }
+    return children;
+};
+
 const MainLayout = ({ children }) => {
     const { user } = useApp();
     const isAuthenticated = !!user;
@@ -51,7 +59,11 @@ function App() {
                                 <Route path="/geo-targeting" element={<GeoTargeting />} />
                                 <Route path="/pricing" element={<Pricing />} />
                                 <Route path="/analytics" element={<Analytics />} />
-                                <Route path="/admin/pricing" element={<AdminPricing />} />
+                                <Route path="/admin/pricing" element={
+                                    <AdminGuard>
+                                        <AdminPricing />
+                                    </AdminGuard>
+                                } />
                                 <Route path="*" element={<Navigate to="/" replace />} />
                             </Routes>
                         </MainLayout>

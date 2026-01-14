@@ -96,6 +96,9 @@ class CampaignCreate(BaseModel):
     target_state: Optional[str] = None
     target_country: Optional[str] = None
     description: Optional[str] = None
+    headline: Optional[str] = None
+    landing_page_url: Optional[str] = None
+    ad_format: Optional[str] = None
     tags: Optional[List[str]] = []
     
     @validator('end_date')
@@ -141,6 +144,9 @@ class CampaignResponse(BaseModel):
     clicks: int
     ctr: float
     description: Optional[str]
+    headline: Optional[str]
+    landing_page_url: Optional[str]
+    ad_format: Optional[str]
     tags: Optional[List[str]]
     created_at: datetime
     updated_at: Optional[datetime]
@@ -250,7 +256,35 @@ class CampaignAnalytics(BaseModel):
     status: CampaignStatus
 
 
+# ==================== Pricing Multi-Config Schemas ====================
+class IndustryConfig(BaseModel):
+    name: str
+    multiplier: float
+
+class AdTypeConfig(BaseModel):
+    name: str
+    base_rate: float
+
+class StateConfig(BaseModel):
+    name: str
+    land_area: float
+    population: int
+    density_multiplier: float
+    state_code: Optional[str] = None
+    country_code: str = "US"
+
+class DiscountConfig(BaseModel):
+    state: float
+    national: float
+
+class GlobalPricingConfig(BaseModel):
+    industries: List[IndustryConfig]
+    ad_types: List[AdTypeConfig]
+    states: List[StateConfig]
+    discounts: DiscountConfig
+
 # ==================== Admin Schemas ====================
+
 class AdminUserUpdate(BaseModel):
     """Schema for admin updating user."""
     name: Optional[str] = None

@@ -66,7 +66,7 @@ const Dropdown = ({ label, icon, options, value, onChange, align = 'right' }) =>
 };
 
 const Header = () => {
-    const { user, notifications, markAllRead, logout, language, setLanguage, currency, setCurrency, country, setCountry, CONSTANTS, setSidebarOpen } = useApp();
+    const { user, notifications, markAllRead, logout, language, setLanguage, currency, setCurrency, country, setCountry, CONSTANTS, setSidebarOpen, t } = useApp();
     const [showNotifs, setShowNotifs] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -90,7 +90,7 @@ const Header = () => {
 
                 <div>
                     <h1 className="text-lg md:text-xl font-bold text-slate-100">
-                        Dashboard
+                        {t('sidebar.dashboard')}
                     </h1>
                     <div className="flex items-center gap-2 mt-0.5">
                         <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
@@ -154,15 +154,15 @@ const Header = () => {
                                 <div className="fixed left-4 right-4 top-20 sm:absolute sm:top-14 sm:right-0 sm:left-auto sm:w-[380px] bg-background-elevated rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-slate-700 z-[70] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                                     <div className="p-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-900/50">
                                         <div className="flex items-center gap-2">
-                                            <h3 className="font-bold text-slate-100">Notifications</h3>
-                                            <span className="bg-primary/20 text-primary-light text-xs font-bold px-2 py-0.5 rounded-full">{unreadCount} New</span>
+                                            <h3 className="font-bold text-slate-100">{t('dashboard.approval_status')}</h3>
+                                            <span className="bg-primary/20 text-primary-light text-xs font-bold px-2 py-0.5 rounded-full">{unreadCount} {t('common.loading')}</span>
                                         </div>
                                         <button onClick={markAllRead} className="text-xs text-primary-light font-medium hover:underline hover:text-primary">Mark all read</button>
                                     </div>
                                     <div className="max-h-[400px] overflow-y-auto p-2 space-y-1">
                                         {notifications.length === 0 ? (
                                             <div className="p-8 text-center text-slate-400">
-                                                <p>No new notifications</p>
+                                                <p>{t('common.no_data')}</p>
                                             </div>
                                         ) : (
                                             notifications.map(n => (
@@ -189,7 +189,7 @@ const Header = () => {
 
                     <Link to="/campaigns/new" className="flex items-center gap-1 sm:gap-2 premium-btn text-white text-[10px] sm:text-sm font-semibold px-2 sm:px-4 py-1.5 sm:py-2.5 rounded-xl transition-all active:scale-95 shadow-lg shadow-primary/25">
                         <PlusCircle size={14} className="sm:w-4 sm:h-4" />
-                        <span className="hidden xs:inline">New Campaign</span>
+                        <span className="hidden xs:inline">{t('sidebar.new_campaign')}</span>
                     </Link>
 
                     {/* User Menu */}
@@ -216,27 +216,6 @@ const Header = () => {
                                         <p className="text-xs text-slate-400 truncate">{user?.email || 'authenticated_user'}</p>
                                     </div>
 
-                                    {/* Mobile Only: Quick Selectors */}
-                                    <div className="lg:hidden p-3 border-b border-slate-700/50 space-y-2">
-                                        <p className="text-[10px] font-bold text-slate-500 uppercase px-2 mb-1">Preferences</p>
-                                        <div className="flex gap-1 overflow-x-auto pb-1 no-scrollbar">
-                                            <Dropdown
-                                                label="Country"
-                                                options={CONSTANTS.COUNTRIES}
-                                                value={country}
-                                                onChange={setCountry}
-                                                icon={<Globe size={14} />}
-                                            />
-                                            <Dropdown
-                                                label="Currency"
-                                                options={CONSTANTS.CURRENCIES}
-                                                value={currency}
-                                                onChange={setCurrency}
-                                                icon={<span className="font-mono text-xs font-bold">{CONSTANTS.CURRENCIES.find(c => c.code === currency)?.symbol}</span>}
-                                            />
-                                        </div>
-                                    </div>
-
                                     <div className="p-2 space-y-1">
                                         <button className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition-colors flex items-center gap-2">
                                             <UserIcon size={16} />
@@ -244,7 +223,7 @@ const Header = () => {
                                         </button>
                                         <button className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition-colors flex items-center gap-2">
                                             <Settings size={16} />
-                                            <span>Settings</span>
+                                            <span>{t('admin.title')}</span>
                                         </button>
                                         <div className="h-px bg-slate-700/50 my-1"></div>
                                         <button
@@ -252,7 +231,7 @@ const Header = () => {
                                             className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-900/20 rounded-lg transition-colors flex items-center gap-2"
                                         >
                                             <LogOut size={16} />
-                                            <span>Sign Out</span>
+                                            <span>{t('sidebar.logout')}</span>
                                         </button>
                                     </div>
                                 </div>

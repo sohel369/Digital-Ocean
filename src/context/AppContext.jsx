@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getCountryDefaults, SUPPORTED_COUNTRIES, SUPPORTED_CURRENCIES, SUPPORTED_LANGUAGES } from '../config/i18nConfig';
+import { getCountryDefaults, SUPPORTED_COUNTRIES, SUPPORTED_CURRENCIES, SUPPORTED_LANGUAGES, formatCurrency } from '../config/i18nConfig';
+import { translations } from '../config/translations';
 import { toast } from 'sonner';
 import {
     auth,
@@ -24,6 +25,13 @@ export const AppProvider = ({ children }) => {
 
     const [campaigns, setCampaigns] = useState([]);
     const [notifications, setNotifications] = useState([]);
+    const [pricingData, setPricingData] = useState({
+        industries: [],
+        adTypes: [],
+        states: [],
+        discounts: { state: 0.15, national: 0.30 }
+    });
+
     const [user, setUser] = useState(() => {
         const stored = localStorage.getItem('user');
         try {
@@ -49,7 +57,7 @@ export const AppProvider = ({ children }) => {
     const fetchData = async () => {
         try {
             // Fetch basic data in parallel
-            const [statsRes, campaignsRes, notifRes] = await Promise.all([
+            const [statsRes, campaignsRes, notifRes, pricingRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/stats`, {
                     headers: { ...getAuthHeaders() },
                     credentials: 'include'
@@ -61,8 +69,13 @@ export const AppProvider = ({ children }) => {
                 fetch(`${API_BASE_URL}/notifications`, {
                     headers: { ...getAuthHeaders() },
                     credentials: 'include'
+                }),
+                fetch(`${API_BASE_URL}/pricing/config`, {
+                    headers: { ...getAuthHeaders() },
+                    credentials: 'include'
                 })
             ]);
+
 
 
             // Clear session if any core request is unauthorized
@@ -95,6 +108,28 @@ export const AppProvider = ({ children }) => {
             if (notifRes.ok) {
                 setNotifications(await notifRes.json());
             }
+
+            if (pricingRes && pricingRes.ok) {
+                const rawPricing = await pricingRes.json();
+                // Transform to frontend format with formatting
+                setPricingData({
+                    industries: (rawPricing.industries || []).map(i => ({
+                        ...i,
+                        name: formatIndustryName(i.name)
+                    })),
+                    adTypes: (rawPricing.ad_types || []).map(a => ({ name: a.name, baseRate: a.base_rate })),
+                    states: (rawPricing.states || []).map(s => ({
+                        name: s.name,
+                        landMass: s.land_area,
+                        densityMultiplier: s.density_multiplier,
+                        population: s.population,
+                        stateCode: s.state_code,
+                        countryCode: s.country_code
+                    })),
+                    discounts: rawPricing.discounts || { state: 0.15, national: 0.30 }
+                });
+            }
+
 
         } catch (error) {
             console.error("Failed to fetch data from API:", error);
@@ -268,60 +303,124 @@ export const AppProvider = ({ children }) => {
         }
     };
 
-    const [currency, setCurrency] = useState('USD');
-    const [language, setLanguage] = useState('en');
-    const [country, setCountry] = useState('US');
+    const [currency, setCurrency] = useState(() => localStorage.getItem('currency') || 'USD');
+    const [language, setLanguage] = useState(() => localStorage.getItem('language') || 'en');
+    const [country, setCountry] = useState(() => localStorage.getItem('country') || 'US');
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
-    // Dynamic Pricing Data
-    const pricingData = {
-        industries: [
-            { name: "Tyres and wheels", multiplier: 1 },
-            { name: "Vehicle servicing and maintenance", multiplier: 2 },
-            { name: "Panel beating and smash repairs", multiplier: 3 },
-            { name: "Automotive finance solutions", multiplier: 4 },
-            { name: "Vehicle insurance products", multiplier: 3 },
-            { name: "Auto parts, tools, and accessories", multiplier: 1 },
-            { name: "Fleet management tools", multiplier: 2 },
-            { name: "Workshop technology and equipment", multiplier: 2 },
-            { name: "Telematics systems and vehicle tracking solutions", multiplier: 2 },
-            { name: "Fuel cards and fuel management services", multiplier: 1 },
-            { name: "Vehicle cleaning and detailing services", multiplier: 1 },
-            { name: "Logistics and scheduling software", multiplier: 2 },
-            { name: "Safety and compliance solutions", multiplier: 1 },
-            { name: "Driver training and induction programs", multiplier: 1 },
-            { name: "Roadside assistance programs", multiplier: 1 },
-            { name: "GPS navigation and route optimisation tools", multiplier: 2 },
-            { name: "EV charging infrastructure and electric vehicle solutions", multiplier: 1 },
-            { name: "Mobile device integration and communications equipment", multiplier: 1 },
-            { name: "Asset recovery and anti-theft technologies", multiplier: 2 }
-        ],
-        adTypes: [
-            { name: "Mobile Leaderboard", baseRate: 125 },
-            { name: "Medium Rectangle", baseRate: 150 },
-            { name: "Leaderboard (Header)", baseRate: 180 },
-            { name: "Leaderboard (Footer)", baseRate: 100 },
-            { name: "Skyscraper", baseRate: 150 }
-        ],
-        discounts: {
-            state: 0.15,
-            national: 0.30
-        },
-        states: [
-            { name: "California", landMass: 155779, densityMultiplier: 1.2 },
-            { name: "Texas", landMass: 261232, densityMultiplier: 1.0 },
-            { name: "Florida", landMass: 53625, densityMultiplier: 1.2 },
-            { name: "New York", landMass: 47126, densityMultiplier: 1.2 },
-            { name: "Pennsylvania", landMass: 44743, densityMultiplier: 1.0 },
-            { name: "Illinois", landMass: 55519, densityMultiplier: 1.0 },
-            { name: "Ohio", landMass: 40861, densityMultiplier: 1.0 },
-            { name: "Georgia", landMass: 57513, densityMultiplier: 1.0 },
-            { name: "North Carolina", landMass: 48618, densityMultiplier: 1.0 },
-            { name: "Michigan", landMass: 56539, densityMultiplier: 1.0 },
-            { name: "Wyoming", landMass: 97093, densityMultiplier: 0.8 },
-            { name: "Montana", landMass: 145546, densityMultiplier: 0.8 }
-        ]
+    // Persist preferences
+    useEffect(() => {
+        localStorage.setItem('currency', currency);
+    }, [currency]);
+
+    useEffect(() => {
+        localStorage.setItem('language', language);
+    }, [language]);
+
+    useEffect(() => {
+        localStorage.setItem('country', country);
+    }, [country]);
+
+    // Translation Helper
+    const t = (path, replacements = {}) => {
+        const keys = path.split('.');
+        let value = translations[language] || translations['en'];
+
+        for (const key of keys) {
+            value = value?.[key];
+        }
+
+        if (typeof value !== 'string') return path;
+
+        Object.entries(replacements).forEach(([key, val]) => {
+            value = value.replace(`{{${key}}}`, val);
+        });
+
+        return value;
     };
+
+    // Helper to format industry names (Polish)
+    const formatIndustryName = (name) => {
+        if (!name) return name;
+        const lowercaseWords = ['and', 'or', 'the', 'in', 'on', 'at', 'to', 'for', 'with', 'from', 'by'];
+
+        return name
+            .split(' ')
+            .map((word, index) => {
+                const lower = word.toLowerCase();
+                if (index > 0 && lowercaseWords.includes(lower)) return lower;
+                return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+            })
+            .join(' ');
+    };
+
+    // Country × Language × Currency Sync Logic
+    const handleCountryChange = (countryCode) => {
+        setCountry(countryCode);
+        const defaults = getCountryDefaults(countryCode);
+        if (defaults) {
+            setLanguage(defaults.language);
+            setCurrency(defaults.currency);
+            toast.info(`Synced: ${countryCode} defaults applied.`);
+        }
+    };
+
+    const AD_FORMATS = [
+        { id: 'mobile_leaderboard', name: 'Mobile Leaderboard', width: 320, height: 50, category: 'mobile' },
+        { id: 'leaderboard', name: 'Leaderboard', width: 728, height: 90, category: 'desktop' },
+        { id: 'medium_rectangle', name: 'Medium Rectangle', width: 300, height: 250, category: 'universal' },
+        { id: 'skyscraper', name: 'Skyscraper', width: 160, height: 600, category: 'desktop' }
+    ];
+
+    const CTA_OPTIONS = [
+        'Learn More',
+        'Shop Now',
+        'Sign Up',
+        'Get Quote',
+        'Book Now',
+        'Contact Us'
+    ];
+
+    // Dynamic Pricing Data handles by state now
+    const savePricingConfig = async (newConfig) => {
+        try {
+            // Transform back to backend format
+            const backendConfig = {
+                industries: newConfig.industries,
+                ad_types: newConfig.adTypes.map(a => ({ name: a.name, base_rate: a.baseRate })),
+                states: newConfig.states.map(s => ({
+                    name: s.name,
+                    land_area: s.landMass,
+                    population: s.population || 0,
+                    density_multiplier: s.densityMultiplier,
+                    state_code: s.stateCode
+                })),
+                discounts: newConfig.discounts
+            };
+
+            const response = await fetch(`${API_BASE_URL}/pricing/admin/config`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...getAuthHeaders()
+                },
+                credentials: 'include',
+                body: JSON.stringify(backendConfig)
+            });
+
+            if (response.ok) {
+                setPricingData(newConfig);
+                toast.success("Pricing configurations updated successfully!");
+                return true;
+            }
+            throw new Error("Failed to save pricing configuration");
+        } catch (error) {
+            console.error("Save Error:", error);
+            toast.error("Save Error", { description: error.message });
+            return false;
+        }
+    };
+
 
     const CONSTANTS = {
         COUNTRIES: SUPPORTED_COUNTRIES,
@@ -451,13 +550,19 @@ export const AppProvider = ({ children }) => {
             setCurrency,
             language,
             setLanguage,
-            country,
-            setCountry,
+            setCountry: handleCountryChange,
             sidebarOpen,
             setSidebarOpen,
             CONSTANTS,
             pricingData,
+            savePricingConfig,
             addCampaign,
+            formatCurrency: (amount) => formatCurrency(amount, currency),
+            t,
+            adFormats: AD_FORMATS,
+            ctaOptions: CTA_OPTIONS,
+            formatIndustryName,
+
             markAllRead,
             logout,
             login,

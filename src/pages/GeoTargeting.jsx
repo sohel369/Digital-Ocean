@@ -91,7 +91,6 @@ const GeoTargeting = () => {
         }
     };
 
-    // Update map when settings change
     useEffect(() => {
         if (mapInstance.current && window.L && circleInstance.current) {
             const radiusMeters = milesToMeters(settings.radius);
@@ -99,6 +98,17 @@ const GeoTargeting = () => {
             // Update Circle
             circleInstance.current.setRadius(radiusMeters);
             circleInstance.current.setLatLng([settings.lat, settings.lng]);
+
+            // Update Popup capability (unbind old, verify logic)
+            // Rebind so next open gets new text
+            const popupContent = `${t('geo.radius')}: ${settings.radius} ${t('geo.miles')}`;
+            circleInstance.current.unbindPopup();
+            circleInstance.current.bindPopup(popupContent);
+
+            // Fixed: Update popup immediately if it's already open (User Request: "display remains showing 30 mile radius")
+            if (circleInstance.current.isPopupOpen()) {
+                circleInstance.current.setPopupContent(popupContent);
+            }
 
             // Update Marker
             if (markerInstance.current) {
@@ -113,24 +123,34 @@ const GeoTargeting = () => {
 
             setStats(calculateStats(settings.radius));
         }
-    }, [settings.radius, settings.lat, settings.lng]);
+    }, [settings.radius, settings.lat, settings.lng, t]);
 
     const handlePostcodeSearch = () => {
         if (!settings.postcode) return;
 
         // Use Nominatim OpenStreetMap Geocoding API (Free)
-        const countryArg = country ? `&countrycodes=${country.toLowerCase()}` : '';
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(settings.postcode)}${countryArg}`)
+        // Global search enabled (no countryCodes restriction), but requesting address details for smart matching
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(settings.postcode)}&addressdetails=1`)
             .then(res => res.json())
             .then(data => {
                 if (data && data.length > 0) {
-                    const match = data.find(d => d.address?.country_code?.toUpperCase() === country?.toUpperCase()) || data[0];
+                    // Smart Matching Logic:
+                    // 1. Priority: Try to find a result that matches the currently selected country (Context)
+                    //    This solves the "90210 maps to Poland" issue when the user is logically in the US.
+                    const countryMatch = data.find(d => d.address?.country_code?.toUpperCase() === country?.toUpperCase());
 
-                    setSettings(prev => ({
-                        ...prev,
-                        lat: parseFloat(match.lat),
-                        lng: parseFloat(match.lon)
-                    }));
+                    // 2. Fallback: If the postcode isn't in the selected country (e.g. User is in US mode but types an Australian postcode),
+                    //    or if no country specific match is found, use the first global result.
+                    //    This satisfies "I can provide any country's postcode".
+                    const match = countryMatch || data[0];
+
+                    if (match) {
+                        setSettings(prev => ({
+                            ...prev,
+                            lat: parseFloat(match.lat),
+                            lng: parseFloat(match.lon)
+                        }));
+                    }
                 } else {
                     alert(t('geo.not_found'));
                 }
@@ -153,25 +173,28 @@ const GeoTargeting = () => {
                 <div className="glass-panel rounded-3xl p-6 shadow-sm space-y-8 h-fit">
 
                     {/* Location Input */}
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                            <MapPin size={16} /> {t('geo.location')}
+                            <MapPin size={16} className="text-primary" />
+                            {t('geo.location')}
                         </h2>
-                        <div className="flex flex-col sm:flex-row gap-2 items-stretch">
-                            <input
-                                type="text"
-                                className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-slate-500"
-                                placeholder={t('geo.placeholder')}
-                                value={settings.postcode}
-                                onChange={(e) => setSettings(p => ({ ...p, postcode: e.target.value }))}
-                                onKeyDown={(e) => e.key === 'Enter' && handlePostcodeSearch()}
-                            />
+                        <div className="flex flex-col sm:flex-row gap-3 items-stretch">
+                            <div className="relative flex-1 group">
+                                <input
+                                    type="text"
+                                    className="w-full bg-slate-900/50 border border-slate-700/50 rounded-2xl px-5 py-4 text-sm text-slate-100 outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-slate-500 transition-all group-hover:bg-slate-900/80"
+                                    placeholder={t('geo.placeholder')}
+                                    value={settings.postcode}
+                                    onChange={(e) => setSettings(p => ({ ...p, postcode: e.target.value }))}
+                                    onKeyDown={(e) => e.key === 'Enter' && handlePostcodeSearch()}
+                                />
+                            </div>
                             <button
                                 onClick={handlePostcodeSearch}
-                                className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center shrink-0 shadow-lg shadow-blue-900/10 active:scale-95 transition-transform"
+                                className="bg-primary hover:bg-primary-dark text-white px-6 py-4 rounded-2xl transition-all flex items-center justify-center shrink-0 shadow-lg shadow-primary/20 active:scale-95 group"
                             >
-                                <span className="sm:hidden mr-2 font-bold text-xs uppercase">{t('geo.search')}</span>
-                                <Navigation size={18} />
+                                <span className="sm:hidden mr-2 font-bold text-xs uppercase tracking-wider">{t('geo.search')}</span>
+                                <Navigation size={20} className="group-hover:translate-x-0.5 transition-transform" />
                             </button>
                         </div>
                     </div>

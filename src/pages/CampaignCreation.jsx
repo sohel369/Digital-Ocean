@@ -6,7 +6,7 @@ import AdPreview from '../components/AdPreview';
 
 const CampaignCreation = () => {
     const navigate = useNavigate();
-    const { addCampaign, pricingData, country, t, adFormats, ctaOptions } = useApp();
+    const { addCampaign, pricingData, country, t, adFormats, ctaOptions, formatIndustryName } = useApp();
     const [formData, setFormData] = useState({
         name: '',
         budget: '150',
@@ -122,7 +122,7 @@ const CampaignCreation = () => {
                                     >
                                         {pricingData.industries.map(i => (
                                             <option key={i.name} value={i.name} className="bg-slate-900 text-sm">
-                                                {t(`industry.${i.name.toLowerCase().replace(/ /g, '_')}`) || formatIndustryName(i.name)}
+                                                {t(`industry.${i.name.toLowerCase().replace(/ /g, '_')}`) || i.displayName || formatIndustryName(i.name)}
                                             </option>
                                         ))}
                                     </select>

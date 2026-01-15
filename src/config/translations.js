@@ -123,7 +123,7 @@ export const translations = {
             title: "Geo-Targeting",
             subtitle: "Define your audience location and reach.",
             location: "Location",
-            placeholder: "Enter Postcode or City",
+            placeholder: "Enter Postcode",
             search: "Search Location",
             radius: "Radius",
             miles: "miles",

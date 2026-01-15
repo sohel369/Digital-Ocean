@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useApp } from '../context/AppContext';
 
 // Icons using SVG for no dependencies
 const GlobeIcon = ({ className }) => (
@@ -64,7 +65,7 @@ const Dropdown = ({ label, icon, options, value, onChange }) => {
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-32 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 mt-2 w-32 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-64 overflow-y-auto custom-scrollbar">
                     <div className="py-1">
                         {options.map((option) => (
                             <button
@@ -74,17 +75,15 @@ const Dropdown = ({ label, icon, options, value, onChange }) => {
                                     setIsOpen(false);
                                 }}
                                 className={`
-                  w-full text-left px-4 py-2.5 text-sm transition-colors
+                  w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between
                   ${value === option.value
                                         ? 'bg-indigo-500/10 text-indigo-400'
                                         : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                                     }
                 `}
                             >
-                                <div className="flex items-center justify-between">
-                                    <span>{option.label}</span>
-                                    {option.symbol && <span className="text-xs opacity-50">{option.symbol}</span>}
-                                </div>
+                                <span className="truncate mr-2">{option.label}</span>
+                                {option.symbol && <span className="text-xs opacity-50 shrink-0">{option.symbol}</span>}
                             </button>
                         ))}
                     </div>
@@ -104,24 +103,28 @@ const Dropdown = ({ label, icon, options, value, onChange }) => {
  * - Premium design
  */
 export const I18nHeader = () => {
-    const [currency, setCurrency] = useState('USD');
-    const [language, setLanguage] = useState('EN');
+    const {
+        currency, setCurrency,
+        language, setLanguage,
+        country, setCountry,
+        CONSTANTS
+    } = useApp();
 
-    // Mock data for dropdowns
-    const currencies = [
-        { value: 'USD', label: 'USD', symbol: '$' },
-        { value: 'GBP', label: 'GBP', symbol: '£' },
-        { value: 'EUR', label: 'EUR', symbol: '€' },
-    ];
+    // Map constants to dropdown options
+    const currencyOptions = CONSTANTS.CURRENCIES
+        .filter(c => c.enabled)
+        .map(c => ({ value: c.code, label: c.code, symbol: c.symbol }));
 
-    const languages = [
-        { value: 'EN', label: 'English' },
-        { value: 'FR', label: 'Français' },
-        { value: 'DE', label: 'Deutsch' },
-        { value: 'ES', label: 'Español' },
-    ];
+    const languageOptions = CONSTANTS.LANGUAGES
+        .filter(l => l.enabled)
+        .map(l => ({ value: l.code, label: l.name }));
 
-    const currentSymbol = currencies.find(c => c.value === currency)?.symbol || '$';
+    const countryOptions = CONSTANTS.COUNTRIES
+        .filter(c => c.enabled)
+        .map(c => ({ value: c.code, label: c.code, symbol: c.flag }));
+
+    const currentCurrency = CONSTANTS.CURRENCIES.find(c => c.code === currency) || {};
+    const currentCountry = CONSTANTS.COUNTRIES.find(c => c.code === country) || {};
 
     return (
         <header className="relative z-40 bg-slate-900/60 backdrop-blur-xl border-b border-white/5 shadow-sm px-8 py-4 mb-8 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4">
@@ -136,10 +139,16 @@ export const I18nHeader = () => {
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                             Live
                         </span>
-                        <span className="text-slate-500 text-xs flex items-center gap-1">
-                            <GlobeIcon className="w-3 h-3" />
-                            United States
-                        </span>
+
+                        <div className="flex items-center gap-1">
+                            <Dropdown
+                                label="Country"
+                                options={countryOptions}
+                                value={country}
+                                onChange={setCountry}
+                                icon={<span className="text-sm">{currentCountry.flag}</span>}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -151,17 +160,17 @@ export const I18nHeader = () => {
                 <div className="flex items-center gap-2 mr-4 pr-4 border-r border-white/5">
                     <Dropdown
                         label="Currency"
-                        options={currencies}
+                        options={currencyOptions}
                         value={currency}
                         onChange={setCurrency}
-                        icon={<span className="font-mono text-xs font-bold text-slate-500">{currentSymbol}</span>}
+                        icon={<span className="font-mono text-xs font-bold text-slate-500">{currentCurrency.symbol || '$'}</span>}
                     />
                     <Dropdown
                         label="Language"
-                        options={languages}
+                        options={languageOptions}
                         value={language}
                         onChange={setLanguage}
-                        icon={<span className="text-xs font-bold text-slate-500">{language}</span>}
+                        icon={<span className="text-xs font-bold text-slate-500">{language.toUpperCase()}</span>}
                     />
                 </div>
 

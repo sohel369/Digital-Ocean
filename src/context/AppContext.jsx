@@ -398,7 +398,11 @@ export const AppProvider = ({ children }) => {
             .map((word, index) => {
                 const lower = word.toLowerCase();
                 if (index > 0 && lowercaseWords.includes(lower)) return lower;
-                return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+
+                // Handle hyphens for words like Anti-Theft
+                return word.split('-').map(part =>
+                    part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+                ).join('-');
             })
             .join(' ');
     };

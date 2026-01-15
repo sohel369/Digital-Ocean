@@ -4,7 +4,7 @@ import { MapPin, Globe, Layout, Building2, CheckCircle2, ChevronRight, Info } fr
 import { PaymentModal } from '../components/PaymentCheckout';
 
 const Pricing = () => {
-    const { pricingData, formatCurrency, t } = useApp();
+    const { pricingData, formatCurrency, t, country, formatIndustryName } = useApp();
     const [selectedIndustry, setSelectedIndustry] = useState({ name: 'Tech', multiplier: 1.0 });
     const [selectedAdType, setSelectedAdType] = useState({ name: 'Display', baseRate: 15.0 });
     const [coverageArea, setCoverageArea] = useState('radius'); // 'radius', 'state', 'national'
@@ -108,7 +108,7 @@ const Pricing = () => {
                                 >
                                     {pricingData.industries.map(i => (
                                         <option key={i.name} value={i.name}>
-                                            {t(`industry.${i.name.toLowerCase().replace(/ /g, '_')}`) || i.name}
+                                            {t(`industry.${i.name.toLowerCase().replace(/ /g, '_')}`) || i.displayName || formatIndustryName(i.name)}
                                         </option>
                                     ))}
                                 </select>
@@ -172,18 +172,23 @@ const Pricing = () => {
                                 <div className="space-y-4">
                                     <label className="text-xs font-black text-slate-500 uppercase tracking-widest px-1">{t('campaign.select_region')}</label>
                                     <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
-                                        {pricingData.states.map(state => (
-                                            <button
-                                                key={state.name}
-                                                onClick={() => setSelectedState(state)}
-                                                className={`px-4 py-3 rounded-xl text-xs font-black transition-all border ${selectedState.name === state.name
-                                                    ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20'
-                                                    : 'bg-slate-800/40 text-slate-400 border-white/5 hover:bg-slate-800'
-                                                    }`}
-                                            >
-                                                {state.name}
-                                            </button>
-                                        ))}
+                                        {pricingData.states
+                                            .filter(state => state.countryCode === country)
+                                            .map(state => (
+                                                <button
+                                                    key={state.name}
+                                                    onClick={() => setSelectedState(state)}
+                                                    className={`px-4 py-3 rounded-xl text-xs font-black transition-all border ${selectedState.name === state.name
+                                                        ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20'
+                                                        : 'bg-slate-800/40 text-slate-400 border-white/5 hover:bg-slate-800'
+                                                        }`}
+                                                >
+                                                    {state.name}
+                                                </button>
+                                            ))}
+                                        {pricingData.states.filter(state => state.countryCode === country).length === 0 && (
+                                            <p className="col-span-full text-slate-500 text-sm italic py-4">{t('common.no_data')}</p>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -211,42 +216,52 @@ const Pricing = () => {
                         <h3 className="text-xl font-bold text-white mb-8">{t('pricing.summary')}</h3>
 
                         <div className="space-y-6">
+                            {/* Details Section */}
                             <div className="space-y-4 border-b border-white/5 pb-6">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">{t('pricing.config_label')}</span>
-                                    <span className="text-white font-bold">{selectedAdType.name} @ {selectedIndustry.name}</span>
+                                <div className="grid grid-cols-[80px_1fr] gap-4 text-sm items-start">
+                                    <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px] pt-1">{t('pricing.config_label')}</span>
+                                    <span className="text-slate-200 font-bold text-right leading-snug break-words">
+                                        {selectedAdType.name} <span className="text-slate-600 px-1">@</span> {selectedIndustry.name}
+                                    </span>
                                 </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">{t('pricing.reach_label')}</span>
-                                    <span className="text-white font-bold">{calculation.areaDescription} (x{calculation.sections})</span>
+                                <div className="grid grid-cols-[80px_1fr] gap-4 text-sm items-start">
+                                    <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px] pt-1">{t('pricing.reach_label')}</span>
+                                    <div className="text-right">
+                                        <span className="text-slate-200 font-bold leading-snug block">{calculation.areaDescription}</span>
+                                        <span className="text-slate-500 text-xs font-mono mt-0.5 block">(x{calculation.sections})</span>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="space-y-4">
-                                <div className="flex justify-between text-slate-400 text-sm">
-                                    <span>{t('pricing.subtotal')}</span>
-                                    <span className="font-bold text-white">{formatCurrency(calculation.basePrice)}</span>
+                            {/* Financials Section */}
+                            <div className="space-y-3">
+                                <div className="grid grid-cols-[80px_1fr] gap-4 text-sm items-center">
+                                    <span className="text-slate-400 font-medium">{t('pricing.subtotal')}</span>
+                                    <span className="font-bold text-white text-right">{formatCurrency(calculation.basePrice)}</span>
                                 </div>
                                 {calculation.discountAmount > 0 && (
-                                    <div className="flex justify-between text-emerald-400 text-sm italic">
-                                        <span>{t('pricing.saving')} ({calculation.discountPercent}%)</span>
-                                        <span className="font-bold">-{formatCurrency(calculation.discountAmount)}</span>
+                                    <div className="grid grid-cols-[80px_1fr] gap-4 text-sm items-center text-emerald-400 italic">
+                                        <span className="truncate">{t('pricing.saving')} <span className="opacity-75 text-xs not-italic">({calculation.discountPercent}%)</span></span>
+                                        <span className="font-bold text-right">-{formatCurrency(calculation.discountAmount)}</span>
                                     </div>
                                 )}
                             </div>
 
+                            {/* Total Section */}
                             <div className="pt-6">
-                                <div className="flex flex-col items-end gap-1 mb-8">
-                                    <span className="text-5xl font-black text-white tracking-tighter">{formatCurrency(calculation.finalPrice)}</span>
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t('pricing.monthly_est')}</span>
+                                <div className="flex flex-col items-end gap-1 mb-6">
+                                    <span className="text-3xl sm:text-4xl lg:text-3xl xl:text-4xl font-black text-white tracking-tighter text-right break-all">
+                                        {formatCurrency(calculation.finalPrice)}
+                                    </span>
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('pricing.monthly_est')}</span>
                                 </div>
 
                                 <button
                                     onClick={() => setIsCheckoutOpen(true)}
-                                    className="w-full premium-btn py-5 rounded-2xl text-xl font-black group shadow-2xl shadow-primary/20 italic"
+                                    className="w-full premium-btn py-4 rounded-xl text-lg font-black group shadow-lg shadow-primary/20 italic flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all"
                                 >
                                     {t('pricing.next_step')}
-                                    <ChevronRight className="inline-block ml-2 group-hover:translate-x-1 transition-transform" />
+                                    <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
                                 </button>
                             </div>
                         </div>

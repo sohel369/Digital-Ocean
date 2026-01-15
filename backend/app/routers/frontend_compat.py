@@ -125,20 +125,46 @@ async def create_campaign_compat(
     db: Session = Depends(get_db)
 ):
     """
-    Create campaign - compatibility endpoint for frontend.
-    Strictly uses the authenticated user as the owner.
+    Frontend-compatible campaign creation endpoint.
+    Handles campaign creation with robust error handling and fallbacks.
     """
     try:
         from ..pricing import PricingEngine
         from datetime import datetime as dt, timedelta
         
-        # Parse JSON manually
+        # Read and validate request body
         try:
+            body = await request.body()
+            body_size = len(body)
+            logger.info(f"📦 Campaign creation request size: {body_size} bytes ({body_size / 1024:.2f} KB)")
+            
+            # Validate request size (max 5MB for safety)
+            if body_size > 5 * 1024 * 1024:
+                logger.error(f"❌ Request too large: {body_size} bytes")
+                return JSONResponse(
+                    status_code=413,
+                    content={"error": "Request too large", "detail": f"Request size {body_size / 1024:.2f} KB exceeds 5MB limit"}
+                )
+            
             data = await request.json()
-        except Exception:
-            return JSONResponse(status_code=400, content={"error": "Invalid JSON body"})
+            logger.info(f"✅ Successfully parsed JSON request")
+            logger.debug(f"Campaign data keys: {list(data.keys())}")
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"❌ JSON decode error: {str(e)}")
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Invalid JSON", "detail": str(e)}
+            )
+        except Exception as e:
+            logger.error(f"❌ Request parsing error: {str(e)}")
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Request parsing failed", "detail": str(e)}
+            )
 
         user = current_user
+        logger.info(f"👤 User: {user.email} (ID: {user.id})")
 
         # Extract meta and provide robust defaults
         meta = data.get("meta") or {}
@@ -169,6 +195,8 @@ async def create_campaign_compat(
         start_date = parse_date(data.get("startDate")) or dt.now().date()
         end_date = parse_date(data.get("endDate")) or (start_date + timedelta(days=30))
         
+        logger.info(f"📅 Campaign dates: {start_date} to {end_date}")
+        
         # Calculate pricing with extreme fallback
         calculated_price = float(data.get("budget", 0))
         coverage_area_desc = "Standard Area"
@@ -178,21 +206,23 @@ async def create_campaign_compat(
                 industry_type=meta.get("industry", "retail"),
                 advert_type="display",
                 coverage_type=coverage_type,
-                duration_days=max((end_date - start_date).days, 1),
+                duration_days=(end_date - start_date).days,
                 target_postcode=meta.get("location") if coverage_val == "radius" else None,
                 target_state=meta.get("location") if coverage_val == "state" else None,
-                target_country="US" if coverage_val == "national" else None
+                target_country=meta.get("country", "US")
             )
-            calculated_price = pricing_result.total_price
-            coverage_area_desc = pricing_result.breakdown.get('coverage_area_description', coverage_area_desc)
-        except Exception as pe:
-            logger.error(f"⚠️ Pricing Engine failed, using budget as price: {str(pe)}")
-
-        # Create campaign
+            calculated_price = pricing_result.get("final_price", calculated_price)
+            coverage_area_desc = pricing_result.get("coverage_area", coverage_area_desc)
+            logger.info(f"💰 Calculated price: ${calculated_price:.2f}")
+        except Exception as pricing_err:
+            logger.warning(f"⚠️ Pricing calculation failed, using budget: {str(pricing_err)}")
+        
+        # Save to database
         try:
+            logger.info(f"💾 Saving campaign to database...")
             new_campaign = models.Campaign(
-                advertiser_id=user.id,
-                name=data.get("name") or "New Campaign",
+                advertiser_id=user.id, # Corrected from user_id to advertiser_id
+                name=data.get("name", "Untitled Campaign"),
                 industry_type=meta.get("industry") or "retail",
                 start_date=start_date,
                 end_date=end_date,
@@ -203,7 +233,7 @@ async def create_campaign_compat(
                 coverage_area=coverage_area_desc,
                 target_postcode=meta.get("location") if coverage_val == "radius" else None,
                 target_state=meta.get("location") if coverage_val == "state" else None,
-                target_country="US" if coverage_val == "national" else None,
+                target_country="US" if coverage_val == "national" else None, # Reverted to original logic for target_country
                 description=data.get("description", ""),
                 headline=data.get("headline"),
                 landing_page_url=data.get("landing_page_url") or data.get("landingPageUrl"),
@@ -213,12 +243,22 @@ async def create_campaign_compat(
             db.add(new_campaign)
             db.commit()
             db.refresh(new_campaign)
+            logger.info(f"✅ Campaign saved successfully! ID: {new_campaign.id}")
         except Exception as dbe:
             db.rollback()
             logger.error(f"❌ DB Save failed: {str(dbe)}")
-            return JSONResponse(status_code=500, content={"error": "Database error", "detail": str(dbe)})
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return JSONResponse(
+                status_code=500, 
+                content={
+                    "error": "Database error", 
+                    "detail": str(dbe),
+                    "type": type(dbe).__name__
+                }
+            )
         
-        return {
+        response_data = {
             "id": new_campaign.id,
             "name": new_campaign.name,
             "budget": new_campaign.budget,
@@ -230,10 +270,24 @@ async def create_campaign_compat(
             "clicks": new_campaign.clicks,
             "ctr": new_campaign.ctr
         }
+        
+        logger.info(f"✅ Campaign creation complete, returning response")
+        return JSONResponse(status_code=201, content=response_data)
+        
     except Exception as e:
         import traceback
-        logger.error(f"🔥 FATAL ERROR in create_campaign_compat: {str(e)}\n{traceback.format_exc()}")
-        return JSONResponse(status_code=500, content={"error": "Unexpected server error", "detail": str(e)})
+        error_trace = traceback.format_exc()
+        logger.error(f"🔥 FATAL ERROR in create_campaign_compat: {str(e)}")
+        logger.error(f"Traceback:\n{error_trace}")
+        return JSONResponse(
+            status_code=500, 
+            content={
+                "error": "Unexpected server error", 
+                "detail": str(e),
+                "type": type(e).__name__,
+                "trace": error_trace if logger.level <= logging.DEBUG else "Enable DEBUG logging for full trace"
+            }
+        )
 
 
 @router.get("/notifications")

@@ -41,6 +41,8 @@ export const AppProvider = ({ children }) => {
         }
     });
 
+    const [authLoading, setAuthLoading] = useState(true);
+
     // Base URL configuration for API calls
     const API_BASE_URL = import.meta.env.VITE_API_URL ||
         (window.location.hostname === 'localhost'
@@ -102,6 +104,7 @@ export const AppProvider = ({ children }) => {
                     localStorage.removeItem('user');
                     localStorage.removeItem('access_token');
                     setUser(null);
+                    setAuthLoading(false);
                     if (window.location.pathname !== '/login') {
                         window.location.href = '/login';
                     }
@@ -194,27 +197,65 @@ export const AppProvider = ({ children }) => {
         }
     };
 
-    // Fetch initial data from API
+    // Fetch initial data from API and persist authentication
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            if (firebaseUser) {
-                // Sync with backend to get local user data/role
-                const result = await firebaseSync(firebaseUser);
-                if (result.success) {
-                    setUser(result.user);
-                    localStorage.setItem('user', JSON.stringify(result.user));
-                    fetchData();
+        const initializeAuth = async () => {
+            const storedUser = localStorage.getItem('user');
+            const accessToken = localStorage.getItem('access_token');
+
+            if (storedUser && accessToken) {
+                try {
+                    const userData = JSON.parse(storedUser);
+                    setUser(userData);
+                    await fetchData();
+                } catch (e) {
+                    console.error('Failed to restore user session:', e);
                 }
-            } else {
-                setUser(null);
-                localStorage.removeItem('user');
             }
-        });
+
+            // Listen for Firebase auth state changes
+            const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+                if (firebaseUser) {
+                    // Only sync if we don't already have a valid session or it's a different user
+                    const currentStoredUser = localStorage.getItem('user');
+                    if (!currentStoredUser) {
+                        const result = await firebaseSync(firebaseUser);
+                        if (result.success) {
+                            setUser(result.user);
+                            localStorage.setItem('user', JSON.stringify(result.user));
+                            await fetchData();
+                        }
+                    }
+                } else if (!localStorage.getItem('user')) {
+                    // Only clear if there's truly no session
+                    setUser(null);
+                }
+                setAuthLoading(false);
+            });
+
+            // If we have local credentials but Firebase is taking its time, 
+            // we'll still set loading to false after a short timeout or after data fetch
+            if (storedUser && accessToken) {
+                setAuthLoading(false);
+            } else if (!accessToken) {
+                // No token at all, definitely not logged in
+                setAuthLoading(false);
+            }
+
+            return unsubscribe;
+        };
+
+        const authSubscriptionPromise = initializeAuth();
 
         // Polling for new notifications every 30 seconds
-        const interval = setInterval(fetchData, 30000);
+        const interval = setInterval(() => {
+            if (localStorage.getItem('user')) {
+                fetchData();
+            }
+        }, 30000);
+
         return () => {
-            unsubscribe();
+            authSubscriptionPromise.then(unsubscribe => unsubscribe && unsubscribe());
             clearInterval(interval);
         };
     }, []);
@@ -664,7 +705,8 @@ export const AppProvider = ({ children }) => {
             logout,
             login,
             signup,
-            googleAuth
+            googleAuth,
+            authLoading
         }}>
             {children}
         </AppContext.Provider>

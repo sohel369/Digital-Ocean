@@ -8,9 +8,14 @@ import time
 from .config import settings
 
 # Configure logging at the very top
+# Configure logging at the very top
+import sys
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL, logging.INFO),
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
 )
 logger = logging.getLogger(__name__)
 

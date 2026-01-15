@@ -24,21 +24,37 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
+# Logger for database errors
+import logging
+logger = logging.getLogger(__name__)
+from fastapi import HTTPException, status
+from sqlalchemy.exc import SQLAlchemyError
+
 def get_db() -> Generator[Session, None, None]:
     """
     Dependency function that yields database session.
     Automatically closes session after request completes.
-    
-    Usage:
-        @app.get("/items")
-        def read_items(db: Session = Depends(get_db)):
-            return db.query(Item).all()
+    Handles connection errors gracefully.
     """
-    db = SessionLocal()
+    db = None
     try:
+        db = SessionLocal()
         yield db
+    except SQLAlchemyError as e:
+        logger.error(f"❌ Database Connection Error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection failed"
+        )
+    except Exception as e:
+        logger.error(f"❌ Unexpected Database Error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal database error"
+        )
     finally:
-        db.close()
+        if db:
+            db.close()
 
 
 def init_db():

@@ -100,3 +100,11 @@ settings = Settings()
 
 # Ensure upload directory exists
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+
+# Compatibility warning
+if "postgres://" in settings.DATABASE_URL:
+    settings.DATABASE_URL = settings.DATABASE_URL.replace("postgres://", "postgresql://")
+
+if settings.DATABASE_URL.startswith("sqlite"):
+    print("⚠️  WARNING: Running with SQLite database. This is not recommended for production on Railway.")
+

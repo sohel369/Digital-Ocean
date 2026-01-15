@@ -18,9 +18,9 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
-print("🚀 STARTING ADVERTISING BACKEND VERSION: 1.0.2-final 🚀")
-print("🚀 STARTING ADVERTISING BACKEND VERSION: 1.0.2-final 🚀")
-print("🚀 STARTING ADVERTISING BACKEND VERSION: 1.0.2-final 🚀")
+print("🚀 STARTING ADVERTISING BACKEND VERSION: 1.0.3-reset 🚀")
+print("🚀 STARTING ADVERTISING BACKEND VERSION: 1.0.3-reset 🚀")
+print("🚀 STARTING ADVERTISING BACKEND VERSION: 1.0.3-reset 🚀")
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -355,11 +355,11 @@ async def startup_event():
                     db.commit()
                     logger.info("✅ Admin user created: admin@adplatform.com")
                 else:
-                    # Ensure it has the admin role
-                    if admin.role != models.UserRole.ADMIN:
-                        admin.role = models.UserRole.ADMIN
-                        db.commit()
-                        logger.info("✅ Updated user to ADMIN role")
+                    # FORCE RESET PASSWORD and ROLE to ensure access
+                    admin.role = models.UserRole.ADMIN
+                    admin.password_hash = auth.get_password_hash("admin123")
+                    db.commit()
+                    logger.info("✅ Admin user updated: Role=ADMIN, Password=Reset")
             except Exception as e:
                 logger.error(f"❌ Error during auto-seeding: {e}")
             finally:

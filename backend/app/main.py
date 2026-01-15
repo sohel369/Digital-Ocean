@@ -166,6 +166,51 @@ async def health_check():
         "version": settings.APP_VERSION
     }
 
+# ==================== Debug/Diagnostic Endpoints ====================
+@app.get("/api/debug/db", tags=["Debug"])
+async def debug_db():
+    from .database import SessionLocal
+    from sqlalchemy import text
+    try:
+        db = SessionLocal()
+        # Test 1: Simple SELECT 1
+        db.execute(text("SELECT 1"))
+        
+        # Test 2: Count users
+        from . import models
+        user_count = db.query(models.User).count()
+        pricing_count = db.query(models.PricingMatrix).count()
+        
+        db.close()
+        return {
+            "status": "ok", 
+            "database_connected": True, 
+            "user_count": user_count,
+            "pricing_count": pricing_count
+        }
+    except Exception as e:
+        import traceback
+        return {
+            "status": "error", 
+            "error": str(e), 
+            "traceback": traceback.format_exc()
+        }
+
+@app.get("/api/debug/env", tags=["Debug"])
+async def debug_env():
+    import os
+    # Return existence of keys only, not values for security
+    env_keys = list(os.environ.keys())
+    has_db_url = "DATABASE_URL" in os.environ
+    db_url_start = os.environ.get("DATABASE_URL", "")[:10] if has_db_url else None
+    
+    return {
+        "env_keys": env_keys,
+        "has_database_url": has_db_url,
+        "database_url_start": db_url_start,
+        "app_env": os.environ.get("RAILWAY_ENVIRONMENT", "unknown")
+    }
+
 
 # ==================== Include Routers ====================
 

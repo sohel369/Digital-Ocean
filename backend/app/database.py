@@ -47,27 +47,12 @@ def get_db() -> Generator[Session, None, None]:
     """
     Dependency function that yields database session.
     Automatically closes session after request completes.
-    Handles connection errors gracefully.
     """
-    db = None
+    db = SessionLocal()
     try:
-        db = SessionLocal()
         yield db
-    except SQLAlchemyError as e:
-        logger.error(f"❌ Database Connection Error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection failed"
-        )
-    except Exception as e:
-        logger.error(f"❌ Unexpected Database Error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal database error"
-        )
     finally:
-        if db:
-            db.close()
+        db.close()
 
 
 def init_db():

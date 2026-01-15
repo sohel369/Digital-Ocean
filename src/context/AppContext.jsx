@@ -44,13 +44,16 @@ export const AppProvider = ({ children }) => {
     const [authLoading, setAuthLoading] = useState(true);
 
     // Base URL configuration for API calls
+    // FORCE PRODUCTION BACKEND if VITE_API_URL is missing
+    const PRODUCTION_BACKEND = 'https://balanced-wholeness-production-ca00.up.railway.app/api';
+
     const API_BASE_URL = import.meta.env.VITE_API_URL ||
         (window.location.hostname === 'localhost'
             ? '/api'
-            : (window.location.origin + '/api')); // Default to relative /api on same domain
+            : PRODUCTION_BACKEND);
 
     // Backup Fallback (Old Railway URL - only used if previous detection seems likely to fail or for legacy)
-    const BACKUP_API_URL = 'https://balanced-wholeness-production-ca00.up.railway.app/api';
+    const BACKUP_API_URL = PRODUCTION_BACKEND;
 
     // Debugging helper
     useEffect(() => {

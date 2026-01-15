@@ -11,7 +11,7 @@ cmds = [
 # Initialize database before starting (critical for Railway)
 [phases.build]
 cmds = [
-    "cd backend && /opt/venv/bin/python scripts/init_db.py || echo 'Database init skipped or already initialized'"
+    "echo 'Build phase complete - Database init will run on startup'"
 ]
 
 [start]

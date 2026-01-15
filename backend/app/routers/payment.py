@@ -26,18 +26,13 @@ async def create_checkout_session(
     campaign_id: int,
     success_url: str,
     cancel_url: str,
+    currency: str = "usd",
     current_user: models.User = Depends(auth.get_current_active_user),
     db: Session = Depends(get_db)
 ):
     """
     Create a Stripe Checkout session for campaign payment.
-    
-    - **campaign_id**: ID of the campaign to pay for
-    - **success_url**: URL to redirect after successful payment
-    - **cancel_url**: URL to redirect if payment is cancelled
-    
-    Returns:
-    - Checkout session URL to redirect the user to
+    Supports multi-currency.
     """
     # Get campaign
     campaign = db.query(models.Campaign).filter(models.Campaign.id == campaign_id).first()
@@ -62,19 +57,24 @@ async def create_checkout_session(
     ).first()
     
     if existing_payment:
+        # If already paid, we shouldn't create a new session, but for testing we might want to allow it? 
+        # Better to block.
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Campaign has already been paid for"
         )
     
-    # Calculate amount (in cents for Stripe)
-    amount_cents = int(campaign.calculated_price * 100)
+    # Currency Handling: Stripe expects smallest currency unit
+    # Zero-decimal currencies: VND, JPY, KRW, etc.
+    zero_decimal_currencies = ['vnd', 'jpy', 'krw', 'bif', 'clp', 'djf', 'gnf', 'kmf', 'mga', 'pyg', 'rwf', 'ugx', 'vuv', 'xaf', 'xof', 'xpf']
+    target_currency = currency.lower()
     
-    if amount_cents <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid campaign price"
-        )
+    multiplier = 1 if target_currency in zero_decimal_currencies else 100
+    amount_smallest_unit = int(campaign.calculated_price * multiplier)
+    
+    if amount_smallest_unit <= 0:
+        # Fallback for campaigns with 0 calculated price (e.g. error) or free trials
+        amount_smallest_unit = 100 if multiplier == 100 else 1 # Minimum charge
     
     try:
         if not is_stripe_configured():
@@ -92,12 +92,12 @@ async def create_checkout_session(
             line_items=[
                 {
                     'price_data': {
-                        'currency': 'usd',
+                        'currency': target_currency,
                         'product_data': {
                             'name': f'Campaign: {campaign.name}',
                             'description': f'{campaign.industry_type} - {campaign.coverage_type.value} coverage',
                         },
-                        'unit_amount': amount_cents,
+                        'unit_amount': amount_smallest_unit,
                     },
                     'quantity': 1,
                 }
@@ -110,7 +110,8 @@ async def create_checkout_session(
             metadata={
                 'campaign_id': campaign_id,
                 'user_id': current_user.id,
-                'campaign_name': campaign.name
+                'campaign_name': campaign.name,
+                'currency': target_currency 
             }
         )
         
@@ -120,7 +121,7 @@ async def create_checkout_session(
             user_id=current_user.id,
             stripe_payment_intent_id=checkout_session.payment_intent or checkout_session.id,
             amount=campaign.calculated_price,
-            currency='USD',
+            currency=target_currency.upper(),
             status='pending',
             payment_method='stripe_checkout'
         )
@@ -229,10 +230,10 @@ async def stripe_webhook(
             payment.stripe_charge_id = session.get('payment_intent')
             payment.completed_at = db.func.now()
             
-            # Update campaign status to PENDING (awaiting admin approval)
+            # Update campaign status to ACTIVE (Paid & Active immediately)
             campaign = db.query(models.Campaign).filter(models.Campaign.id == campaign_id).first()
             if campaign:
-                campaign.status = models.CampaignStatus.PENDING
+                campaign.status = models.CampaignStatus.ACTIVE
             
             db.commit()
     

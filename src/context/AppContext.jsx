@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getCountryDefaults, SUPPORTED_COUNTRIES, SUPPORTED_CURRENCIES, SUPPORTED_LANGUAGES, formatCurrency } from '../config/i18nConfig';
+import { getCountryDefaults, SUPPORTED_COUNTRIES, SUPPORTED_CURRENCIES, SUPPORTED_LANGUAGES, formatCurrency, convertCurrency } from '../config/i18nConfig';
 import { translations } from '../config/translations';
 import { toast } from 'sonner';
 import {
@@ -29,7 +29,8 @@ export const AppProvider = ({ children }) => {
         industries: [],
         adTypes: [],
         states: [],
-        discounts: { state: 0.15, national: 0.30 }
+        discounts: { state: 0.15, national: 0.30 },
+        currency: 'USD' // Base currency of the pricing attributes
     });
 
     const [user, setUser] = useState(() => {
@@ -68,6 +69,77 @@ export const AppProvider = ({ children }) => {
         return token ? { 'Authorization': `Bearer ${token}` } : {};
     };
 
+    // Helper to load regions (states) dynamically for the selected country
+    // AND load the specific pricing configuration for that country (Currency Overrides)
+    const loadRegionsForCountry = async (countryCode, currentPricing = null) => {
+        try {
+            console.log(`🌍 Fetching regions and pricing for ${countryCode}...`);
+
+            // Parallel fetch: Regions (Geo) + Config (Pricing)
+            const [geoRes, pricingRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/geo/regions/${countryCode}`),
+                fetch(`${API_BASE_URL}/pricing/config?country_code=${countryCode}`, {
+                    headers: { ...getAuthHeaders() }
+                })
+            ]);
+
+            // 1. Process Regions
+            let regionUpdates = [];
+            if (geoRes.ok) {
+                const regions = await geoRes.json();
+                regionUpdates = regions;
+            }
+
+            // 2. Process Pricing & Currency
+            let pricingUpdates = null;
+            if (pricingRes.ok) {
+                const rawPricing = await pricingRes.json();
+                pricingUpdates = {
+                    industries: (rawPricing.industries || []).map(i => ({
+                        ...i,
+                        displayName: formatIndustryName(i.name),
+                        name: i.name
+                    })),
+                    adTypes: (rawPricing.ad_types || []).map(a => ({ name: a.name, baseRate: a.base_rate })),
+                    discounts: rawPricing.discounts || { state: 0.15, national: 0.30 },
+                    // CRITICAL: Backend now tells us if these rates are USD or Specific (e.g. THB)
+                    currency: rawPricing.currency || 'USD'
+                };
+            }
+
+            setPricingData(prev => {
+                const base = currentPricing || pricingUpdates || prev;
+                const existingStates = base.states || [];
+
+                // Merge Regions
+                let mergedStates = existingStates;
+                if (regionUpdates.length > 0) {
+                    mergedStates = regionUpdates.map(r => {
+                        const existing = existingStates.find(s => s.name === r.name || s.stateCode === r.code);
+                        return {
+                            name: r.name,
+                            stateCode: r.code,
+                            countryCode: r.country_code,
+                            landMass: existing?.landMass || existing?.land_area || 50000,
+                            densityMultiplier: existing?.densityMultiplier || existing?.density_multiplier || 1.0,
+                            population: existing?.population || 1000000
+                        };
+                    });
+                }
+
+                // If we got fresh pricing, return that with merged states.
+                // Otherwise update states on previous pricing.
+                if (pricingUpdates) {
+                    return { ...pricingUpdates, states: mergedStates };
+                }
+                return { ...base, states: mergedStates };
+            });
+
+        } catch (e) {
+            console.error("❌ Failed to load regions/pricing:", e);
+        }
+    };
+
 
     const fetchData = async () => {
         try {
@@ -85,7 +157,7 @@ export const AppProvider = ({ children }) => {
                     headers: { ...getAuthHeaders() },
                     credentials: 'include'
                 }),
-                fetch(`${API_BASE_URL}/pricing/config`, {
+                fetch(`${API_BASE_URL}/pricing/config?country_code=${country}`, {
                     headers: { ...getAuthHeaders() },
                     credentials: 'include'
                 })
@@ -129,7 +201,7 @@ export const AppProvider = ({ children }) => {
             if (pricingRes && pricingRes.ok) {
                 const rawPricing = await pricingRes.json();
                 // Transform to frontend format with formatting
-                setPricingData({
+                const freshPricing = {
                     industries: (rawPricing.industries || []).map(i => ({
                         ...i,
                         displayName: formatIndustryName(i.name), // Format for UI
@@ -144,8 +216,14 @@ export const AppProvider = ({ children }) => {
                         stateCode: s.state_code,
                         countryCode: s.country_code
                     })),
-                    discounts: rawPricing.discounts || { state: 0.15, national: 0.30 }
-                });
+                    discounts: rawPricing.discounts || { state: 0.15, national: 0.30 },
+                    currency: rawPricing.currency || 'USD'
+                };
+
+                setPricingData(freshPricing);
+                // Immediately load regions to ensure we have the full list
+                await loadRegionsForCountry(country, freshPricing);
+
             } else {
                 console.warn("Pricing metadata fetch failed or unauthorized, using internal fallbacks.");
                 setPricingData({
@@ -463,7 +541,8 @@ export const AppProvider = ({ children }) => {
     // Helper to format industry names (Polish)
     const formatIndustryName = (name) => {
         if (!name) return name;
-        const lowercaseWords = ['and', 'or', 'the', 'in', 'on', 'at', 'to', 'for', 'with', 'from', 'by'];
+        // Strictly only 'and' remains lowercase as per requirements
+        const lowercaseWords = ['and'];
 
         return name
             .split(' ')
@@ -480,8 +559,12 @@ export const AppProvider = ({ children }) => {
     };
 
     // Country × Language × Currency Sync Logic
-    const handleCountryChange = (countryCode) => {
+    const handleCountryChange = async (countryCode) => {
         setCountry(countryCode);
+
+        // Load regions for the new country immediately
+        await loadRegionsForCountry(countryCode);
+
         const defaults = getCountryDefaults(countryCode);
         if (defaults) {
             // Country change ALWAYS resets overrides to ensure predictable behavior
@@ -659,6 +742,36 @@ export const AppProvider = ({ children }) => {
 
     };
 
+    // Payment Handler
+    const initiatePayment = async (campaignId, targetCurrency) => {
+        try {
+            toast.loading("Initializing secure checkout...");
+
+            const res = await fetch(`${API_BASE_URL}/payment/create-checkout-session?campaign_id=${campaignId}&success_url=${encodeURIComponent(window.location.origin + '/dashboard?payment=success')}&cancel_url=${encodeURIComponent(window.location.origin + '/create-campaign?payment=cancelled')}&currency=${targetCurrency || currency}`, {
+                method: 'POST',
+                headers: {
+                    ...getAuthHeaders(),
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!res.ok) {
+                const error = await res.json();
+                throw new Error(error.detail || 'Payment initialization failed');
+            }
+
+            const data = await res.json();
+            if (data.checkout_url) {
+                window.location.href = data.checkout_url;
+            } else {
+                toast.error('Invalid payment configuration received.');
+            }
+        } catch (error) {
+            console.error("Payment Error:", error);
+            toast.error(`Payment Failed: ${error.message}`);
+        }
+    };
+
     return (
         <AppContext.Provider value={{
             stats,
@@ -679,7 +792,9 @@ export const AppProvider = ({ children }) => {
             pricingData,
             savePricingConfig,
             addCampaign,
+            initiatePayment,
             formatCurrency: (amount) => formatCurrency(amount, currency),
+            convertPrice: (amount, sourceCurrency) => convertCurrency(amount, sourceCurrency || 'USD', currency),
             t,
             adFormats: [
                 { id: 'mobile_leaderboard', name: 'Mobile Leaderboard (320x50)', width: 320, height: 50, category: 'mobile' },

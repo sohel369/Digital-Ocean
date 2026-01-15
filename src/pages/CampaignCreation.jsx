@@ -6,7 +6,7 @@ import AdPreview from '../components/AdPreview';
 
 const CampaignCreation = () => {
     const navigate = useNavigate();
-    const { addCampaign, pricingData, country, currency, CONSTANTS, t, adFormats, ctaOptions, formatIndustryName } = useApp();
+    const { addCampaign, pricingData, country, currency, CONSTANTS, t, adFormats, ctaOptions, formatIndustryName, convertPrice, formatCurrency } = useApp();
     const currentCurrency = CONSTANTS.CURRENCIES.find(c => c.code === currency) || { symbol: '$' };
     const [formData, setFormData] = useState({
         name: '',
@@ -38,6 +38,18 @@ const CampaignCreation = () => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
+
+    // Auto-select first state when country changes
+    React.useEffect(() => {
+        if (filteredStates.length > 0) {
+            setFormData(prev => ({
+                ...prev,
+                targetState: filteredStates[0].name,
+                postcode: '' // Clear postcode on country change to prevent mismatches
+            }));
+        }
+    }, [country, pricingData.states]); // simplified dependency
+
 
     const handleFileDrop = (e) => {
         e.preventDefault();
@@ -81,8 +93,16 @@ const CampaignCreation = () => {
         };
 
         try {
-            await addCampaign(config);
-            navigate('/');
+            const newCampaign = await addCampaign(config);
+
+            if (newCampaign && newCampaign.id) {
+                // Determine currency from pricingData (preferred) or default to USD
+                // This ensures we pay in the currency the user saw on the screen
+                await initiatePayment(newCampaign.id, pricingData.currency || 'USD');
+            } else {
+                // Fallback if no ID returned (shouldn't happen with updated addCampaign)
+                navigate('/');
+            }
         } catch (error) {
             console.error("Submission failed:", error);
         }
@@ -322,17 +342,45 @@ const CampaignCreation = () => {
                             </div>
                         </div>
 
+                        {/* Pricing Estimation Card */}
+                        <div className="bg-slate-900/50 rounded-2xl p-4 border border-slate-700/50 flex flex-col gap-2">
+                            <div className="flex justify-between text-xs text-slate-400">
+                                <span>Base Rate ({formData.format})</span>
+                                <span className="text-slate-200 font-mono">
+                                    {/* Dynamic Price Display */}
+                                    {(() => {
+                                        // Find base rate for selected format
+                                        const rate = pricingData.adTypes.find(a => a.name.toLowerCase() === formData.format.replace('_', ' ').toLowerCase())?.baseRate || 100;
+                                        // Convert from specific source currency (e.g. THB) to user display currency
+                                        const converted = convertPrice(rate, pricingData.currency);
+                                        return formatCurrency(converted);
+                                    })()}
+                                    /day
+                                </span>
+                            </div>
+                            <div className="flex justify-between text-xs text-slate-400">
+                                <span>Industry Multiplier ({formatIndustryName(formData.industry)})</span>
+                                <span className="text-primary font-bold">
+                                    x{pricingData.industries.find(i => i.name === formData.industry)?.multiplier || 1.0}
+                                </span>
+                            </div>
+                        </div>
+
                         <div className="space-y-4">
                             <label className="block text-xs font-bold text-slate-500 uppercase">{t('campaign.daily_budget')}</label>
                             <div className="relative max-w-xs">
                                 <div className="absolute left-5 top-1/2 -translate-y-1/2 text-primary font-black text-xl italic">{currentCurrency.symbol}</div>
                                 <input
-                                    type="number" name="budget" step="10" min="50"
+                                    type="number" name="budget"
+                                    step={Math.ceil(convertPrice(10, 'USD'))}
+                                    min={Math.ceil(convertPrice(50, 'USD'))}
                                     className="w-full bg-slate-900/50 border border-slate-700/50 rounded-2xl pl-12 pr-5 py-4 text-2xl font-black text-white outline-none focus:ring-2 focus:ring-primary/50"
                                     value={formData.budget} onChange={handleInputChange}
                                 />
                             </div>
-                            <p className="text-xs text-slate-500 font-medium">{t('campaign.budget_min')}</p>
+                            <p className="text-xs text-slate-500 font-medium">
+                                {t('campaign.budget_min')} ({formatCurrency(convertPrice(50, 'USD'))})
+                            </p>
                         </div>
                     </div>
 

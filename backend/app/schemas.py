@@ -282,6 +282,7 @@ class GlobalPricingConfig(BaseModel):
     ad_types: List[AdTypeConfig]
     states: List[StateConfig]
     discounts: DiscountConfig
+    currency: str = "USD"
 
 # ==================== Admin Schemas ====================
 

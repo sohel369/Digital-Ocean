@@ -128,29 +128,21 @@ const GeoTargeting = () => {
     const handlePostcodeSearch = () => {
         if (!settings.postcode) return;
 
-        // Use Nominatim OpenStreetMap Geocoding API (Free)
-        // Global search enabled (no countryCodes restriction), but requesting address details for smart matching
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(settings.postcode)}&addressdetails=1`)
+        // Strict Country Validation: Map only to the selected country
+        // This ensures 90210 maps to US, and French postcodes map to France.
+        const isoCode = country?.toLowerCase() || 'us';
+
+        // Use Nominatim with 'countrycodes' parameter for strict filtering
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(settings.postcode)}&countrycodes=${isoCode}&limit=1`)
             .then(res => res.json())
             .then(data => {
                 if (data && data.length > 0) {
-                    // Smart Matching Logic:
-                    // 1. Priority: Try to find a result that matches the currently selected country (Context)
-                    //    This solves the "90210 maps to Poland" issue when the user is logically in the US.
-                    const countryMatch = data.find(d => d.address?.country_code?.toUpperCase() === country?.toUpperCase());
-
-                    // 2. Fallback: If the postcode isn't in the selected country (e.g. User is in US mode but types an Australian postcode),
-                    //    or if no country specific match is found, use the first global result.
-                    //    This satisfies "I can provide any country's postcode".
-                    const match = countryMatch || data[0];
-
-                    if (match) {
-                        setSettings(prev => ({
-                            ...prev,
-                            lat: parseFloat(match.lat),
-                            lng: parseFloat(match.lon)
-                        }));
-                    }
+                    const match = data[0];
+                    setSettings(prev => ({
+                        ...prev,
+                        lat: parseFloat(match.lat),
+                        lng: parseFloat(match.lon)
+                    }));
                 } else {
                     alert(t('geo.not_found'));
                 }

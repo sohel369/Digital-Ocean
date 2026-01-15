@@ -182,51 +182,71 @@ async def delete_pricing_matrix_entry(
     )
 @router.get("/config", response_model=schemas.GlobalPricingConfig)
 async def get_global_pricing_config(
+    country_code: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
     """
-    Fetch the entire pricing configuration for admin management.
-    Derives unique lists from PricingMatrix and GeoData.
+    Fetch pricing configuration.
+    If country_code is provided, tries to find country-specific pricing (Currency Override).
+    Falls back to US/Global pricing if no specific override exists.
     """
-    from sqlalchemy import func
+    from sqlalchemy import func, or_
     
-    # Get unique industries and their multipliers
-    industries_data = db.query(
-        models.PricingMatrix.industry_type,
-        func.max(models.PricingMatrix.multiplier).label('multiplier')
-    ).group_by(models.PricingMatrix.industry_type).all()
+    target_country = country_code.upper() if country_code else "US"
     
-    industries = [
-        schemas.IndustryConfig(name=row.industry_type, multiplier=row.multiplier)
-        for row in industries_data
-    ]
+    # helper to getting rates with fallback
+    def get_matrix_entries(filters):
+        # Try specific country first
+        query = db.query(models.PricingMatrix)
+        for k, v in filters.items():
+            query = query.filter(getattr(models.PricingMatrix, k) == v)
+            
+        specific = query.filter(models.PricingMatrix.country_id == target_country).all()
+        if specific:
+            return specific, True # Found specific
+            
+        # Fallback to US or NULL
+        fallback = query.filter(
+            or_(models.PricingMatrix.country_id == "US", models.PricingMatrix.country_id.is_(None))
+        ).all()
+        return fallback, False # Found fallback
+
+    # 1. Industries & Multipliers
+    # We fetch all unique industries first to ensure we allow selection
+    all_industries = db.query(models.PricingMatrix.industry_type).distinct().all()
+    industries = []
     
-    # Fallback if empty
+    for (ind_name,) in all_industries:
+        # For each industry, find the effective multiplier for this country
+        entries, is_specific = get_matrix_entries({"industry_type": ind_name})
+        # Use max multiplier to be safe/conservative if duplicates exist
+        mult = max([e.multiplier for e in entries]) if entries else 1.0
+        industries.append(schemas.IndustryConfig(name=ind_name, multiplier=mult))
+
     if not industries:
-        industries = [
+         industries = [
             schemas.IndustryConfig(name="Retail", multiplier=1.0),
             schemas.IndustryConfig(name="Healthcare", multiplier=1.5),
             schemas.IndustryConfig(name="Tech", multiplier=1.3)
         ]
+
+    # 2. Ad Types & Base Rates
+    # Similar logic: check if this country has a specific base rate for "Display"
+    all_ad_types = db.query(models.PricingMatrix.advert_type).distinct().all()
+    ad_types = []
     
-    # Get unique ad types and their base rates
-    ad_types_data = db.query(
-        models.PricingMatrix.advert_type,
-        func.max(models.PricingMatrix.base_rate).label('base_rate')
-    ).group_by(models.PricingMatrix.advert_type).all()
-    
-    ad_types = [
-        schemas.AdTypeConfig(name=row.advert_type, base_rate=row.base_rate)
-        for row in ad_types_data
-    ]
-    
+    for (ad_name,) in all_ad_types:
+        entries, is_specific = get_matrix_entries({"advert_type": ad_name})
+        rate = max([e.base_rate for e in entries]) if entries else 100.0
+        ad_types.append(schemas.AdTypeConfig(name=ad_name, base_rate=rate))
+        
     if not ad_types:
         ad_types = [
             schemas.AdTypeConfig(name="Display", base_rate=100.0),
             schemas.AdTypeConfig(name="Video", base_rate=250.0)
         ]
-    
-    # Get states/geo data
+
+    # 3. Geo Data (Existing Logic)
     states_data = db.query(models.GeoData).all()
     states = [
         schemas.StateConfig(
@@ -239,24 +259,46 @@ async def get_global_pricing_config(
         )
         for row in states_data
     ]
-    
     if not states:
-        states = [
+         states = [
             schemas.StateConfig(name="California", land_area=423970, population=39538223, density_multiplier=1.5, state_code="CA", country_code="US")
         ]
+
+    # 4. Discounts (Country specific or default)
+    disc_entries, _ = get_matrix_entries({}) # Just get any for this country
+    first_entry = disc_entries[0] if disc_entries else None
     
-    # Get global discounts (from first available matrix entry or defaults)
-    first_matrix = db.query(models.PricingMatrix).first()
     discounts = schemas.DiscountConfig(
-        state=first_matrix.state_discount if first_matrix else 0.15,
-        national=first_matrix.national_discount if first_matrix else 0.30
+        state=first_entry.state_discount if first_entry else 0.15,
+        national=first_entry.national_discount if first_entry else 0.30
     )
+
+    # Determine currency based on context
+    # basic mapping, in prod this should be in a DB table
+    currency_map = {
+        "US": "USD", "TH": "THB", "VN": "VND", "PH": "PHP", 
+        "GB": "GBP", "FR": "EUR", "DE": "EUR", "CA": "CAD", 
+        "AU": "AUD", "IN": "INR", "ID": "IDR"
+    }
     
+    # Heuristic: If we found specific rates for the requested country, return that currency.
+    # Otherwise return USD.
+    # We check if any of the lookups returned specific data
+    industry_specific = any(get_matrix_entries({"industry_type": i.name})[1] for i in industries)
+    ad_specific = any(get_matrix_entries({"advert_type": a.name})[1] for a in ad_types)
+    
+    is_specific_pricing = industry_specific or ad_specific
+    
+    response_currency = "USD"
+    if is_specific_pricing and target_country in currency_map:
+        response_currency = currency_map[target_country]
+
     return schemas.GlobalPricingConfig(
         industries=industries,
         ad_types=ad_types,
         states=states,
-        discounts=discounts
+        discounts=discounts,
+        currency=response_currency
     )
 
 

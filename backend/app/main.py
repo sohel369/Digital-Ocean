@@ -39,7 +39,8 @@ from .routers import (
     analytics,
     admin,
     payment,
-    frontend_compat
+    frontend_compat,
+    geo
 )
 
 
@@ -231,6 +232,7 @@ app.include_router(pricing.router, prefix="/api")
 app.include_router(payment.router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
+app.include_router(geo.router, prefix="/api")
 
 
 # ==================== Startup/Shutdown Events ====================

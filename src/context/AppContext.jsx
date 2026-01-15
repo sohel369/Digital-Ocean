@@ -363,23 +363,37 @@ export const AppProvider = ({ children }) => {
         }
     };
 
-    const [currency, setCurrency] = useState(() => localStorage.getItem('currency') || 'USD');
-    const [language, setLanguage] = useState(() => localStorage.getItem('language') || 'en');
+    const [currency, setCurrencyState] = useState(() => localStorage.getItem('currency') || 'USD');
+    const [language, setLanguageState] = useState(() => localStorage.getItem('language') || 'en');
     const [country, setCountry] = useState(() => localStorage.getItem('country') || 'US');
+    const [isCurrencyOverridden, setIsCurrencyOverridden] = useState(() => localStorage.getItem('isCurrencyOverridden') === 'true');
+    const [isLanguageOverridden, setIsLanguageOverridden] = useState(() => localStorage.getItem('isLanguageOverridden') === 'true');
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     // Persist preferences
     useEffect(() => {
         localStorage.setItem('currency', currency);
-    }, [currency]);
+        localStorage.setItem('isCurrencyOverridden', isCurrencyOverridden);
+    }, [currency, isCurrencyOverridden]);
 
     useEffect(() => {
         localStorage.setItem('language', language);
-    }, [language]);
+        localStorage.setItem('isLanguageOverridden', isLanguageOverridden);
+    }, [language, isLanguageOverridden]);
 
     useEffect(() => {
         localStorage.setItem('country', country);
     }, [country]);
+
+    const setCurrency = (code, isManual = true) => {
+        setCurrencyState(code);
+        if (isManual) setIsCurrencyOverridden(true);
+    };
+
+    const setLanguage = (code, isManual = true) => {
+        setLanguageState(code);
+        if (isManual) setIsLanguageOverridden(true);
+    };
 
     // Translation Helper
     const t = (path, replacements = {}) => {
@@ -432,8 +446,11 @@ export const AppProvider = ({ children }) => {
         setCountry(countryCode);
         const defaults = getCountryDefaults(countryCode);
         if (defaults) {
-            setLanguage(defaults.language);
-            setCurrency(defaults.currency);
+            // Country change ALWAYS resets overrides to ensure predictable behavior
+            setCurrency(defaults.currency, false);
+            setLanguage(defaults.language, false);
+            setIsCurrencyOverridden(false);
+            setIsLanguageOverridden(false);
             toast.info(`Synced: ${countryCode} defaults applied.`);
         }
     };
@@ -614,7 +631,10 @@ export const AppProvider = ({ children }) => {
             setCurrency,
             language,
             setLanguage,
+            country,
             setCountry: handleCountryChange,
+            isCurrencyOverridden,
+            isLanguageOverridden,
             sidebarOpen,
             setSidebarOpen,
             CONSTANTS,

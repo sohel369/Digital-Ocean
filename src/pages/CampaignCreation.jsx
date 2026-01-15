@@ -6,7 +6,8 @@ import AdPreview from '../components/AdPreview';
 
 const CampaignCreation = () => {
     const navigate = useNavigate();
-    const { addCampaign, pricingData, country, t, adFormats, ctaOptions, formatIndustryName } = useApp();
+    const { addCampaign, pricingData, country, currency, CONSTANTS, t, adFormats, ctaOptions, formatIndustryName } = useApp();
+    const currentCurrency = CONSTANTS.CURRENCIES.find(c => c.code === currency) || { symbol: '$' };
     const [formData, setFormData] = useState({
         name: '',
         budget: '150',
@@ -24,7 +25,14 @@ const CampaignCreation = () => {
         image: null
     });
 
-    const filteredStates = pricingData.states.filter(s => s.countryCode === country);
+    // Remove duplicates by creating a unique set based on state name and country
+    const filteredStates = pricingData.states
+        .filter(s => s.countryCode === country)
+        .reduce((unique, state) => {
+            const exists = unique.find(s => s.name === state.name && s.countryCode === state.countryCode);
+            if (!exists) unique.push(state);
+            return unique;
+        }, []);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -317,7 +325,7 @@ const CampaignCreation = () => {
                         <div className="space-y-4">
                             <label className="block text-xs font-bold text-slate-500 uppercase">{t('campaign.daily_budget')}</label>
                             <div className="relative max-w-xs">
-                                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-primary font-black text-xl italic">$</div>
+                                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-primary font-black text-xl italic">{currentCurrency.symbol}</div>
                                 <input
                                     type="number" name="budget" step="10" min="50"
                                     className="w-full bg-slate-900/50 border border-slate-700/50 rounded-2xl pl-12 pr-5 py-4 text-2xl font-black text-white outline-none focus:ring-2 focus:ring-primary/50"

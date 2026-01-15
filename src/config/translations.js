@@ -23,7 +23,9 @@ export const translations = {
             discard: "Discard",
             tablet: "Tablet",
             operator: "Operator",
-            country_context: "Country"
+            country_context: "Country",
+            currency_overridden: "Currency manually adjusted",
+            language_overridden: "Language manually adjusted"
         },
         sidebar: {
             dashboard: "Dashboard",

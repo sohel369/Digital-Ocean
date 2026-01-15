@@ -4,23 +4,25 @@ import { Save, RefreshCcw, TrendingUp, Map, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 
 const AdminPricing = () => {
-    const { pricingData, savePricingConfig, country, setCountry, CONSTANTS, formatCurrency, t, user } = useApp();
-    const [localPricing, setLocalPricing] = useState(pricingData);
+    const { pricingData, savePricingConfig, CONSTANTS, t, formatIndustryName, currency, country } = useApp();
+    const [localPricing, setLocalPricing] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
+    const currentCurrency = CONSTANTS.CURRENCIES.find(c => c.code === currency) || { symbol: '$' };
     const [selectedCountry, setSelectedCountry] = useState(country);
 
     // Sync local state when pricingData is loaded from backend
     React.useEffect(() => {
-        if (pricingData.industries.length > 0) {
+        if (pricingData?.industries?.length > 0) {
             setLocalPricing(pricingData);
         }
     }, [pricingData]);
 
-    if (!localPricing.industries || localPricing.industries.length === 0) {
+    // Early return if data is not loaded yet
+    if (!localPricing || !localPricing.industries || localPricing.industries.length === 0) {
         return <div className="p-8 text-white">{t('common.loading')}</div>;
     }
 
-    const filteredStates = localPricing.states.filter(s => s.countryCode === selectedCountry);
+    const filteredStates = localPricing.states?.filter(s => s.countryCode === selectedCountry) || [];
 
     const handleMultiplierChange = (industryName, newValue) => {
         setLocalPricing(prev => ({
@@ -93,7 +95,7 @@ const AdminPricing = () => {
                         {localPricing.industries.map((ind) => (
                             <div key={ind.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-900/50 rounded-2xl border border-white/5 gap-3">
                                 <span className="text-slate-200 font-bold text-sm">
-                                    {t(`industry.${ind.name.toLowerCase().replace(/ /g, '_')}`) || ind.name}
+                                    {t(`industry.${ind.name.toLowerCase().replace(/ /g, '_')} `) || ind.name}
                                 </span>
                                 <div className="flex items-center gap-3">
                                     <input
@@ -120,11 +122,11 @@ const AdminPricing = () => {
                         {localPricing.adTypes.map((ad) => (
                             <div key={ad.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-900/50 rounded-2xl border border-white/5 gap-3">
                                 <span className="text-slate-200 font-bold text-sm">
-                                    {t(`formats.${ad.name.toLowerCase().replace(/ /g, '_')}`) || ad.name}
+                                    {t(`formats.${ad.name.toLowerCase().replace(/ /g, '_')} `) || ad.name}
                                 </span>
                                 <div className="flex items-center gap-3">
                                     <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">{CONSTANTS.CURRENCIES.find(c => c.code === (user?.currency || 'USD'))?.symbol || '$'}</span>
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">{currentCurrency.symbol}</span>
                                         <input
                                             type="number"
                                             className="w-28 bg-slate-950 border border-slate-700 rounded-xl pl-6 pr-3 py-2 text-emerald-400 font-black outline-none"

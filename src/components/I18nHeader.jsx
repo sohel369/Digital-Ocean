@@ -107,6 +107,7 @@ export const I18nHeader = () => {
         currency, setCurrency,
         language, setLanguage,
         country, handleCountryChange,
+        isCurrencyOverridden, isLanguageOverridden,
         CONSTANTS, t
     } = useApp();
 
@@ -158,20 +159,35 @@ export const I18nHeader = () => {
 
                 {/* I18n Group */}
                 <div className="flex items-center gap-2 mr-4 pr-4 border-r border-white/5">
-                    <Dropdown
-                        label={t('pricing.currency')}
-                        options={currencyOptions}
-                        value={currency}
-                        onChange={setCurrency}
-                        icon={<span className="font-mono text-xs font-bold text-slate-500">{currentCurrency.symbol || '$'}</span>}
-                    />
-                    <Dropdown
-                        label={t('common.language')}
-                        options={languageOptions}
-                        value={language}
-                        onChange={setLanguage}
-                        icon={<span className="text-xs font-bold text-slate-500">{language.toUpperCase()}</span>}
-                    />
+                    <div className="flex flex-col items-end gap-1">
+                        <Dropdown
+                            label={t('pricing.currency')}
+                            options={currencyOptions}
+                            value={currency}
+                            onChange={setCurrency}
+                            icon={<span className="font-mono text-xs font-bold text-slate-500">{currentCurrency.symbol || '$'}</span>}
+                        />
+                        {isCurrencyOverridden && (
+                            <span className="text-[9px] text-amber-500/80 font-bold uppercase tracking-tighter animate-pulse px-1">
+                                {t('common.currency_overridden')}
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1">
+                        <Dropdown
+                            label={t('common.language')}
+                            options={languageOptions}
+                            value={language}
+                            onChange={setLanguage}
+                            icon={<span className="text-xs font-bold text-slate-500">{language.toUpperCase()}</span>}
+                        />
+                        {isLanguageOverridden && (
+                            <span className="text-[9px] text-amber-500/80 font-bold uppercase tracking-tighter animate-pulse px-1">
+                                {t('common.language_overridden')}
+                            </span>
+                        )}
+                    </div>
                 </div>
 
                 {/* Action Group */}

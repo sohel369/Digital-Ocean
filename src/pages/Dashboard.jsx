@@ -98,11 +98,11 @@ const Dashboard = () => {
             {/* Stats Grid - 2 columns on mobile */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 <StatCard
-                    title={t('dashboard.active_campaigns')}
-                    value={activeCampaignsCount || 0}
-                    subtext={`${pendingCampaignsCount || 0} ${t('dashboard.pending')}`}
+                    title={t('dashboard.budget')}
+                    value={formatCurrency(stats?.totalSpend || 0)}
+                    subtext={t('dashboard.monthly_est') || 'Monthly Estimated'}
                     icon={Activity}
-                    colorClass="blue-500"
+                    colorClass="indigo-500"
                 />
                 <StatCard
                     title={t('dashboard.impressions')}

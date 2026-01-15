@@ -205,7 +205,9 @@ async def startup_event():
                 ("landing_page_url", "VARCHAR(500)"),
                 ("ad_format", "VARCHAR(100)"),
                 ("description", "TEXT"),
-                ("tags", "JSON")
+                ("tags", "JSON"),
+                ("calculated_price", "FLOAT"),
+                ("coverage_area", "VARCHAR(255)")
             ]
             
             for col_name, col_type in columns_to_add:

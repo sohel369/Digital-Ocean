@@ -45,11 +45,22 @@ export const AppProvider = ({ children }) => {
     const API_BASE_URL = import.meta.env.VITE_API_URL ||
         (window.location.hostname === 'localhost'
             ? '/api'
-            : 'https://balanced-wholeness-production-ca00.up.railway.app/api');
+            : (window.location.origin + '/api')); // Default to relative /api on same domain
+
+    // Backup Fallback (Old Railway URL - only used if previous detection seems likely to fail or for legacy)
+    const BACKUP_API_URL = 'https://balanced-wholeness-production-ca00.up.railway.app/api';
 
     // Debugging helper
     useEffect(() => {
-        console.log('🚀 Final API Base URL:', API_BASE_URL);
+        console.log('🌐 App Environment:', import.meta.env.MODE);
+        console.log('📍 Current Hostname:', window.location.hostname);
+        console.log('🚀 Primary API URL:', API_BASE_URL);
+
+        // Connectivity test
+        fetch(`${API_BASE_URL}/health`).catch(err => {
+            console.error('⚠️ Primary API seems unreachable:', err.message);
+            console.log('🔄 Attempting to use backup fallback:', BACKUP_API_URL);
+        });
     }, [API_BASE_URL]);
 
     // Auth header helper

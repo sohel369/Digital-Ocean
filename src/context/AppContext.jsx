@@ -44,28 +44,22 @@ export const AppProvider = ({ children }) => {
     const [authLoading, setAuthLoading] = useState(true);
 
     // Base URL configuration for API calls
-    // FORCE PRODUCTION BACKEND if VITE_API_URL is missing
-    const PRODUCTION_BACKEND = 'https://balanced-wholeness-production-ca00.up.railway.app/api';
-
-    const API_BASE_URL = import.meta.env.VITE_API_URL ||
-        (window.location.hostname === 'localhost'
-            ? '/api'
-            : PRODUCTION_BACKEND);
-
-    // Backup Fallback (Old Railway URL - only used if previous detection seems likely to fail or for legacy)
-    const BACKUP_API_URL = PRODUCTION_BACKEND;
+    // 1. Priority: Environment Variable (VITE_API_URL) - Set this in Railway!
+    // 2. Fallback: Localhost Proxy ('/api')
+    // 3. Fallback: Production URL (Hardcoded safety net)
+    const API_BASE_URL = import.meta.env.VITE_API_URL
+        || (window.location.hostname === 'localhost' ? '/api' : 'https://balanced-wholeness-production-ca00.up.railway.app/api');
 
     // Debugging helper
     useEffect(() => {
         console.log('🌐 App Environment:', import.meta.env.MODE);
         console.log('📍 Current Hostname:', window.location.hostname);
-        console.log('🚀 Primary API URL:', API_BASE_URL);
+        console.log('🚀 API Base URL:', API_BASE_URL);
 
         // Connectivity test
-        fetch(`${API_BASE_URL}/health`).catch(err => {
-            console.error('⚠️ Primary API seems unreachable:', err.message);
-            console.log('🔄 Attempting to use backup fallback:', BACKUP_API_URL);
-        });
+        fetch(`${API_BASE_URL}/health`)
+            .then(() => console.log('✅ API Connection Verified'))
+            .catch(err => console.error('⚠️ Primary API seems unreachable:', err.message));
     }, [API_BASE_URL]);
 
     // Auth header helper

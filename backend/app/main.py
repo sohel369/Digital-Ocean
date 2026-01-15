@@ -228,6 +228,37 @@ async def startup_event():
             logger.info("✅ Schema migrations checked/applied")
         except Exception as e:
             logger.error(f"❌ Migration check failed: {e}")
+
+    # Ensure PricingMatrix and GeoData are initialized (Production Fix)
+    from .database import SessionLocal
+    from . import models
+    db = SessionLocal()
+    try:
+        # Check if PricingMatrix is empty
+        if db.query(models.PricingMatrix).count() == 0:
+            logger.info("📦 Seeding default PricingMatrix...")
+            # Create default pricing entries
+            defaults = [
+                models.PricingMatrix(industry_type="Retail", advert_type="display", coverage_type=models.CoverageType.RADIUS_30, base_rate=100.0, multiplier=1.0, country_id="US"),
+                models.PricingMatrix(industry_type="Healthcare", advert_type="display", coverage_type=models.CoverageType.RADIUS_30, base_rate=100.0, multiplier=1.5, country_id="US"),
+                models.PricingMatrix(industry_type="Tech", advert_type="display", coverage_type=models.CoverageType.RADIUS_30, base_rate=100.0, multiplier=1.2, country_id="US"),
+            ]
+            db.add_all(defaults)
+            db.commit()
+            logger.info("✅ Default PricingMatrix seeded")
+            
+        # Check if GeoData is empty
+        if db.query(models.GeoData).count() == 0:
+            logger.info("📦 Seeding default GeoData...")
+            ca_geo = models.GeoData(state_name="California", country_code="US", state_code="CA", land_area_sq_km=423970, population=39538223, density_multiplier=1.5)
+            db.add(ca_geo)
+            db.commit()
+            logger.info("✅ Default GeoData seeded")
+            
+    except Exception as e:
+        logger.error(f"❌ Error during auto-seeding pricing/geo: {e}")
+    finally:
+        db.close()
     
     # Ensure admin user exists for production login
     from .database import SessionLocal

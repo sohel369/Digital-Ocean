@@ -11,6 +11,7 @@ import json
 
 from .. import models, auth
 from ..database import get_db
+from ..config import settings
 
 import logging
 
@@ -298,7 +299,7 @@ async def create_campaign_compat(
                 "error": "Unexpected server error", 
                 "detail": str(e),
                 "type": type(e).__name__,
-                "trace": error_trace if logger.level <= logging.DEBUG else "Enable DEBUG logging for full trace"
+                "trace": error_trace if settings.DEBUG else "Check server logs for details" # Security: hide trace in prod
             }
         )
 

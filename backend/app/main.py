@@ -18,9 +18,9 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
-print("🚀 STARTING ADVERTISING BACKEND VERSION: 1.0.1-fix 🚀")
-print("🚀 STARTING ADVERTISING BACKEND VERSION: 1.0.1-fix 🚀")
-print("🚀 STARTING ADVERTISING BACKEND VERSION: 1.0.1-fix 🚀")
+print("🚀 STARTING ADVERTISING BACKEND VERSION: 1.0.2-final 🚀")
+print("🚀 STARTING ADVERTISING BACKEND VERSION: 1.0.2-final 🚀")
+print("🚀 STARTING ADVERTISING BACKEND VERSION: 1.0.2-final 🚀")
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware

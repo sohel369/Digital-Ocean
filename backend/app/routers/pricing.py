@@ -4,6 +4,7 @@ Handles dynamic pricing calculation and admin pricing matrix management.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List, Optional
 
 from ..database import get_db

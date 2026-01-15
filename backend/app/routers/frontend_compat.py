@@ -6,6 +6,9 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
 
+import logging
+import json
+
 from .. import models, auth
 from ..database import get_db
 
@@ -167,76 +170,86 @@ async def create_campaign_compat(
         logger.info(f"👤 User: {user.email} (ID: {user.id})")
 
         # Extract meta and provide robust defaults
-        meta = data.get("meta") or {}
-        if not isinstance(meta, dict):
-            meta = {}
-            
-        # Handle cases where industry might be an empty string
-        industry_val = meta.get("industry")
-        if not industry_val:
-            industry_val = "Retail" # Standard default
-            
-        coverage_val = meta.get("coverage") or "radius"
-        coverage_map = {
-            "radius": models.CoverageType.RADIUS_30,
-            "state": models.CoverageType.STATE,
-            "national": models.CoverageType.COUNTRY
-        }
-        coverage_type = coverage_map.get(coverage_val, models.CoverageType.RADIUS_30)
+        # Map legacy/compat fields to backend schema
+        # Support both flat and nested 'meta' structures
+        meta = data.get("meta", {})
+        industry_val = data.get("industry") or meta.get("industry", "retail")
+        coverage_val = data.get("coverage") or meta.get("coverage", "radius")
+        location_val = data.get("location") or meta.get("location") or data.get("state") or data.get("postcode")
         
-        # Robust date handling
-        def parse_date(date_str):
-            if not date_str: return None
-            try: return dt.strptime(str(date_str)[:10], "%Y-%m-%d").date()
-            except: 
-                try: return dt.fromisoformat(str(date_str).replace('Z', '+00:00')).date()
-                except: return None
-
-        start_date = parse_date(data.get("startDate")) or dt.now().date()
-        end_date = parse_date(data.get("endDate")) or (start_date + timedelta(days=30))
-        
-        logger.info(f"📅 Campaign dates: {start_date} to {end_date}")
+        # Normalize coverage type
+        if coverage_val == "30-mile" or coverage_val == "radius":
+            coverage_type = models.CoverageType.RADIUS_30
+        elif coverage_val == "state":
+            coverage_type = models.CoverageType.STATE
+        elif coverage_val == "country" or coverage_val == "national":
+            coverage_type = models.CoverageType.COUNTRY
+        else:
+            coverage_type = models.CoverageType.RADIUS_30
         
         # Calculate pricing with extreme fallback
         calculated_price = float(data.get("budget", 0))
         coverage_area_desc = "Standard Area"
         try:
             pricing_engine = PricingEngine(db)
+            
+            # Calculate duration
+            try:
+                start_date = data.get("startDate") or data.get("start_date")
+                end_date = data.get("endDate") or data.get("end_date")
+                
+                def parse_date(date_str):
+                    if not date_str: return dt.now().date()
+                    try: return dt.strptime(str(date_str)[:10], "%Y-%m-%d").date()
+                    except: return dt.now().date()
+                
+                s_date = parse_date(start_date)
+                e_date = parse_date(end_date)
+                duration_days = max((e_date - s_date).days, 1)
+            except Exception as de:
+                logger.warning(f"⚠️ Date parsing failed: {str(de)}")
+                duration_days = 30
+                s_date = dt.now().date()
+                e_date = s_date + timedelta(days=30)
+
             pricing_result = pricing_engine.calculate_price(
-                industry_type=meta.get("industry", "retail"),
+                industry_type=industry_val,
                 advert_type="display",
                 coverage_type=coverage_type,
-                duration_days=(end_date - start_date).days,
-                target_postcode=meta.get("location") if coverage_val == "radius" else None,
-                target_state=meta.get("location") if coverage_val == "state" else None,
-                target_country=meta.get("country", "US")
+                duration_days=duration_days,
+                target_postcode=data.get("postcode") or (location_val if coverage_type == models.CoverageType.RADIUS_30 else None),
+                target_state=data.get("state") or (location_val if coverage_type == models.CoverageType.STATE else None),
+                target_country="US"
             )
-            calculated_price = pricing_result.get("final_price", calculated_price)
-            coverage_area_desc = pricing_result.get("coverage_area", coverage_area_desc)
+            calculated_price = pricing_result.total_price
+            coverage_area_desc = pricing_result.breakdown.get("coverage_area_description", coverage_area_desc)
             logger.info(f"💰 Calculated price: ${calculated_price:.2f}")
         except Exception as pricing_err:
             logger.warning(f"⚠️ Pricing calculation failed, using budget: {str(pricing_err)}")
+            # Initialize dates if they couldn't be parsed above
+            if 's_date' not in locals(): s_date = dt.now().date()
+            if 'e_date' not in locals(): e_date = s_date + timedelta(days=30)
         
         # Save to database
         try:
             logger.info(f"💾 Saving campaign to database...")
             new_campaign = models.Campaign(
-                advertiser_id=user.id, # Corrected from user_id to advertiser_id
+                advertiser_id=user.id,
                 name=data.get("name", "Untitled Campaign"),
-                industry_type=meta.get("industry") or "retail",
-                start_date=start_date,
-                end_date=end_date,
+                industry_type=industry_val,
+                start_date=s_date,
+                end_date=e_date,
                 budget=float(data.get("budget", 0)),
                 calculated_price=calculated_price,
                 status=models.CampaignStatus.DRAFT,
                 coverage_type=coverage_type,
                 coverage_area=coverage_area_desc,
-                target_postcode=meta.get("location") if coverage_val == "radius" else None,
-                target_state=meta.get("location") if coverage_val == "state" else None,
-                target_country="US" if coverage_val == "national" else None, # Reverted to original logic for target_country
+                target_postcode=data.get("postcode") or (location_val if coverage_type == models.CoverageType.RADIUS_30 else None),
+                target_state=data.get("state") or (location_val if coverage_type == models.CoverageType.STATE else None),
+                target_country="US",
                 description=data.get("description", ""),
-                headline=data.get("headline"),
-                landing_page_url=data.get("landing_page_url") or data.get("landingPageUrl"),
+                headline=data.get("headline") or data.get("adText", {}).get("headline"),
+                landing_page_url=data.get("landing_page_url") or data.get("landingPage") or data.get("url"),
                 ad_format=data.get("ad_format") or data.get("format")
             )
             

@@ -241,113 +241,145 @@ async def startup_event():
     Run on application startup.
     Initialize database, connections, etc.
     """
-    # Initialize database immediately (creates tables if they don't exist)
-    init_db()
-    logger.info("✅ Database tables initialized successfully")
-    
-    # Schema Migration: Add missing columns if they don't exist (Production Fix)
-    from .database import engine, SessionLocal
-    from sqlalchemy import text
-    
-    with engine.connect() as conn:
-        logger.info("🛠️ Checking for schema migrations...")
+    logger.info("🚀 STARTUP: Beginning initialization...")
+    try:
+        # Initialize database immediately (creates tables if they don't exist)
         try:
-            # 1. Add missing columns to campaigns table
-            columns_to_add = [
-                ("headline", "VARCHAR(500)"),
-                ("landing_page_url", "VARCHAR(500)"),
-                ("ad_format", "VARCHAR(100)"),
-                ("description", "TEXT"),
-                ("tags", "JSON"),
-                ("calculated_price", "FLOAT"),
-                ("coverage_area", "VARCHAR(255)")
-            ]
-            
-            for col_name, col_type in columns_to_add:
-                try:
-                    conn.execute(text(f"ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
-                    conn.commit()
-                except Exception as col_err:
-                    logger.warning(f"Note: Column {col_name} check: {col_err}")
-            
-            # 2. Add missing columns to users table (if any)
-            try:
-                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE"))
-                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture VARCHAR(500)"))
-                conn.commit()
-            except Exception:
-                pass
-                
-            logger.info("✅ Schema migrations checked/applied")
+            init_db()
+            logger.info("✅ Database tables initialized successfully")
         except Exception as e:
-            logger.error(f"❌ Migration check failed: {e}")
+            logger.error(f"⚠️ init_db failed: {e}")
+        
+        # Schema Migration: Add missing columns if they don't exist (Production Fix)
+        try:
+            from .database import engine, SessionLocal
+            from sqlalchemy import text
+            
+            with engine.connect() as conn:
+                logger.info("🛠️ Checking for schema migrations...")
+                try:
+                    # 1. Add missing columns to campaigns table
+                    columns_to_add = [
+                        ("headline", "VARCHAR(500)"),
+                        ("landing_page_url", "VARCHAR(500)"),
+                        ("ad_format", "VARCHAR(100)"),
+                        ("description", "TEXT"),
+                        ("tags", "JSON"),
+                        ("calculated_price", "FLOAT"),
+                        ("coverage_area", "VARCHAR(255)")
+                    ]
+                    
+                    for col_name, col_type in columns_to_add:
+                        try:
+                            # Using text() explicitly for safety
+                            conn.execute(text(f"ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
+                            conn.commit()
+                        except Exception as col_err:
+                            logger.warning(f"Note: Column {col_name} check: {col_err}")
+                    
+                    # 2. Add missing columns to users table (if any)
+                    try:
+                        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE"))
+                        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture VARCHAR(500)"))
+                        conn.commit()
+                    except Exception:
+                        pass
+                        
+                    logger.info("✅ Schema migrations checked/applied")
+                except Exception as e:
+                    logger.error(f"❌ Migration check failed: {e}")
+        except Exception as e:
+            logger.error(f"⚠️ Migration outer block failed: {e}")
 
-    # Ensure PricingMatrix and GeoData are initialized (Production Fix)
-    from .database import SessionLocal
-    from . import models
-    db = SessionLocal()
-    try:
-        # Check if PricingMatrix is empty
-        if db.query(models.PricingMatrix).count() == 0:
-            logger.info("📦 Seeding default PricingMatrix...")
-            # Create default pricing entries
-            defaults = [
-                models.PricingMatrix(industry_type="Retail", advert_type="display", coverage_type=models.CoverageType.RADIUS_30, base_rate=100.0, multiplier=1.0, country_id="US"),
-                models.PricingMatrix(industry_type="Healthcare", advert_type="display", coverage_type=models.CoverageType.RADIUS_30, base_rate=100.0, multiplier=1.5, country_id="US"),
-                models.PricingMatrix(industry_type="Tech", advert_type="display", coverage_type=models.CoverageType.RADIUS_30, base_rate=100.0, multiplier=1.2, country_id="US"),
-            ]
-            db.add_all(defaults)
-            db.commit()
-            logger.info("✅ Default PricingMatrix seeded")
-            
-        # Check if GeoData is empty
-        if db.query(models.GeoData).count() == 0:
-            logger.info("📦 Seeding default GeoData...")
-            ca_geo = models.GeoData(state_name="California", country_code="US", state_code="CA", land_area_sq_km=423970, population=39538223, density_multiplier=1.5)
-            db.add(ca_geo)
-            db.commit()
-            logger.info("✅ Default GeoData seeded")
-            
-    except Exception as e:
-        logger.error(f"❌ Error during auto-seeding pricing/geo: {e}")
-    finally:
-        db.close()
-    
-    # Ensure admin user exists for production login
-    from .database import SessionLocal
-    from . import models, auth
-    db = SessionLocal()
-    try:
-        admin = db.query(models.User).filter(models.User.email == "admin@adplatform.com").first()
-        if not admin:
-            logger.info("📦 Seeding essential admin user...")
-            admin_user = models.User(
-                name="Admin User",
-                email="admin@adplatform.com",
-                password_hash=auth.get_password_hash("admin123"),
-                role=models.UserRole.ADMIN,
-                country="US"
-            )
-            db.add(admin_user)
-            db.commit()
-            logger.info("✅ Admin user created: admin@adplatform.com")
+        # Ensure PricingMatrix and GeoData are initialized (Production Fix)
+        try:
+            from .database import SessionLocal
+            from . import models
+            db = SessionLocal()
+            try:
+                # Check if PricingMatrix is empty
+                try:
+                    count = db.query(models.PricingMatrix).count()
+                except Exception:
+                    count = 0
+                    
+                if count == 0:
+                    logger.info("📦 Seeding default PricingMatrix...")
+                    # Create default pricing entries
+                    defaults = [
+                        models.PricingMatrix(industry_type="Retail", advert_type="display", coverage_type=models.CoverageType.RADIUS_30, base_rate=100.0, multiplier=1.0, country_id="US"),
+                        models.PricingMatrix(industry_type="Healthcare", advert_type="display", coverage_type=models.CoverageType.RADIUS_30, base_rate=100.0, multiplier=1.5, country_id="US"),
+                        models.PricingMatrix(industry_type="Tech", advert_type="display", coverage_type=models.CoverageType.RADIUS_30, base_rate=100.0, multiplier=1.2, country_id="US"),
+                    ]
+                    db.add_all(defaults)
+                    db.commit()
+                    logger.info("✅ Default PricingMatrix seeded")
+                    
+                # Check if GeoData is empty
+                try:
+                    count = db.query(models.GeoData).count()
+                except Exception:
+                    count = 0
+                    
+                if count == 0:
+                    logger.info("📦 Seeding default GeoData...")
+                    ca_geo = models.GeoData(state_name="California", country_code="US", state_code="CA", land_area_sq_km=423970, population=39538223, density_multiplier=1.5)
+                    db.add(ca_geo)
+                    db.commit()
+                    logger.info("✅ Default GeoData seeded")
+                    
+            except Exception as e:
+                logger.error(f"❌ Error during auto-seeding pricing/geo: {e}")
+            finally:
+                db.close()
+        except Exception as e:
+             logger.error(f"⚠️ Seeding block failed: {e}")
+        
+        # Ensure admin user exists for production login
+        try:
+            from .database import SessionLocal
+            from . import models, auth
+            db = SessionLocal()
+            try:
+                admin = db.query(models.User).filter(models.User.email == "admin@adplatform.com").first()
+                if not admin:
+                    logger.info("📦 Seeding essential admin user...")
+                    admin_user = models.User(
+                        name="Admin User",
+                        email="admin@adplatform.com",
+                        password_hash=auth.get_password_hash("admin123"),
+                        role=models.UserRole.ADMIN,
+                        country="US"
+                    )
+                    db.add(admin_user)
+                    db.commit()
+                    logger.info("✅ Admin user created: admin@adplatform.com")
+                else:
+                    # Ensure it has the admin role
+                    if admin.role != models.UserRole.ADMIN:
+                        admin.role = models.UserRole.ADMIN
+                        db.commit()
+                        logger.info("✅ Updated user to ADMIN role")
+            except Exception as e:
+                logger.error(f"❌ Error during auto-seeding: {e}")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"⚠️ Admin creation failed: {e}")
+        
+        logger.info("🚀 Startup initialization finished")
+        logger.info(f"📍 Environment: {'Development' if settings.DEBUG else 'Production'}")
+        if '@' in settings.DATABASE_URL:
+            logger.info(f"🗄️  Database: {settings.DATABASE_URL.split('@')[1]}")
         else:
-            # Ensure it has the admin role
-            if admin.role != models.UserRole.ADMIN:
-                admin.role = models.UserRole.ADMIN
-                db.commit()
-                logger.info("✅ Updated user to ADMIN role")
-    except Exception as e:
-        logger.error(f"❌ Error during auto-seeding: {e}")
-    finally:
-        db.close()
-    
-    logger.info("🚀 Starting Advertiser Dashboard API")
-    logger.info(f"📍 Environment: {'Development' if settings.DEBUG else 'Production'}")
-    if '@' in settings.DATABASE_URL:
-        logger.info(f"🗄️  Database: {settings.DATABASE_URL.split('@')[1]}")
-    else:
-        logger.info("🗄️  Database: configured")
+            logger.info("🗄️  Database: configured")
+            
+    except Exception as critical_error:
+        # CATCH ALL - Prevent startup crash
+        logger.error(f"🔥🔥🔥 CRITICAL STARTUP ERROR: {critical_error} 🔥🔥🔥", exc_info=True)
+        print(f"CRITICAL STARTUP ERROR: {critical_error}")
+        # We do NOT raise here, allowing uvicorn to start the HTTP server anyway
+        # This way /health and /api/debug/db still work
 
 
 @app.on_event("shutdown")

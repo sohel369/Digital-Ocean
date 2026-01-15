@@ -216,7 +216,7 @@ const AdminPricing = () => {
                             value={localPricing.discounts.state}
                             onChange={(e) => handleDiscountChange('state', e.target.value)}
                         />
-                        <p className="text-xs text-slate-500 font-medium italic">Applied when targeting an entire state or region.</p>
+                        <p className="text-xs text-slate-500 font-medium italic">{t('admin.region_discount_desc')}</p>
                     </div>
 
                     <div className="space-y-4">
@@ -230,7 +230,7 @@ const AdminPricing = () => {
                             value={localPricing.discounts.national}
                             onChange={(e) => handleDiscountChange('national', e.target.value)}
                         />
-                        <p className="text-xs text-slate-500 font-medium italic">Applied when targeting a whole country.</p>
+                        <p className="text-xs text-slate-500 font-medium italic">{t('admin.country_discount_desc')}</p>
                     </div>
                 </div>
             </div>

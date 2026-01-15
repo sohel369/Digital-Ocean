@@ -183,17 +183,17 @@ const Dashboard = () => {
                                                     {camp.status === 'live' ? (
                                                         <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-[10px] font-bold uppercase">
                                                             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                                            Live
+                                                            {t('status.live')}
                                                         </span>
                                                     ) : camp.status === 'review' ? (
                                                         <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full text-[10px] font-bold uppercase">
                                                             <Clock size={12} />
-                                                            {t('dashboard.pending').toUpperCase()}
+                                                            {t('status.review')}
                                                         </span>
                                                     ) : (
                                                         <span className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 text-slate-400 border border-slate-700/50 rounded-full text-[10px] font-bold uppercase">
                                                             <AlertCircle size={12} />
-                                                            Draft
+                                                            {t('status.draft')}
                                                         </span>
                                                     )}
                                                 </div>
@@ -228,7 +228,7 @@ const Dashboard = () => {
                                     </div>
                                     <div>
                                         <p className="text-sm font-bold text-slate-200 line-clamp-1">{n.title}</p>
-                                        <p className="text-xs text-slate-500 mt-1">{n.time} • Rule 7 AdOps</p>
+                                        <p className="text-xs text-slate-500 mt-1">{n.time} • {t('common.operator')}</p>
                                     </div>
                                 </div>
                             ))
@@ -257,7 +257,7 @@ const Dashboard = () => {
                                 className="w-full h-full object-cover opacity-60"
                             />
                             <div className="absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-slate-950 to-transparent">
-                                <p className="text-sm font-black text-white italic tracking-tighter uppercase">PREMIUM VEHICLE DEALS</p>
+                                <p className="text-sm font-black text-white italic tracking-tighter uppercase">{t('dashboard.premium_deals')}</p>
                                 <p className="text-[10px] text-primary-light font-bold">{t('dashboard.conversion_rate')}: 2.8%</p>
                             </div>
                         </div>

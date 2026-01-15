@@ -69,7 +69,7 @@ const Sidebar = () => {
 
                 {/* Navigation Items */}
                 <nav className="flex-1 p-6 space-y-2 overflow-y-auto custom-scrollbar">
-                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-4 pl-2">Menu</p>
+                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-4 pl-2">{t('sidebar.menu')}</p>
                     {navItems.map((item) => (
                         <NavLink
                             key={item.to}
@@ -87,7 +87,7 @@ const Sidebar = () => {
 
                     {user?.role === 'admin' && (
                         <div className="pt-8">
-                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-4 pl-2">System</p>
+                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-4 pl-2">{t('sidebar.system')}</p>
                             <NavLink
                                 to="/admin/pricing"
                                 onClick={handleNavClick}
@@ -112,7 +112,7 @@ const Sidebar = () => {
                         </div>
                         <div className="text-left">
                             <p className="text-sm font-bold text-slate-100 italic">{t('sidebar.logout')}</p>
-                            <p className="text-[10px] font-bold text-slate-500 uppercase">End Session</p>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase">{t('sidebar.end_session')}</p>
                         </div>
                     </button>
                 </div>

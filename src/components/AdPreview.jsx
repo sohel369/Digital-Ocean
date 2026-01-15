@@ -116,8 +116,8 @@ export const AdPreview = ({ formData = {} }) => {
 
                     {activeTab === 'email' && (
                         <div className="p-8 pb-4 text-center border-b border-slate-100 mb-4 bg-slate-50">
-                            <div className="text-xs text-slate-500 uppercase tracking-widest font-semibold mb-2">Rule 7 Media Newsletter</div>
-                            <div className="text-2xl font-serif text-slate-900">Your Daily Update</div>
+                            <div className="text-xs text-slate-500 uppercase tracking-widest font-semibold mb-2">{t('preview.newsletter_title')}</div>
+                            <div className="text-2xl font-serif text-slate-900">{t('preview.newsletter_subtitle')}</div>
                         </div>
                     )}
 
@@ -127,7 +127,7 @@ export const AdPreview = ({ formData = {} }) => {
                             <img src={image} alt="Ad" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
                             {activeTab !== 'email' && (
                                 <div className="absolute top-2 left-2 bg-black/40 backdrop-blur-md text-white text-[8px] sm:text-[10px] font-bold px-2 py-1 rounded uppercase">
-                                    Sponsored
+                                    {t('preview.sponsored')}
                                 </div>
                             )}
                         </div>
@@ -135,21 +135,21 @@ export const AdPreview = ({ formData = {} }) => {
                         {/* Text Area */}
                         <div className={`flex flex-col ${styles.text}`}>
                             {activeTab !== 'email' && (
-                                <div className="text-primary text-[10px] font-bold uppercase tracking-widest mb-1">Recommended</div>
+                                <div className="text-primary text-[10px] font-bold uppercase tracking-widest mb-1">{t('preview.recommended')}</div>
                             )}
                             <h2 className={`font-bold text-slate-900 leading-tight ${activeTab === 'email' ? 'font-serif' : ''} 
                                 ${styles.h === 'h-[50px]' ? 'text-xs mb-0 truncate' : styles.h === 'h-[90px]' ? 'text-sm mb-0' : 'text-xl sm:text-2xl mb-2'}`}>
-                                {headline || 'Catchy Headline Here'}
+                                {headline || t('campaign.headline_placeholder')}
                             </h2>
                             <p className={`text-slate-600 text-sm leading-relaxed mb-4 
                                 ${styles.h === 'h-[50px]' || styles.h === 'h-[90px]' ? 'hidden' : 'block'} 
                                 ${styles.h === 'h-[600px]' ? 'line-clamp-6' : 'line-clamp-3'}`}>
-                                {description || 'Add an engaging description to capture attention.'}
+                                {description || t('campaign.description_placeholder')}
                             </p>
                             <button className={`font-bold transition-all 
                                 ${activeTab === 'email' ? 'bg-indigo-600 text-white py-3 px-6' : 'bg-slate-950 text-white hover:bg-slate-800'}
                                 ${styles.h === 'h-[50px]' ? 'py-1.5 px-3 text-[10px] ml-2' : styles.h === 'h-[90px]' ? 'py-1.5 px-4 text-xs ml-4' : 'py-3 px-6 rounded-xl self-start'}`}>
-                                {cta}
+                                {t(`campaign.${cta}`) || cta}
                             </button>
                         </div>
                     </div>
@@ -157,7 +157,7 @@ export const AdPreview = ({ formData = {} }) => {
 
                 {activeTab === 'email' && (
                     <div className="mt-8 text-xs text-slate-500 text-center max-w-[600px] px-4">
-                        <p>Placing ads in newsletters increases click-through rates by up to 40%.</p>
+                        <p>{t('preview.newsletter_tip')}</p>
                     </div>
                 )}
             </div>

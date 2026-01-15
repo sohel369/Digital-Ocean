@@ -390,7 +390,16 @@ export const AppProvider = ({ children }) => {
             value = value?.[key];
         }
 
-        if (typeof value !== 'string') return path;
+        // Return path if value is not a string, but try to beautify it
+        if (typeof value !== 'string') {
+            const lastKey = keys[keys.length - 1];
+            // If it looks like a key (has dots or underscores), beautify it
+            return lastKey
+                .replace(/_/g, ' ')
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+        }
 
         Object.entries(replacements).forEach(([key, val]) => {
             value = value.replace(`{{${key}}}`, val);
@@ -429,21 +438,6 @@ export const AppProvider = ({ children }) => {
         }
     };
 
-    const AD_FORMATS = [
-        { id: 'mobile_leaderboard', name: 'Mobile Leaderboard', width: 320, height: 50, category: 'mobile' },
-        { id: 'leaderboard', name: 'Leaderboard', width: 728, height: 90, category: 'desktop' },
-        { id: 'medium_rectangle', name: 'Medium Rectangle', width: 300, height: 250, category: 'universal' },
-        { id: 'skyscraper', name: 'Skyscraper', width: 160, height: 600, category: 'desktop' }
-    ];
-
-    const CTA_OPTIONS = [
-        'Learn More',
-        'Shop Now',
-        'Sign Up',
-        'Get Quote',
-        'Book Now',
-        'Contact Us'
-    ];
 
     // Dynamic Pricing Data handles by state now
     const savePricingConfig = async (newConfig) => {
@@ -629,9 +623,22 @@ export const AppProvider = ({ children }) => {
             addCampaign,
             formatCurrency: (amount) => formatCurrency(amount, currency),
             t,
-            adFormats: AD_FORMATS,
-            ctaOptions: CTA_OPTIONS,
+            adFormats: [
+                { id: 'mobile_leaderboard', name: 'Mobile Leaderboard (320x50)', width: 320, height: 50, category: 'mobile' },
+                { id: 'leaderboard', name: 'Leaderboard (728x90)', width: 728, height: 90, category: 'desktop' },
+                { id: 'medium_rectangle', name: 'Medium Rectangle (300x250)', width: 300, height: 250, category: 'universal' },
+                { id: 'skyscraper', name: 'Skyscraper (160x600)', width: 160, height: 600, category: 'desktop' }
+            ],
+            ctaOptions: [
+                'Learn More',
+                'Shop Now',
+                'Sign Up',
+                'Get Quote',
+                'Book Now',
+                'Contact Us'
+            ],
             formatIndustryName,
+            handleCountryChange,
 
             markAllRead,
             logout,

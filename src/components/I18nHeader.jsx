@@ -106,8 +106,8 @@ export const I18nHeader = () => {
     const {
         currency, setCurrency,
         language, setLanguage,
-        country, setCountry,
-        CONSTANTS
+        country, handleCountryChange,
+        CONSTANTS, t
     } = useApp();
 
     // Map constants to dropdown options
@@ -123,7 +123,7 @@ export const I18nHeader = () => {
         .filter(c => c.enabled)
         .map(c => ({ value: c.code, label: c.code, symbol: c.flag }));
 
-    const currentCurrency = CONSTANTS.CURRENCIES.find(c => c.code === currency) || {};
+    const currentCurrency = CONSTANTS.CURRENCIES.find(c => c.code === (currency || 'USD')) || {};
     const currentCountry = CONSTANTS.COUNTRIES.find(c => c.code === country) || {};
 
     return (
@@ -132,20 +132,20 @@ export const I18nHeader = () => {
             <div className="flex items-center gap-6">
                 <div>
                     <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-                        Dashboard
+                        {t('sidebar.dashboard')}
                     </h1>
                     <div className="flex items-center gap-2 mt-1">
                         <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                            Live
+                            {t('status.live')}
                         </span>
 
                         <div className="flex items-center gap-1">
                             <Dropdown
-                                label="Country"
+                                label={t('common.country_context')}
                                 options={countryOptions}
                                 value={country}
-                                onChange={setCountry}
+                                onChange={handleCountryChange}
                                 icon={<span className="text-sm">{currentCountry.flag}</span>}
                             />
                         </div>
@@ -159,14 +159,14 @@ export const I18nHeader = () => {
                 {/* I18n Group */}
                 <div className="flex items-center gap-2 mr-4 pr-4 border-r border-white/5">
                     <Dropdown
-                        label="Currency"
+                        label={t('pricing.currency')}
                         options={currencyOptions}
                         value={currency}
                         onChange={setCurrency}
                         icon={<span className="font-mono text-xs font-bold text-slate-500">{currentCurrency.symbol || '$'}</span>}
                     />
                     <Dropdown
-                        label="Language"
+                        label={t('common.language')}
                         options={languageOptions}
                         value={language}
                         onChange={setLanguage}
@@ -181,9 +181,9 @@ export const I18nHeader = () => {
                         <span className="absolute top-2 right-2.5 w-2 h-2 bg-indigo-500 rounded-full border border-slate-900"></span>
                     </button>
 
-                    <button className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-lg shadow-indigo-600/20 transition-all active:scale-95">
+                    <button className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-lg shadow-indigo-600/20 transition-all active:scale-95 italic">
                         <PlusIcon />
-                        New Campaign
+                        {t('sidebar.new_campaign').toUpperCase()}
                     </button>
                 </div>
             </div>

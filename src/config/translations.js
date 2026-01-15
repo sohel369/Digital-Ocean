@@ -21,7 +21,9 @@ export const translations = {
             id: "ID",
             status: "Status",
             discard: "Discard",
-            tablet: "Tablet"
+            tablet: "Tablet",
+            operator: "Operator",
+            country_context: "Country"
         },
         sidebar: {
             dashboard: "Dashboard",
@@ -31,7 +33,10 @@ export const translations = {
             analytics: "Analytics",
             admin_pricing: "Admin Pricing",
             logout: "Logout",
-            new_campaign: "New Campaign"
+            new_campaign: "New Campaign",
+            menu: "Menu",
+            system: "System",
+            end_session: "End Session"
         },
         dashboard: {
             title: "Advertiser",
@@ -55,7 +60,8 @@ export const translations = {
             creative_tip: "Creative Tip",
             creative_tip_text: "Use high-contrast images for 2x CTR results.",
             top_performing: "Top Performing Creative",
-            conversion_rate: "Conversion Rate"
+            conversion_rate: "Conversion Rate",
+            premium_deals: "Premium Vehicle Deals"
         },
         campaign: {
             launch: "LAUNCH",
@@ -115,9 +121,10 @@ export const translations = {
         },
         formats: {
             leaderboard: "Leaderboard (728x90)",
-            skyscraper: "Wide Skyscraper (160x600)",
+            skyscraper: "Skyscraper (160x600)",
             medium_rectangle: "Medium Rectangle (300x250)",
-            mobile_banner: "Mobile Banner (320x50)"
+            mobile_banner: "Mobile Banner (320x50)",
+            mobile_leaderboard: "Mobile Leaderboard (320x50)"
         },
         geo: {
             title: "Geo-Targeting",
@@ -156,8 +163,24 @@ export const translations = {
             monthly_est: "Monthly Estimated",
             next_step: "Next Step",
             radius_desc: "30 Mile Radius around postcode",
-            state_desc: "Full coverage of {{state}}",
-            national_desc: "Nationwide coverage"
+            state_desc: "Selected Region: {{state}}",
+            national_desc: "Full Nationwide Coverage",
+            currency: "Currency"
+        },
+        status: {
+            live: "Live",
+            review: "Review",
+            pending: "Pending",
+            draft: "Draft",
+            active: "Active",
+            completed: "Completed"
+        },
+        preview: {
+            sponsored: "Sponsored",
+            recommended: "Recommended",
+            newsletter_title: "Rule 7 Media Newsletter",
+            newsletter_subtitle: "Your Daily Update",
+            newsletter_tip: "Placing ads in newsletters increases click-through rates by up to 40%."
         },
         admin: {
             title: "Admin",
@@ -171,7 +194,10 @@ export const translations = {
             density_multi: "Density Multi",
             population: "Population (M)",
             region_discount: "Region-wide Discount",
-            country_discount: "Country-wide Discount"
+            country_discount: "Country-wide Discount",
+            region_discount_desc: "Applied when targeting an entire state or region.",
+            country_discount_desc: "Applied when targeting a whole country.",
+            global_config_desc: "Global configuration for industry multipliers and base rates."
         },
         analytics: {
             title: "Performance Analytics",
@@ -200,6 +226,21 @@ export const translations = {
             processing: "Processing...",
             emergency: "Emergency Credentials",
             email_required_msg: "Please use your registered Email Address."
+        },
+        preview: {
+            sponsored: "Sponsored",
+            recommended: "Recommended",
+            newsletter_title: "Rule 7 Media Newsletter",
+            newsletter_subtitle: "Your Daily Update",
+            newsletter_tip: "Placing ads in newsletters increases click-through rates by up to 40%."
+        },
+        status: {
+            live: "Live",
+            review: "Review",
+            pending: "Pending",
+            draft: "Draft",
+            active: "Active",
+            completed: "Completed"
         }
     },
     hi: {
@@ -229,7 +270,10 @@ export const translations = {
             analytics: "विश्लेषण",
             admin_pricing: "व्यवस्थापक मूल्य",
             logout: "लॉगआउट",
-            new_campaign: "नया अभियान"
+            new_campaign: "नया अभियान",
+            menu: "मेनू",
+            system: "प्रणाली",
+            end_session: "सत्र समाप्त करें"
         },
         dashboard: {
             title: "विज्ञापनदाता",
@@ -315,7 +359,8 @@ export const translations = {
             leaderboard: "लीडरबोर्ड (728x90)",
             skyscraper: "स्काईस्क्रेपर (160x600)",
             medium_rectangle: "मीडियम रेक्टेंगल (300x250)",
-            mobile_banner: "मोबाइल बैनर (320x50)"
+            mobile_banner: "मोबाइल बैनर (320x50)",
+            mobile_leaderboard: "मोबाइल लीडरबोर्ड (320x50)"
         },
         geo: {
             title: "जियो-टारगेटिंग",
@@ -354,8 +399,8 @@ export const translations = {
             monthly_est: "मासिक अनुमानित",
             next_step: "अगला कदम",
             radius_desc: "पोस्टकोड के आसपास 30 मील की त्रिज्या",
-            state_desc: "{{state}} का पूर्ण कवरेज",
-            national_desc: "राष्ट्रव्यापी कवरेज"
+            national_desc: "राष्ट्रव्यापी कवरेज",
+            currency: "मुद्रा"
         },
         admin: {
             title: "व्यवस्थापक",
@@ -369,7 +414,10 @@ export const translations = {
             density_multi: "घनत्व मल्टी",
             population: "जनसंख्या (M)",
             region_discount: "क्षेत्रव्यापी छूट",
-            country_discount: "देशव्यापी छूट"
+            country_discount: "देशव्यापी छूट",
+            region_discount_desc: "पूरे राज्य या क्षेत्र को लक्षित करते समय लागू किया जाता है।",
+            country_discount_desc: "पूरे देश को लक्षित करते समय लागू किया जाता है।",
+            global_config_desc: "उद्योग मल्टीप्लायरों और आधार दरों के लिए वैश्विक कॉन्फ़िगरेशन।"
         },
         analytics: {
             title: "प्रदर्शन विश्लेषण",
@@ -398,6 +446,21 @@ export const translations = {
             processing: "प्रसंस्करण हो रहा है...",
             emergency: "आपातकालीन क्रेडेंชियल्स",
             email_required_msg: "कृपया अपना पंजीकृत ईमेल पता उपयोग करें।"
+        },
+        preview: {
+            sponsored: "प्रायोजित",
+            recommended: "अनुशंसित",
+            newsletter_title: "Rule 7 मीडिया न्यूज़लैटर",
+            newsletter_subtitle: "आपका दैनिक अपडेट",
+            newsletter_tip: "न्यूज़लेटर्स में विज्ञापन देने से क्लिक-थ्रू दर 40% तक बढ़ जाती है।"
+        },
+        status: {
+            live: "लाइव",
+            review: "समीक्षा",
+            pending: "लंबित",
+            draft: "ड्राफ्ट",
+            active: "सक्रिय",
+            completed: "पुरा"
         }
     },
     th: {
@@ -427,7 +490,10 @@ export const translations = {
             analytics: "การวิเคราะห์",
             admin_pricing: "จัดการราคา",
             logout: "ออกจากระบบ",
-            new_campaign: "แคมเปญใหม่"
+            new_campaign: "แคมเปญใหม่",
+            menu: "เมนู",
+            system: "ระบบ",
+            end_session: "จบเซสชัน"
         },
         dashboard: {
             title: "ผู้โฆษณา",
@@ -513,7 +579,8 @@ export const translations = {
             leaderboard: "ลีดเดอร์บอร์ด (728x90)",
             skyscraper: "สกายสเครปเปอร์ (160x600)",
             medium_rectangle: "สี่เหลี่ยมจัตุรัสกลาง (300x250)",
-            mobile_banner: "แบนเนอร์มือถือ (320x50)"
+            mobile_banner: "แบนเนอร์มือถือ (320x50)",
+            mobile_leaderboard: "ลีดเดอร์บอร์ดมือถือ (320x50)"
         },
         geo: {
             title: "การกำหนดเป้าหมาย",
@@ -552,8 +619,8 @@ export const translations = {
             monthly_est: "ประมาณการรายเดือน",
             next_step: "ขั้นตอนถัดไป",
             radius_desc: "รัศมี 30 ไมล์รอบรหัสไปรษณีย์",
-            state_desc: "ครอบคลุมทั่ว {{state}}",
-            national_desc: "ครอบคลุมทั่วประเทศ"
+            national_desc: "ครอบคลุมทั่วประเทศ",
+            currency: "สกุลเงิน"
         },
         admin: {
             title: "ผู้ดูแล",
@@ -567,7 +634,10 @@ export const translations = {
             density_multi: "ตัวคูณความหนาแน่น",
             population: "ประชากร (ล้าน)",
             region_discount: "ส่วนลดระดับจังหวัด",
-            country_discount: "ส่วนลดระดับประเทศ"
+            country_discount: "ส่วนลดระดับประเทศ",
+            region_discount_desc: "ใช้เมื่อกำหนดเป้าหมายทั้งรัฐหรือภูมิภาค",
+            country_discount_desc: "ใช้เมื่อกำหนดเป้าหมายทั้งประเทศ",
+            global_config_desc: "การตั้งค่าส่วนกลางสำหรับตัวคูณอุตสาหกรรมและราคาพื้นฐาน"
         },
         analytics: {
             title: "การวิเคราะห์ประสิทธิภาพ",
@@ -596,6 +666,21 @@ export const translations = {
             processing: "กำลังดำเนินการ...",
             emergency: "รหัสผ่านฉุกเฉิน",
             email_required_msg: "โปรดใช้อีเมลที่ลงทะเบียนไว้"
+        },
+        preview: {
+            sponsored: "ได้รับการสนับสนุน",
+            recommended: "แนะนำ",
+            newsletter_title: "Rule 7 Media Newsletter",
+            newsletter_subtitle: "การอัปเดตประจำวันของคุณ",
+            newsletter_tip: "การวางโฆษณาในจดหมายข่าวจะเพิ่มอัตราการคลิกผ่านได้ถึง 40%"
+        },
+        status: {
+            live: "ออนไลน์",
+            review: "รอการตรวจสอบ",
+            pending: "รอดำเนินการ",
+            draft: "ร่าง",
+            active: "ใช้งานอยู่",
+            completed: "เสร็จสมบูรณ์"
         }
     },
     vi: {
@@ -625,7 +710,10 @@ export const translations = {
             analytics: "Phân tích",
             admin_pricing: "Quản lý giá",
             logout: "Đăng xuất",
-            new_campaign: "Chiến dịch mới"
+            new_campaign: "Chiến dịch mới",
+            menu: "Thực đơn",
+            system: "Hệ thống",
+            end_session: "Kết thúc phiên"
         },
         dashboard: {
             title: "Nhà quảng cáo",
@@ -711,7 +799,8 @@ export const translations = {
             leaderboard: "Leaderboard (728x90)",
             skyscraper: "Skyscraper (160x600)",
             medium_rectangle: "Chữ nhật trung bình (300x250)",
-            mobile_banner: "Banner di động (320x50)"
+            mobile_banner: "Banner di động (320x50)",
+            mobile_leaderboard: "Mobile Leaderboard (320x50)"
         },
         geo: {
             title: "Nhắm mục tiêu địa lý",
@@ -750,8 +839,8 @@ export const translations = {
             monthly_est: "Ước tính hàng tháng",
             next_step: "Bước tiếp theo",
             radius_desc: "Bán kính 30 dặm quanh mã bưu điện",
-            state_desc: "Phủ sóng toàn bộ {{state}}",
-            national_desc: "Phủ sóng toàn quốc"
+            national_desc: "Phủ sóng toàn quốc",
+            currency: "Tiền tệ"
         },
         admin: {
             title: "Admin",
@@ -765,7 +854,10 @@ export const translations = {
             density_multi: "Hệ số mật độ",
             population: "Dân số (Triệu)",
             region_discount: "Giảm giá toàn vùng",
-            country_discount: "Giảm giá toàn quốc"
+            country_discount: "Giảm giá toàn quốc",
+            region_discount_desc: "Áp dụng khi nhắm mục tiêu toàn bộ tiểu bang hoặc khu vực.",
+            country_discount_desc: "Áp dụng khi nhắm mục tiêu toàn bộ quốc gia.",
+            global_config_desc: "Cấu hình toàn cầu cho hệ số ngành và giá cơ bản."
         },
         analytics: {
             title: "Phân tích hiệu suất",
@@ -794,6 +886,21 @@ export const translations = {
             processing: "Đang xử lý...",
             emergency: "Thông tin khẩn cấp",
             email_required_msg: "Vui lòng sử dụng địa chỉ Email đã đăng ký."
+        },
+        preview: {
+            sponsored: "Được tài trợ",
+            recommended: "Được đề xuất",
+            newsletter_title: "Bản tin Rule 7 Media",
+            newsletter_subtitle: "Cập nhật hàng ngày của bạn",
+            newsletter_tip: "Đặt quảng cáo trong bản tin giúp tăng tỷ lệ nhấp lên tới 40%."
+        },
+        status: {
+            live: "Trực tiếp",
+            review: "Xem xét",
+            pending: "Chờ xử lý",
+            draft: "Bản nháp",
+            active: "Hoạt động",
+            completed: "Hoàn thành"
         }
     },
     fil: {
@@ -823,7 +930,10 @@ export const translations = {
             analytics: "Analitika",
             admin_pricing: "Admin na Presyo",
             logout: "Mag-logout",
-            new_campaign: "Bagong Kampanya"
+            new_campaign: "Bagong Kampanya",
+            menu: "Menu",
+            system: "Sistema",
+            end_session: "Tapusin ang Session"
         },
         dashboard: {
             title: "Tagapatalastas",
@@ -909,7 +1019,8 @@ export const translations = {
             leaderboard: "Leaderboard (728x90)",
             skyscraper: "Skyscraper (160x600)",
             medium_rectangle: "Medium Rectangle (300x250)",
-            mobile_banner: "Mobile Banner (320x50)"
+            mobile_banner: "Mobile Banner (320x50)",
+            mobile_leaderboard: "Mobile Leaderboard (320x50)"
         },
         geo: {
             title: "Geo-Targeting",
@@ -963,7 +1074,10 @@ export const translations = {
             density_multi: "Density Multi",
             population: "Populasyon (M)",
             region_discount: "Region-wide Discount",
-            country_discount: "Country-wide Discount"
+            country_discount: "Country-wide Discount",
+            region_discount_desc: "Inilalapat kapag tina-target ang buong estado o rehiyon.",
+            country_discount_desc: "Inilalapat kapag tina-target ang buong bansa.",
+            global_config_desc: "Pandaigdigang pagsasaayos para sa industry multipliers at base rates."
         },
         analytics: {
             title: "Analitika ng Performance",
@@ -992,6 +1106,201 @@ export const translations = {
             processing: "Pinoproseso...",
             emergency: "Emergency Credentials",
             email_required_msg: "Mangyaring gamitin ang iyong rehistradong Email Address."
+        },
+        preview: {
+            sponsored: "Sponsored",
+            recommended: "Recommended",
+            newsletter_title: "Rule 7 Media Newsletter",
+            newsletter_subtitle: "Kasalukuyang Update",
+            newsletter_tip: "Ang paglalagay ng ads sa newsletter ay nagpapataas ng click-through rates hanggang 40%."
+        },
+        status: {
+            live: "Live",
+            review: "Suriin",
+            pending: "Nakabinbin",
+            draft: "Draft",
+            active: "Aktibo",
+            completed: "Tapos na"
+        }
+    },
+    fr: {
+        common: {
+            save: "Enregistrer",
+            cancel: "Annuler",
+            delete: "Supprimer",
+            edit: "Modifier",
+            loading: "Chargement...",
+            success: "Succès",
+            error: "Erreur",
+            next: "Suivant",
+            back: "Retour",
+            search: "Rechercher...",
+            no_data: "Aucune donnée disponible",
+            view_all: "Voir tout",
+            id: "ID",
+            status: "Statut",
+            discard: "Abandonner",
+            tablet: "Tablette"
+        },
+        sidebar: {
+            dashboard: "Tableau de Bord",
+            campaigns: "Campagnes",
+            geo_targeting: "Ciblage Géo",
+            pricing: "Tarification",
+            analytics: "Analyses",
+            admin_pricing: "Gestion Prix",
+            logout: "Déconnexion",
+            new_campaign: "Nouvelle Campagne",
+            menu: "Menu",
+            system: "Système",
+            end_session: "Fin de Session"
+        },
+        dashboard: {
+            title: "Annonceur",
+            subtitle: "Tableau de Bord",
+            monitoring: "Surveillance de {{count}} campagnes actives.",
+            active_campaigns: "Campagnes Actives",
+            pending: "en attente",
+            impressions: "Impressions",
+            today: "aujourd'hui",
+            total_clicks: "Total Clics",
+            ctr: "CTR Actuel",
+            target: "Cible",
+            recent_campaigns: "Campagnes",
+            recent_campaigns_sub: "Récentes",
+            campaign_name: "Nom de la Campagne",
+            engagement: "Engagement",
+            performance: "Performance",
+            budget: "Budget",
+            approval_status: "Statut",
+            approval_status_sub: "Approbation",
+            creative_tip: "Conseil Créatif",
+            creative_tip_text: "Utilisez des images à fort contraste pour booster le CTR.",
+            top_performing: "Meilleure Création",
+            conversion_rate: "Taux de Conversion"
+        },
+        campaign: {
+            launch: "LANCER LA",
+            campaign: "CAMPAGNE",
+            define_target: "Définissez votre cible et vos visuels.",
+            basics: "Informations de Base",
+            name: "Nom de la Campagne",
+            name_placeholder: "ex: Lancement Été 2024",
+            industry: "Secteur d'Activité",
+            start_date: "Début",
+            end_date: "Fin",
+            geo_target: "Ciblage Géographique",
+            radius_30: "Rayon de 30 Miles",
+            state_wide: "Région Entière",
+            national: "National",
+            postcode: "Code Postal",
+            postcode_placeholder: "ex: 75001",
+            select_region: "Sélectionner la Région",
+            creative: "Création Ad",
+            click_to_upload: "Cliquez ou glissez une image pour l'uploader",
+            optimal_size: "Optimal: 1200x628px • JPG, PNG, GIF",
+            headline: "Titre",
+            headline_placeholder: "Titre accrocheur...",
+            description: "Description",
+            description_placeholder: "Écrivez votre texte publicitaire...",
+            landing_page: "URL de Destination",
+            format: "Format Publicitaire",
+            cta: "Texte du Bouton (CTA)",
+            budget_pricing: "Budget & Tarifs",
+            pay_as_you_go: "Paiement à l'Usage",
+            daily_budget: "Budget Quotidien (USD)",
+            budget_min: "Budget minimum 50$/jour. Ne payez que pour la performance.",
+            submit: "Soumettre la Campagne",
+            live_preview: "Aperçu en Direct",
+            validation_error: "La date de fin doit être après la date de début.",
+            desktop: "Ordinateur",
+            mobile: "Mobile",
+            email: "Newsletter Email",
+            "Learn More": "En Savoir Plus",
+            "Shop Now": "Acheter",
+            "Sign Up": "S'inscrire",
+            "Get Quote": "Obtenir un Devis",
+            "Book Now": "Réserver",
+            "Contact Us": "Nous Contacter"
+        },
+        industry: {
+            real_estate: "Immobilier",
+            automotive: "Automobile",
+            healthcare: "Santé",
+            education: "Éducation",
+            retail: "Commerce de Détail",
+            technology: "Technologie",
+            finance: "Finance",
+            food_beverage: "Alimentation & Boissons",
+            entertainment: "Divertissement",
+            services: "Services Professionnels"
+        },
+        formats: {
+            leaderboard: "Leaderboard (728x90)",
+            skyscraper: "Skyscraper (160x600)",
+            medium_rectangle: "Rectangle Moyen (300x250)",
+            mobile_banner: "Bannière Mobile (320x50)",
+            mobile_leaderboard: "Leaderboard Mobile (320x50)"
+        },
+        status: {
+            live: "En Direct",
+            review: "En Révision",
+            pending: "En Attente",
+            draft: "Brouillon",
+            active: "Actif",
+            completed: "Terminé"
+        },
+        preview: {
+            sponsored: "Sponsorisé",
+            recommended: "Recommandé",
+            newsletter_title: "Newsletter Rule 7 Media",
+            newsletter_subtitle: "Votre Point Quotidien",
+            newsletter_tip: "Les annonces dans les newsletters boostent le clic de 40%."
+        },
+        admin: {
+            title: "Admin",
+            title_sub: "Contrôle des Prix",
+            save_config: "Enregistrer la Configuration",
+            industry_multipliers: "Multiplicateurs d'Industrie",
+            base_rates: "Tarifs de Base",
+            geo_weightings: "Pondérations Géographiques",
+            discounts: "Remises Système",
+            saving: "Enregistrement...",
+            density_multi: "Multi Densité",
+            population: "Population (M)",
+            region_discount: "Remise Régionale",
+            country_discount: "Remise Nationale",
+            region_discount_desc: "Appliqué lors du ciblage d'un état ou d'une région entière.",
+            country_discount_desc: "Appliqué lors du ciblage d'un pays entier.",
+            global_config_desc: "Configuration globale pour les multiplicateurs d'industrie et les tarifs de base."
+        },
+        analytics: {
+            title: "Analyses de Performance",
+            subtitle: "Plongez dans les métriques de votre campagne avec des mises à jour en direct.",
+            ctr_trends: "Tendances du CTR (Direct)",
+            daily_impressions: "Impressions Quotidiennes",
+            budget_utilization: "Utilisation du Budget",
+            traffic_share: "Part de Trafic",
+            export_pdf: "PDF",
+            export_csv: "CSV",
+            day: "Jour"
+        },
+        auth: {
+            title: "Vérification d'Identité",
+            subtitle: "Accès Terminal Premium AdPlatform",
+            email_label: "Adresse Email Enregistrée",
+            username_label: "Nom d'Utilisateur",
+            password_label: "Mot de Passe",
+            login_btn: "Exécuter la Connexion",
+            register_btn: "Enregistrer l'Opérateur",
+            google_continue: "Continuer avec Google",
+            google_signup: "S'inscrire avec Google",
+            or_divider: "Ou utiliser vos identifiants",
+            need_account: "Besoin d'un compte ? S'inscrire ici",
+            have_account: "Déjà un compte ? Se connecter",
+            processing: "Traitement...",
+            emergency: "Identifiants d'Urgence",
+            email_required_msg: "Veuillez utiliser votre adresse email enregistrée."
         }
     }
 };

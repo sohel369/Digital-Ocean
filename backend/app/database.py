@@ -9,12 +9,25 @@ from typing import Generator
 from .config import settings
 
 # Create database engine
+# Create database engine
+connect_args = {}
+engine_args = {
+    "pool_pre_ping": True,
+    "echo": settings.DEBUG,
+}
+
+if settings.DATABASE_URL.startswith("sqlite"):
+    connect_args["check_same_thread"] = False
+    # SQLite does not support pool_size/max_overflow with default pool
+else:
+    # Postgres/MySQL optimization
+    engine_args["pool_size"] = settings.DATABASE_POOL_SIZE
+    engine_args["max_overflow"] = settings.DATABASE_MAX_OVERFLOW
+
 engine = create_engine(
     settings.DATABASE_URL,
-    pool_size=settings.DATABASE_POOL_SIZE,
-    max_overflow=settings.DATABASE_MAX_OVERFLOW,
-    pool_pre_ping=True,  # Verify connections before using
-    echo=settings.DEBUG,  # Log SQL queries in debug mode
+    connect_args=connect_args,
+    **engine_args
 )
 
 # Session factory

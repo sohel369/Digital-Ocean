@@ -45,6 +45,10 @@ export const AppProvider = ({ children }) => {
     const [authLoading, setAuthLoading] = useState(true);
     const [detectedCountry, setDetectedCountry] = useState(null);
 
+    // Base URL configuration for API calls
+    const API_BASE_URL = import.meta.env.VITE_API_URL
+        || (window.location.hostname === 'localhost' ? '/api' : 'https://balanced-wholeness-production-ca00.up.railway.app/api');
+
     // IP-based Geo Location Detection
     const detectGeoLocation = async () => {
         try {
@@ -62,14 +66,6 @@ export const AppProvider = ({ children }) => {
     useEffect(() => {
         detectGeoLocation();
     }, []);
-
-    // Base URL configuration for API calls
-    // 1. Priority: Environment Variable (VITE_API_URL) - Set this in Railway!
-    // 2. Fallback: Localhost Proxy ('/api')
-    // 3. Fallback: Production URL (Hardcoded safety net)
-    const API_BASE_URL = import.meta.env.VITE_API_URL
-        || (window.location.hostname.includes('railway.app') ? `https://${window.location.hostname.replace('digital-ocean', 'balanced-wholeness')}/api` : '')
-        || (window.location.hostname === 'localhost' ? '/api' : 'https://balanced-wholeness-production-ca00.up.railway.app/api');
 
     // Debugging helper
     useEffect(() => {

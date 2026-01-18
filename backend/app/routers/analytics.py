@@ -44,7 +44,7 @@ async def get_campaign_analytics(
     
     # Calculate spent (in a real system, this would come from payment/impression tracking)
     # For now, we'll use a placeholder calculation
-    spent = campaign.calculated_price or 0.0 if campaign.status in [models.CampaignStatus.ACTIVE, models.CampaignStatus.COMPLETED] else 0.0
+    spent = campaign.calculated_price or 0.0 if campaign.status in [models.CampaignStatus.APPROVED, models.CampaignStatus.ACTIVE, models.CampaignStatus.COMPLETED] else 0.0
     
     analytics = schemas.CampaignAnalytics(
         campaign_id=campaign.id,
@@ -94,12 +94,12 @@ async def get_user_analytics_summary(
     total_clicks = sum(c.clicks for c in campaigns)
     average_ctr = (total_clicks / total_impressions * 100) if total_impressions > 0 else 0.0
     
-    active_campaigns = sum(1 for c in campaigns if c.status == models.CampaignStatus.ACTIVE)
+    active_campaigns = sum(1 for c in campaigns if c.status in [models.CampaignStatus.APPROVED, models.CampaignStatus.ACTIVE])
     
     total_spent = sum(
         c.calculated_price or 0 
         for c in campaigns 
-        if c.status in [models.CampaignStatus.ACTIVE, models.CampaignStatus.COMPLETED]
+        if c.status in [models.CampaignStatus.APPROVED, models.CampaignStatus.ACTIVE, models.CampaignStatus.COMPLETED]
     )
     total_budget = sum(c.budget for c in campaigns)
     

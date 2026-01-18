@@ -62,6 +62,7 @@ async def signup(user_data: schemas.UserSignup, db: Session = Depends(get_db)):
         password_hash=hashed_password,
         role=user_data.role,
         country=user_data.country,
+        industry=user_data.industry,
         last_login=datetime.utcnow()
     )
     

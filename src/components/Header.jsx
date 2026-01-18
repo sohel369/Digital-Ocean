@@ -1,69 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Bell, Search, Globe, ChevronDown, User as UserIcon, X, Check, Info, PlusCircle, Settings, LogOut, Menu } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-// Simple Dropdown Component
-const Dropdown = ({ label, icon, options, value, onChange, align = 'right' }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    return (
-        <div className="relative" ref={dropdownRef}>
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className={`
-          flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all duration-200
-          ${isOpen
-                        ? 'bg-primary/20 border-primary/50 text-primary-light'
-                        : 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:text-slate-100 hover:bg-slate-800'
-                    }
-        `}
-            >
-                {icon}
-                <span className="hidden md:inline text-xs font-semibold">{options.find(o => o.code === value || o.value === value)?.name || options.find(o => o.code === value)?.code || value}</span>
-                <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {isOpen && (
-                <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-48 bg-background-elevated border border-slate-700 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.5)] z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[300px] overflow-y-auto`}>
-                    <div className="py-1">
-                        {options.map((option) => (
-                            <button
-                                key={option.code || option.value}
-                                onClick={() => {
-                                    onChange(option.code || option.value);
-                                    setIsOpen(false);
-                                }}
-                                className={`
-                  w-full text-left px-4 py-2.5 text-sm transition-colors flex justify-between items-center
-                  ${(option.code || option.value) === value
-                                        ? 'bg-primary/20 text-primary-light font-medium'
-                                        : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-                                    }
-                `}
-                            >
-                                <span className="truncate">{option.name || option.label}</span>
-                                {option.symbol && <span className="text-xs text-slate-400 font-mono ml-2">{option.symbol}</span>}
-                                {option.currency && <span className="text-xs text-slate-400 font-mono ml-2">{option.currency}</span>}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
+import Dropdown from './Dropdown';
 
 const Header = () => {
     const { user, notifications, markAllRead, logout, language, setLanguage, currency, setCurrency, country, setCountry, CONSTANTS, setSidebarOpen, t } = useApp();
@@ -89,15 +28,15 @@ const Header = () => {
                 </button>
 
                 <div>
-                    <h1 className="text-lg md:text-xl font-bold text-slate-100">
-                        {t('sidebar.dashboard')}
+                    <h1 className="text-lg md:text-xl font-bold text-slate-100 italic tracking-tight">
+                        {user?.role === 'admin' ? 'Admin Dashboard' : t('sidebar.dashboard')}
                     </h1>
                     <div className="flex items-center gap-2 mt-0.5">
                         <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            LIVE
+                            {user?.role === 'admin' ? 'SYSTEM ONLINE' : 'LIVE'}
                         </span>
-                        <span className="text-slate-400 text-xs flex items-center gap-1 font-medium hidden sm:flex">
+                        <span className="text-slate-400 text-xs flex items-center gap-1 font-medium hidden sm:flex truncate max-w-[150px]">
                             <Globe size={10} />
                             {currentCountryName}
                         </span>
@@ -154,7 +93,7 @@ const Header = () => {
                                 <div className="fixed left-4 right-4 top-20 sm:absolute sm:top-14 sm:right-0 sm:left-auto sm:w-[380px] bg-background-elevated rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-slate-700 z-[70] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                                     <div className="p-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-900/50">
                                         <div className="flex items-center gap-2">
-                                            <h3 className="font-bold text-slate-100">{t('dashboard.approval_status')}</h3>
+                                            <h3 className="font-bold text-slate-100">{user?.role === 'admin' ? 'Admin Notifications' : t('dashboard.approval_status')}</h3>
                                             <span className="bg-primary/20 text-primary-light text-xs font-bold px-2 py-0.5 rounded-full">{unreadCount}</span>
                                         </div>
                                         <button onClick={markAllRead} className="text-xs text-primary-light font-medium hover:underline hover:text-primary">Mark all read</button>
@@ -187,10 +126,12 @@ const Header = () => {
                         )}
                     </div>
 
-                    <Link to="/campaigns/new" className="flex items-center gap-1 sm:gap-2 premium-btn text-white text-[10px] sm:text-sm font-semibold px-2 sm:px-4 py-1.5 sm:py-2.5 rounded-xl transition-all active:scale-95 shadow-lg shadow-primary/25">
-                        <PlusCircle size={14} className="sm:w-4 sm:h-4" />
-                        <span className="hidden xs:inline">{t('sidebar.new_campaign')}</span>
-                    </Link>
+                    {user?.role !== 'admin' && (
+                        <Link to="/campaigns/new" className="flex items-center gap-1 sm:gap-2 premium-btn text-white text-[10px] sm:text-sm font-semibold px-2 sm:px-4 py-1.5 sm:py-2.5 rounded-xl transition-all active:scale-95 shadow-lg shadow-primary/25">
+                            <PlusCircle size={14} className="sm:w-4 sm:h-4" />
+                            <span className="hidden xs:inline">{t('sidebar.new_campaign')}</span>
+                        </Link>
+                    )}
 
                     {/* User Menu */}
                     <div className="relative">

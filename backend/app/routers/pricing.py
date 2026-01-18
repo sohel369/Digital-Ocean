@@ -183,6 +183,7 @@ async def delete_pricing_matrix_entry(
 @router.get("/config", response_model=schemas.GlobalPricingConfig)
 async def get_global_pricing_config(
     country_code: Optional[str] = Query(None),
+    current_user: Optional[models.User] = Depends(auth.get_current_user_optional),
     db: Session = Depends(get_db)
 ):
     """
@@ -216,34 +217,56 @@ async def get_global_pricing_config(
     all_industries = db.query(models.PricingMatrix.industry_type).distinct().all()
     industries = []
     
-    for (ind_name,) in all_industries:
-        # For each industry, find the effective multiplier for this country
-        entries, is_specific = get_matrix_entries({"industry_type": ind_name})
-        # Use max multiplier to be safe/conservative if duplicates exist
-        mult = max([e.multiplier for e in entries]) if entries else 1.0
-        industries.append(schemas.IndustryConfig(name=ind_name, multiplier=mult))
-
+    if all_industries:
+        for (ind_name,) in all_industries:
+            # For each industry, find the effective multiplier for this country
+            entries, _ = get_matrix_entries({"industry_type": ind_name})
+            # Use max multiplier to be safe/conservative if duplicates exist
+            mult = max([e.multiplier for e in entries]) if entries else 1.0
+            industries.append(schemas.IndustryConfig(name=ind_name, multiplier=mult))
+    
+    # Ensure we always have at least some industries if DB is fresh
     if not industries:
-         industries = [
-            schemas.IndustryConfig(name="Retail", multiplier=1.0),
-            schemas.IndustryConfig(name="Healthcare", multiplier=1.5),
-            schemas.IndustryConfig(name="Tech", multiplier=1.3)
+        default_industries = [
+            "Tyres And Wheels", "Vehicle Servicing And Maintenance", "Panel Beating And Smash Repairs",
+            "Automotive Finance Solutions", "Vehicle Insurance Products", "Auto Parts Tools And Accessories",
+            "Fleet Management Tools", "Workshop Technology And Equipment", "Telematics Systems And Vehicle Tracking Solutions",
+            "Fuel Cards And Fuel Management Services", "Vehicle Cleaning And Detailing Services", "Logistics And Scheduling Software",
+            "Safety And Compliance Solutions", "Driver Training And Induction Programs", "Roadside Assistance Programs",
+            "Gps Navigation And Route Optimisation Tools", "Ev Charging Infrastructure And Electric Vehicle Solutions",
+            "Mobile Device Integration And Communications Equipment", "Asset Recovery And Anti Theft Technologies"
         ]
+        industries = [schemas.IndustryConfig(name=name, multiplier=1.0) for name in default_industries]
+
+    # Filter industries for non-admin users
+    if current_user and current_user.role != models.UserRole.ADMIN and hasattr(current_user, 'industry') and current_user.industry:
+        user_ind = current_user.industry.lower()
+        # Filter strictly
+        filtered = [i for i in industries if i.name.lower() == user_ind]
+        if filtered:
+            industries = filtered
+        else:
+            # Fallback if industry not found in matrix
+            industries = [schemas.IndustryConfig(name=current_user.industry, multiplier=1.0)]
 
     # 2. Ad Types & Base Rates
     # Similar logic: check if this country has a specific base rate for "Display"
     all_ad_types = db.query(models.PricingMatrix.advert_type).distinct().all()
     ad_types = []
     
-    for (ad_name,) in all_ad_types:
-        entries, is_specific = get_matrix_entries({"advert_type": ad_name})
-        rate = max([e.base_rate for e in entries]) if entries else 100.0
-        ad_types.append(schemas.AdTypeConfig(name=ad_name, base_rate=rate))
+    if all_ad_types:
+        for (ad_name,) in all_ad_types:
+            entries, _ = get_matrix_entries({"advert_type": ad_name})
+            rate = max([e.base_rate for e in entries]) if entries else 100.0
+            ad_types.append(schemas.AdTypeConfig(name=ad_name, base_rate=rate))
         
     if not ad_types:
         ad_types = [
-            schemas.AdTypeConfig(name="Display", base_rate=100.0),
-            schemas.AdTypeConfig(name="Video", base_rate=250.0)
+            schemas.AdTypeConfig(name="Leaderboard (728x90)", base_rate=150.0),
+            schemas.AdTypeConfig(name="Skyscraper (160x600)", base_rate=180.0),
+            schemas.AdTypeConfig(name="Medium Rectangle (300x250)", base_rate=200.0),
+            schemas.AdTypeConfig(name="Mobile Leaderboard (320x50)", base_rate=100.0),
+            schemas.AdTypeConfig(name="Email Newsletter (600x200)", base_rate=250.0)
         ]
 
     # 3. Geo Data (Existing Logic)
@@ -261,16 +284,15 @@ async def get_global_pricing_config(
     ]
     if not states:
          states = [
-            schemas.StateConfig(name="California", land_area=423970, population=39538223, density_multiplier=1.5, state_code="CA", country_code="US")
+            schemas.StateConfig(name="California", land_area=423970, population=39538223, density_multiplier=1.0, state_code="CA", country_code="US")
         ]
 
     # 4. Discounts (Country specific or default)
     disc_entries, _ = get_matrix_entries({}) # Just get any for this country
-    first_entry = disc_entries[0] if disc_entries else None
     
     discounts = schemas.DiscountConfig(
-        state=first_entry.state_discount if first_entry else 0.15,
-        national=first_entry.national_discount if first_entry else 0.30
+        state=disc_entries[0].state_discount if disc_entries else 0.15,
+        national=disc_entries[0].national_discount if disc_entries else 0.30
     )
 
     # Determine currency based on context
@@ -278,7 +300,8 @@ async def get_global_pricing_config(
     currency_map = {
         "US": "USD", "TH": "THB", "VN": "VND", "PH": "PHP", 
         "GB": "GBP", "FR": "EUR", "DE": "EUR", "CA": "CAD", 
-        "AU": "AUD", "IN": "INR", "ID": "IDR"
+        "AU": "AUD", "IN": "INR", "ID": "IDR", "JP": "JPY",
+        "CN": "CNY", "IT": "EUR", "ES": "EUR"
     }
     
     # Heuristic: If we found specific rates for the requested country, return that currency.
@@ -319,11 +342,16 @@ async def save_global_pricing_config(
     try:
         logger.info(f"💾 Saving Admin Config: {len(config.industries)} industries, {len(config.states)} states")
         
+        # 0. Determine target country for these pricing rows
+        target_country = config.country_code.upper() if config.country_code else "US"
+        logger.info(f"Targeting country: {target_country} for pricing updates")
+
         # 1. Update/Upsert Industry Multipliers in PricingMatrix
-        # We'll update ALL entries that match this industry name
+        # We'll update entries that match this industry name AND the target country
         for ind in config.industries:
             affected = db.query(models.PricingMatrix).filter(
-                models.PricingMatrix.industry_type == ind.name
+                models.PricingMatrix.industry_type == ind.name,
+                models.PricingMatrix.country_id == target_country
             ).update({"multiplier": ind.multiplier})
             
             if affected == 0:
@@ -337,31 +365,34 @@ async def save_global_pricing_config(
                     multiplier=ind.multiplier,
                     state_discount=config.discounts.state,
                     national_discount=config.discounts.national,
-                    country_id="US"
+                    country_id=target_country
                 )
                 db.add(new_entry)
             
         # 2. Update Ad Type Base Rates
         for ad in config.ad_types:
             affected = db.query(models.PricingMatrix).filter(
-                models.PricingMatrix.advert_type == ad.name
+                models.PricingMatrix.advert_type == ad.name,
+                models.PricingMatrix.country_id == target_country
             ).update({"base_rate": ad.base_rate})
             
             if affected == 0:
                 new_entry = models.PricingMatrix(
-                    industry_type="Retail",  # Default industry
+                    industry_type="Tyres And Wheels",  # Default industry
                     advert_type=ad.name,
                     coverage_type=models.CoverageType.RADIUS_30,
                     base_rate=ad.base_rate,
                     multiplier=1.0,
                     state_discount=config.discounts.state,
                     national_discount=config.discounts.national,
-                    country_id="US"
+                    country_id=target_country
                 )
                 db.add(new_entry)
             
-        # 3. Update Discounts globally
-        db.query(models.PricingMatrix).update({
+        # 3. Update Discounts for this country
+        db.query(models.PricingMatrix).filter(
+            models.PricingMatrix.country_id == target_country
+        ).update({
             "state_discount": config.discounts.state,
             "national_discount": config.discounts.national
         })

@@ -10,6 +10,7 @@ from datetime import datetime
 from ..database import get_db
 from .. import models, schemas, auth
 from ..pricing import PricingEngine, get_pricing_engine
+from dateutil.relativedelta import relativedelta
 
 router = APIRouter(prefix="/campaigns", tags=["Campaigns"])
 
@@ -18,6 +19,7 @@ router = APIRouter(prefix="/campaigns", tags=["Campaigns"])
 async def create_campaign(
     campaign_data: schemas.CampaignCreate,
     current_user: models.User = Depends(auth.get_current_active_user),
+    verified_country: str = Depends(auth.verify_geo_access),
     db: Session = Depends(get_db),
     pricing_engine: PricingEngine = Depends(get_pricing_engine)
 ):
@@ -28,9 +30,19 @@ async def create_campaign(
     - Industry type
     - Coverage area
     - Campaign duration
-    - Geographic location
+    - Geographic location (verified via IP)
     """
-    # Calculate campaign duration
+    # Enforce verified country for non-admins
+    if current_user.role != models.UserRole.ADMIN:
+        campaign_data.target_country = verified_country
+    # Calculate end_date if duration is provided
+    if campaign_data.duration and not campaign_data.end_date:
+        campaign_data.end_date = campaign_data.start_date + relativedelta(months=campaign_data.duration)
+    elif not campaign_data.end_date:
+        # Fallback default if nothing provided (though schema validator should catch this)
+        campaign_data.end_date = campaign_data.start_date + relativedelta(months=1)
+
+    # Calculate campaign duration in days for pricing
     duration_days = (campaign_data.end_date - campaign_data.start_date).days
     
     # Calculate pricing
@@ -45,6 +57,8 @@ async def create_campaign(
     )
     
     # Create campaign
+    target_status = campaign_data.status or models.CampaignStatus.PENDING_REVIEW
+    
     new_campaign = models.Campaign(
         advertiser_id=current_user.id,
         name=campaign_data.name,
@@ -53,7 +67,8 @@ async def create_campaign(
         end_date=campaign_data.end_date,
         budget=campaign_data.budget,
         calculated_price=pricing_result.total_price,
-        status=models.CampaignStatus.DRAFT,
+        status=target_status,
+        submitted_at=datetime.utcnow() if target_status == models.CampaignStatus.PENDING_REVIEW else None,
         coverage_type=campaign_data.coverage_type,
         coverage_area=pricing_result.breakdown['coverage_area_description'],
         target_postcode=campaign_data.target_postcode,
@@ -76,22 +91,23 @@ async def list_campaigns(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
     current_user: models.User = Depends(auth.get_current_active_user),
+    verified_country: str = Depends(auth.verify_geo_access),
     db: Session = Depends(get_db)
 ):
     """
     List all campaigns for the current user.
     
-    Admins can see all campaigns, advertisers only see their own.
-    
-    - **status**: Filter by campaign status (optional)
-    - **skip**: Number of records to skip (pagination)
-    - **limit**: Maximum number of records to return
+    Admins can see all campaigns, advertisers only see their own
+    AND only campaigns within their verified country.
     """
     query = db.query(models.Campaign)
     
-    # Role-based filtering
+    # Role-based & Geo-based filtering
     if current_user.role != models.UserRole.ADMIN:
-        query = query.filter(models.Campaign.advertiser_id == current_user.id)
+        query = query.filter(
+            models.Campaign.advertiser_id == current_user.id,
+            models.Campaign.target_country == verified_country
+        )
     
     # Status filter
     if status:
@@ -170,14 +186,29 @@ async def update_campaign(
             detail="Not authorized to update this campaign"
         )
     
+    # Restrict updates based on status (Production-ready logic)
+    if current_user.role != models.UserRole.ADMIN:
+        if campaign.status not in [models.CampaignStatus.DRAFT, models.CampaignStatus.CHANGES_REQUIRED, models.CampaignStatus.REJECTED]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Cannot update campaign in '{campaign.status.value}' status. Please contact support or request changes if needed."
+            )
+    
     # Update fields
     update_data = campaign_update.dict(exclude_unset=True)
     
     for field, value in update_data.items():
         setattr(campaign, field, value)
+        if field == 'status' and value == models.CampaignStatus.PENDING_REVIEW:
+            campaign.submitted_at = datetime.utcnow()
+            campaign.admin_message = None
+    
+    # Handle duration-based end date update
+    if hasattr(campaign_update, 'duration') and campaign_update.duration:
+        campaign.end_date = campaign.start_date + relativedelta(months=campaign_update.duration)
     
     # Recalculate pricing if relevant fields changed
-    if any(key in update_data for key in ['industry_type', 'coverage_type', 'start_date', 'end_date', 'target_postcode', 'target_state', 'target_country']):
+    if any(key in update_data for key in ['industry_type', 'coverage_type', 'start_date', 'end_date', 'target_postcode', 'target_state', 'target_country']) or (hasattr(campaign_update, 'duration') and campaign_update.duration):
         duration_days = (campaign.end_date - campaign.start_date).days
         pricing_result = pricing_engine.calculate_price(
             industry_type=campaign.industry_type,

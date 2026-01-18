@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from typing import List, Dict, Optional
 from pydantic import BaseModel
+from ..utils import geo_ip
 
 router = APIRouter(
     prefix="/geo",
@@ -94,3 +95,15 @@ async def validate_postcode(postcode: str, country_code: str):
     """
     # Placeholder for server-side validation if needed
     return {"valid": True, "formatted": postcode.upper()}
+
+@router.get("/detect-country")
+async def detect_country(request: Request):
+    """
+    Detect the user's country from their IP address.
+    """
+    country = await geo_ip.get_country_from_ip(request)
+    return {
+        "country": country or "US", 
+        "is_local": country is None,
+        "ip": request.client.host if request.client else "unknown"
+    }

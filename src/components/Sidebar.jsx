@@ -8,12 +8,17 @@ import {
     BarChart3,
     LogOut,
     X,
-    Settings
+    Settings,
+    ShieldCheck,
+    ShieldAlert,
+    Shield
 } from 'lucide-react';
+import { Globe } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import Dropdown from './Dropdown';
 
 const Sidebar = () => {
-    const { sidebarOpen, setSidebarOpen, logout, user, t } = useApp();
+    const { sidebarOpen, setSidebarOpen, logout, user, t, detectedCountry, country, setCountry, language, setLanguage, currency, setCurrency, CONSTANTS } = useApp();
 
     const handleNavClick = () => {
         if (window.innerWidth < 768) {
@@ -21,13 +26,21 @@ const Sidebar = () => {
         }
     };
 
-    const navItems = [
+    const advertiserNavItems = [
         { to: "/", icon: LayoutDashboard, label: t('sidebar.dashboard') },
         { to: "/campaigns/new", icon: PlusCircle, label: t('sidebar.new_campaign') },
         { to: "/geo-targeting", icon: Map, label: t('sidebar.geo_targeting') },
         { to: "/pricing", icon: CreditCard, label: t('sidebar.pricing') },
         { to: "/analytics", icon: BarChart3, label: t('sidebar.analytics') },
     ];
+
+    const adminNavItems = [
+        { to: "/", icon: LayoutDashboard, label: 'Admin Dashboard' },
+        { to: "/admin/campaigns", icon: Shield, label: 'Campaign Approvals' },
+        { to: "/admin/pricing", icon: Settings, label: t('sidebar.admin_pricing') },
+    ];
+
+    const currentNavItems = user?.role === 'admin' ? adminNavItems : advertiserNavItems;
 
     const activeClass = "flex items-center gap-3 px-5 py-4 text-sm font-bold rounded-2xl bg-primary text-white shadow-[0_10px_20px_rgba(59,130,246,0.3)] transition-all scale-[1.02]";
     const inactiveClass = "flex items-center gap-3 px-5 py-4 text-sm font-bold text-slate-400 hover:text-slate-200 rounded-2xl transition-all hover:bg-slate-800/40 hover:pl-6";
@@ -67,10 +80,17 @@ const Sidebar = () => {
                     </button>
                 </div>
 
+                {/* Sandbox Mode Indicator */}
+                {(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (
+                    <div className="mx-6 px-4 py-1.5 bg-amber-500/20 border border-amber-500/30 rounded-lg text-amber-500 text-[10px] font-bold uppercase tracking-wider text-center mb-2">
+                        TEST MODE (Sandbox)
+                    </div>
+                )}
+
                 {/* Navigation Items */}
-                <nav className="flex-1 p-6 space-y-2 overflow-y-auto custom-scrollbar">
-                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-4 pl-2">{t('sidebar.menu')}</p>
-                    {navItems.map((item) => (
+                <nav className="flex-1 p-6 space-y-2 overflow-y-auto overflow-x-hidden custom-scrollbar">
+                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-4 pl-2">{user?.role === 'admin' ? 'Administration' : t('sidebar.menu')}</p>
+                    {currentNavItems.map((item) => (
                         <NavLink
                             key={item.to}
                             to={item.to}
@@ -80,26 +100,78 @@ const Sidebar = () => {
                                 return isActive ? activeClass : inactiveClass;
                             }}
                         >
-                            <item.icon size={22} />
+                            <item.icon size={22} className={user?.role === 'admin' && item.to !== '/' ? 'text-amber-500' : ''} />
                             {item.label}
                         </NavLink>
                     ))}
 
-                    {user?.role === 'admin' && (
-                        <div className="pt-8">
-                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-4 pl-2">{t('sidebar.system')}</p>
-                            <NavLink
-                                to="/admin/pricing"
-                                onClick={handleNavClick}
-                                className={inactiveClass}
-                            >
-                                <Settings size={22} className="text-slate-500" />
-                                {t('sidebar.admin_pricing')}
-                            </NavLink>
+                    {/* Geo-Blocking Status (Only for Advertisers or if specifically needed for admin overview) */}
+                    {user?.role !== 'admin' && (
+                        <div className="pt-8 px-2">
+                            <div className={`p-4 rounded-3xl border ${detectedCountry && detectedCountry !== country ? 'bg-red-500/10 border-red-500/20' : 'bg-slate-900/50 border-white/5'}`}>
+                                <div className="flex items-center gap-3 mb-2">
+                                    {detectedCountry && detectedCountry === country ? (
+                                        <ShieldCheck className="text-emerald-500" size={18} />
+                                    ) : (
+                                        <ShieldAlert className="text-red-500" size={18} />
+                                    )}
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('sidebar.geo_status')}</span>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex justify-between text-[10px] font-bold">
+                                        <span className="text-slate-500">{t('sidebar.ip_detected')}</span>
+                                        <span className="text-slate-200">{detectedCountry || t('sidebar.detecting')}</span>
+                                    </div>
+                                    <div className="flex justify-between text-[10px] font-bold">
+                                        <span className="text-slate-500">{t('sidebar.profile_label')}</span>
+                                        <span className="text-slate-200">{country}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
-                </nav>
 
+                    {/* Mobile Settings (Visible ONLY on small screens where Header hides them) */}
+                    <div className="pt-8 px-2 lg:hidden">
+                        <div className="bg-slate-900/50 border border-white/5 p-4 rounded-3xl">
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">{t('common.country_context')}</p>
+                            <div className="space-y-3">
+                                <Dropdown
+                                    label="Country"
+                                    options={CONSTANTS.COUNTRIES}
+                                    value={country}
+                                    onChange={setCountry}
+                                    align="top"
+                                    icon={<Globe size={14} />}
+                                    className="w-full"
+                                    menuWidth="w-full"
+                                />
+                                <div className="flex flex-col gap-3">
+                                    <Dropdown
+                                        label="Language"
+                                        options={CONSTANTS.LANGUAGES}
+                                        value={language}
+                                        onChange={setLanguage}
+                                        align="top"
+                                        icon={<span className="text-xs font-bold uppercase">{language}</span>}
+                                        className="w-full"
+                                        menuWidth="w-full"
+                                    />
+                                    <Dropdown
+                                        label="Currency"
+                                        options={CONSTANTS.CURRENCIES}
+                                        value={currency}
+                                        onChange={setCurrency}
+                                        align="top"
+                                        icon={<span className="font-mono text-xs font-bold">{CONSTANTS.CURRENCIES.find(c => c.code === currency)?.symbol}</span>}
+                                        className="w-full"
+                                        menuWidth="w-full"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
 
                 {/* Footer User Profile */}
                 <div className="p-6 border-t border-white/5">

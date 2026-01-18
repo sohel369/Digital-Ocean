@@ -40,7 +40,8 @@ from .routers import (
     admin,
     payment,
     frontend_compat,
-    geo
+    geo,
+    campaign_approval
 )
 
 
@@ -233,6 +234,7 @@ app.include_router(payment.router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(geo.router, prefix="/api")
+app.include_router(campaign_approval.router, prefix="/api")
 
 
 # ==================== Startup/Shutdown Events ====================
@@ -268,7 +270,12 @@ async def startup_event():
                         ("description", "TEXT"),
                         ("tags", "JSON"),
                         ("calculated_price", "FLOAT"),
-                        ("coverage_area", "VARCHAR(255)")
+                        ("coverage_area", "VARCHAR(255)"),
+                        # Admin approval workflow columns
+                        ("submitted_at", "TIMESTAMP WITH TIME ZONE"),
+                        ("admin_message", "TEXT"),
+                        ("reviewed_by", "INTEGER"),
+                        ("reviewed_at", "TIMESTAMP WITH TIME ZONE")
                     ]
                     
                     for col_name, col_type in columns_to_add:
@@ -286,6 +293,26 @@ async def startup_event():
                         conn.commit()
                     except Exception:
                         pass
+                    
+                    # 3. Create notifications table if not exists
+                    try:
+                        conn.execute(text("""
+                            CREATE TABLE IF NOT EXISTS notifications (
+                                id SERIAL PRIMARY KEY,
+                                user_id INTEGER NOT NULL REFERENCES users(id),
+                                campaign_id INTEGER REFERENCES campaigns(id),
+                                notification_type VARCHAR(50) NOT NULL,
+                                title VARCHAR(255) NOT NULL,
+                                message TEXT NOT NULL,
+                                is_read BOOLEAN DEFAULT FALSE,
+                                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                                read_at TIMESTAMP WITH TIME ZONE
+                            )
+                        """))
+                        conn.commit()
+                        logger.info("✅ Notifications table created/verified")
+                    except Exception as notif_err:
+                        logger.warning(f"Note: Notifications table check: {notif_err}")
                         
                     logger.info("✅ Schema migrations checked/applied")
                 except Exception as e:
@@ -299,23 +326,50 @@ async def startup_event():
             from . import models
             db = SessionLocal()
             try:
-                # Check if PricingMatrix is empty
+                # Check if PricingMatrix is missing essential industries
                 try:
-                    count = db.query(models.PricingMatrix).count()
+                    industry_count = db.query(models.PricingMatrix).filter(
+                        models.PricingMatrix.industry_type == "Tyres And Wheels"
+                    ).count()
                 except Exception:
-                    count = 0
+                    industry_count = 0
                     
-                if count == 0:
-                    logger.info("📦 Seeding default PricingMatrix...")
-                    # Create default pricing entries
-                    defaults = [
-                        models.PricingMatrix(industry_type="Retail", advert_type="display", coverage_type=models.CoverageType.RADIUS_30, base_rate=100.0, multiplier=1.0, country_id="US"),
-                        models.PricingMatrix(industry_type="Healthcare", advert_type="display", coverage_type=models.CoverageType.RADIUS_30, base_rate=100.0, multiplier=1.5, country_id="US"),
-                        models.PricingMatrix(industry_type="Tech", advert_type="display", coverage_type=models.CoverageType.RADIUS_30, base_rate=100.0, multiplier=1.2, country_id="US"),
+                if industry_count == 0:
+                    logger.info("📦 Seeding comprehensive Industry & Ad Type PricingMatrix...")
+                    
+                    industries = [
+                        "Tyres And Wheels", "Vehicle Servicing And Maintenance", "Panel Beating And Smash Repairs",
+                        "Automotive Finance Solutions", "Vehicle Insurance Products", "Auto Parts Tools And Accessories",
+                        "Fleet Management Tools", "Workshop Technology And Equipment", "Telematics Systems And Vehicle Tracking Solutions",
+                        "Fuel Cards And Fuel Management Services", "Vehicle Cleaning And Detailing Services", "Logistics And Scheduling Software",
+                        "Safety And Compliance Solutions", "Driver Training And Induction Programs", "Roadside Assistance Programs",
+                        "Gps Navigation And Route Optimisation Tools", "Ev Charging Infrastructure And Electric Vehicle Solutions",
+                        "Mobile Device Integration And Communications Equipment", "Asset Recovery And Anti Theft Technologies"
                     ]
-                    db.add_all(defaults)
+                    
+                    ad_types = [
+                        "Leaderboard (728x90)", "Skyscraper (160x600)", "Medium Rectangle (300x250)", 
+                        "Mobile Leaderboard (320x50)", "Email Newsletter (600x200)"
+                    ]
+                    
+                    new_entries = []
+                    # Create default entries for US
+                    for ind in industries:
+                        for ad in ad_types:
+                            # We only need one entry per ind/ad combo to show up in admin
+                            new_entries.append(models.PricingMatrix(
+                                industry_type=ind,
+                                advert_type=ad,
+                                coverage_type=models.CoverageType.RADIUS_30,
+                                base_rate=150.0 if "Leaderboard" in ad else 100.0,
+                                multiplier=1.0,
+                                country_id="US"
+                            ))
+                    
+                    # Also keep legacy ones for compatibility if needed, but the list above is primary
+                    db.add_all(new_entries)
                     db.commit()
-                    logger.info("✅ Default PricingMatrix seeded")
+                    logger.info(f"✅ Seeding complete: {len(new_entries)} entries added.")
                     
                 # Check if GeoData is empty
                 try:

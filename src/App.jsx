@@ -8,6 +8,8 @@ import GeoTargeting from './pages/GeoTargeting';
 import Pricing from './pages/Pricing';
 import Analytics from './pages/Analytics';
 import AdminPricing from './pages/AdminPricing';
+import AdminCampaigns from './pages/AdminCampaigns';
+import AdminDashboard from './pages/AdminDashboard';
 
 import { Toaster } from 'sonner';
 
@@ -55,6 +57,7 @@ const MainLayout = ({ children }) => {
 };
 
 function App() {
+    const { user } = useApp();
     return (
         <Router>
             <Toaster position="top-right" richColors closeButton theme="dark" />
@@ -65,14 +68,20 @@ function App() {
                     element={
                         <MainLayout>
                             <Routes>
-                                <Route path="/" element={<Dashboard />} />
+                                <Route path="/" element={user?.role === 'admin' ? <AdminDashboard /> : <Dashboard />} />
                                 <Route path="/campaigns/new" element={<CampaignCreation />} />
+                                <Route path="/campaigns/new/:id" element={<CampaignCreation />} />
                                 <Route path="/geo-targeting" element={<GeoTargeting />} />
                                 <Route path="/pricing" element={<Pricing />} />
                                 <Route path="/analytics" element={<Analytics />} />
                                 <Route path="/admin/pricing" element={
                                     <AdminGuard>
                                         <AdminPricing />
+                                    </AdminGuard>
+                                } />
+                                <Route path="/admin/campaigns" element={
+                                    <AdminGuard>
+                                        <AdminCampaigns />
                                     </AdminGuard>
                                 } />
                                 <Route path="*" element={<Navigate to="/" replace />} />

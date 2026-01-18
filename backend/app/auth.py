@@ -6,19 +6,21 @@ from datetime import datetime, timedelta
 from typing import Optional, Union
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from .config import settings
 from .database import get_db
 from . import models, schemas
+from .utils import geo_ip
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # OAuth2 scheme for token extraction from Authorization header
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -161,6 +163,37 @@ async def get_current_user(
     return user
 
 
+async def get_current_user_optional(
+    token: Optional[str] = Depends(oauth2_scheme_optional),
+    db: Session = Depends(get_db)
+) -> Optional[models.User]:
+    """
+    Get current user from JWT token if present, otherwise None.
+    Does not raise exception if token is missing or invalid.
+    """
+    if not token:
+        return None
+    
+    try:
+        from jose import JWTError
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            user_id = int(payload.get("sub"))
+            if user_id is None:
+                return None
+        except JWTError:
+            return None
+        
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        if user:
+            user.last_login = datetime.utcnow()
+            db.commit()
+            return user
+        return None
+    except Exception:
+        return None
+
+
 async def get_current_active_user(
     current_user: models.User = Depends(get_current_user)
 ) -> models.User:
@@ -199,6 +232,42 @@ async def get_current_admin_user(
             detail="Admin access required"
         )
     return current_user
+
+
+async def verify_geo_access(
+    request: Request,
+    current_user: models.User = Depends(get_current_active_user)
+) -> str:
+    """
+    Dependency to enforce IP-based geo-blocking.
+    
+    1. Detects country from IP.
+    2. Compares against user's registered country.
+    3. Blocks if there's a mismatch (unless Admin).
+    
+    Returns:
+        The verified country code.
+    """
+    # 1. Admins bypass geo-blocking
+    if current_user.role == models.UserRole.ADMIN:
+        return current_user.country or "US"
+
+    # 2. Detect country from IP
+    detected_country = await geo_ip.get_country_from_ip(request)
+    
+    # 3. If we couldn't detect (local/error), fall back to user's registered country
+    user_country = (current_user.country or "US").upper()
+    
+    if detected_country:
+        detected_country = detected_country.upper()
+        # 4. Strict Enforcement: Detected IP must match profile country
+        if detected_country != user_country:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access Denied: Your IP location ({detected_country}) does not match your registered country ({user_country})."
+            )
+
+    return user_country
 
 
 def create_user_tokens(user: models.User) -> schemas.Token:

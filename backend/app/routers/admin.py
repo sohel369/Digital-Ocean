@@ -313,7 +313,7 @@ async def get_system_stats(
         models.Campaign.status == models.CampaignStatus.ACTIVE
     ).scalar()
     pending_campaigns = db.query(func.count(models.Campaign.id)).filter(
-        models.Campaign.status == models.CampaignStatus.PENDING
+        models.Campaign.status == models.CampaignStatus.PENDING_REVIEW
     ).scalar()
     
     # Media statistics

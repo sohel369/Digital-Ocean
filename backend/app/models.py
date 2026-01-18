@@ -23,12 +23,17 @@ class UserRole(str, enum.Enum):
 
 class CampaignStatus(str, enum.Enum):
     """Campaign status enumeration."""
-    DRAFT = "draft"
-    PENDING = "pending"
-    ACTIVE = "active"
-    PAUSED = "paused"
-    COMPLETED = "completed"
-    REJECTED = "rejected"
+    DRAFT = "DRAFT"
+    SUBMITTED = "SUBMITTED"
+    PENDING_REVIEW = "PENDING_REVIEW"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    CHANGES_REQUIRED = "CHANGES_REQUIRED"
+    ACTIVE = "ACTIVE"
+    PAUSED = "PAUSED"
+    COMPLETED = "COMPLETED"
+    # Legacy alias for compatibility
+    PENDING = "PENDING"
 
 
 class MediaApprovalStatus(str, enum.Enum):
@@ -55,6 +60,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=True)  # Nullable for OAuth users
     role = Column(Enum(UserRole), default=UserRole.ADVERTISER, nullable=False)
     country = Column(String(100), nullable=True)
+    industry = Column(String(255), nullable=True)
     
     # OAuth fields
     oauth_provider = Column(String(50), nullable=True)  # 'google', 'facebook', etc.
@@ -67,7 +73,8 @@ class User(Base):
     last_login = Column(DateTime(timezone=True), nullable=True)
     
     # Relationships
-    campaigns = relationship("Campaign", back_populates="advertiser", cascade="all, delete-orphan")
+    campaigns = relationship("Campaign", back_populates="advertiser", cascade="all, delete-orphan", foreign_keys="Campaign.advertiser_id")
+    reviewed_campaigns = relationship("Campaign", back_populates="reviewer", foreign_keys="Campaign.reviewed_by")
     
     def __repr__(self):
         return f"<User {self.email} ({self.role})>"
@@ -118,9 +125,16 @@ class Campaign(Base):
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    submitted_at = Column(DateTime(timezone=True), nullable=True)  # When submitted for review
+    
+    # Admin Review Fields
+    admin_message = Column(Text, nullable=True)  # Feedback from admin (for rejections/changes)
+    reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # Admin who reviewed
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)  # When reviewed
     
     # Relationships
-    advertiser = relationship("User", back_populates="campaigns")
+    advertiser = relationship("User", back_populates="campaigns", foreign_keys=[advertiser_id])
+    reviewer = relationship("User", back_populates="reviewed_campaigns", foreign_keys=[reviewed_by])
     media_files = relationship("Media", back_populates="campaign", cascade="all, delete-orphan")
     
     @property
@@ -250,3 +264,36 @@ class PaymentTransaction(Base):
     
     def __repr__(self):
         return f"<Payment {self.stripe_payment_intent_id} - {self.status}>"
+
+
+class NotificationType(str, enum.Enum):
+    """Notification type enumeration."""
+    CAMPAIGN_APPROVED = "campaign_approved"
+    CAMPAIGN_REJECTED = "campaign_rejected"
+    CHANGES_REQUIRED = "changes_required"
+    CAMPAIGN_SUBMITTED = "campaign_submitted"
+    SYSTEM = "system"
+
+
+class Notification(Base):
+    """User notifications for campaign status updates and admin actions."""
+    __tablename__ = "notifications"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=True)
+    
+    # Notification content
+    notification_type = Column(Enum(NotificationType), nullable=False)
+    title = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    
+    # Read status
+    is_read = Column(Boolean, default=False)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    read_at = Column(DateTime(timezone=True), nullable=True)
+    
+    def __repr__(self):
+        return f"<Notification {self.title} for User {self.user_id}>"

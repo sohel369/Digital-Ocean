@@ -43,6 +43,25 @@ export const AppProvider = ({ children }) => {
     });
 
     const [authLoading, setAuthLoading] = useState(true);
+    const [detectedCountry, setDetectedCountry] = useState(null);
+
+    // IP-based Geo Location Detection
+    const detectGeoLocation = async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/geo/detect-country`);
+            if (res.ok) {
+                const data = await res.json();
+                setDetectedCountry(data.country);
+                console.log(`📍 IP detected as: ${data.country} (Local: ${data.is_local})`);
+            }
+        } catch (e) {
+            console.error("Geo-detection failed:", e);
+        }
+    };
+
+    useEffect(() => {
+        detectGeoLocation();
+    }, []);
 
     // Base URL configuration for API calls
     // 1. Priority: Environment Variable (VITE_API_URL) - Set this in Railway!
@@ -200,25 +219,52 @@ export const AppProvider = ({ children }) => {
 
             if (pricingRes && pricingRes.ok) {
                 const rawPricing = await pricingRes.json();
-                // Transform to frontend format with formatting
+                console.log("Pricing Config received:", rawPricing);
+
+                // Transform to frontend format with formatting and strict null-safety
                 const freshPricing = {
                     industries: (rawPricing.industries || []).map(i => ({
-                        ...i,
-                        displayName: formatIndustryName(i.name), // Format for UI
-                        name: i.name // Keep raw for database
+                        name: i?.name || 'Unknown',
+                        multiplier: i?.multiplier || 1.0,
+                        displayName: formatIndustryName(i?.name || 'Unknown')
                     })),
-                    adTypes: (rawPricing.ad_types || []).map(a => ({ name: a.name, baseRate: a.base_rate })),
+                    adTypes: (rawPricing.ad_types || []).map(a => ({
+                        name: a?.name || 'Display',
+                        baseRate: a?.base_rate || 100.0
+                    })),
                     states: (rawPricing.states || []).map(s => ({
-                        name: s.name,
-                        landMass: s.land_area,
-                        densityMultiplier: s.density_multiplier,
-                        population: s.population,
-                        stateCode: s.state_code,
-                        countryCode: s.country_code
+                        name: s?.name || 'Unknown',
+                        landMass: s?.land_area || 1000,
+                        densityMultiplier: s?.density_multiplier || 1.0,
+                        population: s?.population || 0,
+                        stateCode: s?.state_code || '',
+                        countryCode: s?.country_code || 'US'
                     })),
                     discounts: rawPricing.discounts || { state: 0.15, national: 0.30 },
                     currency: rawPricing.currency || 'USD'
                 };
+
+                // Fallback if data is empty despite ok response
+                if (freshPricing.industries.length === 0) {
+                    freshPricing.industries = [
+                        "Tyres And Wheels", "Vehicle Servicing And Maintenance", "Panel Beating And Smash Repairs",
+                        "Automotive Finance Solutions", "Vehicle Insurance Products", "Auto Parts Tools And Accessories",
+                        "Fleet Management Tools", "Workshop Technology And Equipment", "Telematics Systems And Vehicle Tracking Solutions",
+                        "Fuel Cards And Fuel Management Services", "Vehicle Cleaning And Detailing Services", "Logistics And Scheduling Software",
+                        "Safety And Compliance Solutions", "Driver Training And Induction Programs", "Roadside Assistance Programs",
+                        "Gps Navigation And Route Optimisation Tools", "Ev Charging Infrastructure And Electric Vehicle Solutions",
+                        "Mobile Device Integration And Communications Equipment", "Asset Recovery And Anti Theft Technologies"
+                    ].map(name => ({ name, multiplier: 1.0, displayName: formatIndustryName(name) }));
+                }
+                if (freshPricing.adTypes.length === 0) {
+                    freshPricing.adTypes = [
+                        { name: 'Leaderboard (728x90)', baseRate: 150.0 },
+                        { name: 'Skyscraper (160x600)', baseRate: 180.0 },
+                        { name: 'Medium Rectangle (300x250)', baseRate: 200.0 },
+                        { name: 'Mobile Leaderboard (320x50)', baseRate: 100.0 },
+                        { name: 'Email Newsletter (600x200)', baseRate: 250.0 }
+                    ];
+                }
 
                 setPricingData(freshPricing);
                 // Immediately load regions to ensure we have the full list
@@ -228,21 +274,23 @@ export const AppProvider = ({ children }) => {
                 console.warn("Pricing metadata fetch failed or unauthorized, using internal fallbacks.");
                 setPricingData({
                     industries: [
-                        { name: 'Retail', multiplier: 1.0 },
-                        { name: 'Healthcare', multiplier: 1.5 },
-                        { name: 'Tech', multiplier: 1.3 },
-                        { name: 'Real Estate', multiplier: 1.2 },
-                        { name: 'Finance', multiplier: 1.4 }
-                    ].map(i => ({ ...i, displayName: formatIndustryName(i.name) })),
+                        "Tyres And Wheels", "Vehicle Servicing And Maintenance", "Panel Beating And Smash Repairs",
+                        "Automotive Finance Solutions", "Vehicle Insurance Products", "Auto Parts Tools And Accessories",
+                        "Fleet Management Tools", "Workshop Technology And Equipment", "Telematics Systems And Vehicle Tracking Solutions",
+                        "Fuel Cards And Fuel Management Services", "Vehicle Cleaning And Detailing Services", "Logistics And Scheduling Software",
+                        "Safety And Compliance Solutions", "Driver Training And Induction Programs", "Roadside Assistance Programs",
+                        "Gps Navigation And Route Optimisation Tools", "Ev Charging Infrastructure And Electric Vehicle Solutions",
+                        "Mobile Device Integration And Communications Equipment", "Asset Recovery And Anti Theft Technologies"
+                    ].map(i => ({ name: i, multiplier: 1.0, displayName: formatIndustryName(i) })),
                     adTypes: [
-                        { name: 'Display', baseRate: 100.0 },
-                        { name: 'Video', baseRate: 250.0 },
-                        { name: 'Sponsored', baseRate: 150.0 }
+                        { name: 'Leaderboard (728x90)', baseRate: 150.0 },
+                        { name: 'Skyscraper (160x600)', baseRate: 180.0 },
+                        { name: 'Medium Rectangle (300x250)', baseRate: 200.0 },
+                        { name: 'Mobile Leaderboard (320x50)', baseRate: 100.0 },
+                        { name: 'Email Newsletter (600x200)', baseRate: 250.0 }
                     ],
                     states: [
-                        { name: 'California', landMass: 423970, densityMultiplier: 1.5, population: 39538223, stateCode: 'CA', countryCode: 'US' },
-                        { name: 'New York', landMass: 141300, densityMultiplier: 1.8, population: 20201249, stateCode: 'NY', countryCode: 'US' },
-                        { name: 'Texas', landMass: 695662, densityMultiplier: 1.2, population: 29145505, stateCode: 'TX', countryCode: 'US' }
+                        { name: 'California', landMass: 423970, densityMultiplier: 1.5, population: 39538223, stateCode: 'CA', countryCode: 'US' }
                     ],
                     discounts: { state: 0.15, national: 0.30 }
                 });
@@ -256,13 +304,11 @@ export const AppProvider = ({ children }) => {
             // Apply emergency fallbacks so the UI doesn't hang at "Loading..."
             setPricingData(prev => prev.industries.length > 0 ? prev : {
                 industries: [
-                    { name: 'Retail', displayName: 'Retail', multiplier: 1.0 },
-                    { name: 'Healthcare', displayName: 'Healthcare', multiplier: 1.5 },
-                    { name: 'Tech', displayName: 'Tech', multiplier: 1.3 }
-                ],
+                    "Tyres And Wheels", "Vehicle Servicing And Maintenance", "Panel Beating And Smash Repairs",
+                    "Automotive Finance Solutions", "Vehicle Insurance Products", "Auto Parts Tools And Accessories"
+                ].map(name => ({ name, multiplier: 1.0, displayName: name })),
                 adTypes: [
-                    { name: 'Display', baseRate: 100.0 },
-                    { name: 'Video', baseRate: 250.0 }
+                    { name: 'Leaderboard (728x90)', baseRate: 150.0 }
                 ],
                 states: [
                     { name: 'California', landMass: 423970, densityMultiplier: 1.5, population: 39538223, stateCode: 'CA', countryCode: 'US' }
@@ -315,6 +361,8 @@ export const AppProvider = ({ children }) => {
             } else if (!accessToken) {
                 // No token at all, definitely not logged in
                 setAuthLoading(false);
+                // Still fetch pricing/meta data for guests
+                await fetchData();
             }
 
             return unsubscribe;
@@ -335,7 +383,7 @@ export const AppProvider = ({ children }) => {
         };
     }, []);
 
-    const firebaseSync = async (fbUser) => {
+    const firebaseSync = async (fbUser, extraData = {}) => {
         try {
             const response = await fetch(`${API_BASE_URL}/google-auth`, {
                 method: 'POST',
@@ -345,7 +393,8 @@ export const AppProvider = ({ children }) => {
                     email: fbUser.email,
                     username: fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
                     photoURL: fbUser.photoURL,
-                    uid: fbUser.uid
+                    uid: fbUser.uid,
+                    ...extraData
                 })
             });
             if (response.ok) {
@@ -375,14 +424,12 @@ export const AppProvider = ({ children }) => {
 
 
     const login = async (email, password) => {
-        // Handle Emergency Credentials locally
-        const cleanEmail = (email || '').trim().toUpperCase();
-        const cleanPassword = (password || '').trim().toUpperCase();
-        console.log('Login attempt:', { email: cleanEmail, password: cleanPassword });
+        const cleanEmail = (email || '').trim();
+        const cleanPassword = (password || '').trim();
 
-        if (cleanEmail === 'ADMIN' && cleanPassword === 'ADMIN123') {
+        // 1. Handle Emergency Credentials
+        if (cleanEmail.toUpperCase() === 'ADMIN' && cleanPassword.toUpperCase() === 'ADMIN123') {
             try {
-                // Attempt real backend authentication for emergency bypass using URLSearchParams (Form Data)
                 const params = new URLSearchParams();
                 params.append('username', 'admin@adplatform.com');
                 params.append('password', 'admin123');
@@ -396,21 +443,30 @@ export const AppProvider = ({ children }) => {
                 if (response.ok) {
                     const data = await response.json();
                     localStorage.setItem('access_token', data.access_token);
-                    localStorage.setItem('refresh_token', data.refresh_token);
+                    if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
 
-                    // Fetch real admin data
+                    // Fetch real admin data to get name/username
                     const meRes = await fetch(`${API_BASE_URL}/auth/me`, {
                         headers: { 'Authorization': `Bearer ${data.access_token}` }
                     });
-                    const adminData = await meRes.json();
 
-                    const userObj = {
-                        id: adminData.id,
-                        username: adminData.name,
-                        email: adminData.email,
-                        role: adminData.role,
-                        avatar: adminData.profile_picture
-                    };
+                    let userObj = { role: 'admin' };
+                    if (meRes.ok) {
+                        const adminData = await meRes.json();
+                        userObj = {
+                            id: adminData.id,
+                            username: adminData.name,
+                            email: adminData.email,
+                            role: adminData.role,
+                            avatar: adminData.profile_picture
+                        };
+                    } else {
+                        userObj = {
+                            username: 'Administrator',
+                            email: 'admin@adplatform.com',
+                            role: 'admin'
+                        };
+                    }
 
                     setUser(userObj);
                     localStorage.setItem('user', JSON.stringify(userObj));
@@ -422,13 +478,7 @@ export const AppProvider = ({ children }) => {
                 console.warn("Emergency bypass backend sync failed, using mock data.", err);
             }
 
-            // Extreme fallback if backend init_db hasn't run or is offline
-            const adminUser = {
-                username: 'Administrator',
-                email: 'admin@adplatform.net',
-                role: 'admin',
-                avatar: null
-            };
+            const adminUser = { username: 'Administrator', email: 'admin@adplatform.net', role: 'admin', avatar: null };
             setUser(adminUser);
             localStorage.setItem('user', JSON.stringify(adminUser));
             toast.success('System Access Granted', { description: 'Authenticated via emergency bypass.' });
@@ -436,7 +486,47 @@ export const AppProvider = ({ children }) => {
             return { success: true, user: adminUser };
         }
 
+        // 2. Primary: Native Backend Authentication (No Firebase dependency)
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/login/json`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: cleanEmail, password: cleanPassword })
+            });
 
+            if (response.ok) {
+                const data = await response.json();
+                localStorage.setItem('access_token', data.access_token);
+                if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
+
+                // Fetch full user profile
+                const meRes = await fetch(`${API_BASE_URL}/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${data.access_token}` }
+                });
+                if (meRes.ok) {
+                    const userData = await meRes.json();
+                    const userObj = {
+                        id: userData.id,
+                        username: userData.name,
+                        email: userData.email,
+                        role: userData.role,
+                        avatar: userData.profile_picture
+                    };
+                    setUser(userObj);
+                    localStorage.setItem('user', JSON.stringify(userObj));
+                    await fetchData();
+                    return { success: true, user: userObj };
+                }
+            } else if (response.status === 401 || response.status === 403 || response.status === 400) {
+                const errData = await response.json();
+                const errMsg = errData.error || errData.detail || "Incorrect email or password";
+                return { success: false, message: errMsg };
+            }
+        } catch (err) {
+            console.warn("Native backend auth failed, trying Firebase fallback...", err);
+        }
+
+        // 3. Fallback: Firebase Authentication
         try {
             const fbUser = await loginWithEmail(email, password);
             const result = await firebaseSync(fbUser);
@@ -448,8 +538,12 @@ export const AppProvider = ({ children }) => {
             }
             return { success: false, message: "Sync failed" };
         } catch (error) {
-            console.error("Login Error:", error);
-            return { success: false, message: error.message };
+            console.error("Authentication Error:", error);
+            // If Firebase is restricted or misconfigured, show a descriptive error
+            const msg = error.code === 'auth/admin-restricted-operation'
+                ? "Account registration is currently managed by platform administrators."
+                : (error.message?.replace('Firebase: ', '') || "Authentication failed");
+            return { success: false, message: msg };
         }
     };
 
@@ -463,10 +557,74 @@ export const AppProvider = ({ children }) => {
         return result;
     };
 
-    const signup = async (username, email, password) => {
+    const signup = async (username, email, password, extraData = {}) => {
+        // 1. Primary: Native Backend Signup
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: username,
+                    email: email,
+                    password: password,
+                    role: 'advertiser',
+                    industry: extraData.industry,
+                    country: extraData.country
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                localStorage.setItem('access_token', data.access_token);
+                if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
+
+                const meRes = await fetch(`${API_BASE_URL}/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${data.access_token}` }
+                });
+                if (meRes.ok) {
+                    const userData = await meRes.json();
+                    const userObj = {
+                        id: userData.id,
+                        username: userData.name,
+                        email: userData.email,
+                        role: userData.role,
+                        avatar: userData.profile_picture
+                    };
+                    setUser(userObj);
+                    localStorage.setItem('user', JSON.stringify(userObj));
+                    await fetchData();
+                    return { success: true, user: userObj };
+                }
+            } else if (response.status === 400 || response.status === 422) {
+                const errData = await response.json();
+                let errMsg = "Signup failed. Please check your data.";
+
+                // Handle different error response formats
+                if (errData.error && typeof errData.error === 'string') {
+                    errMsg = errData.error;
+                } else if (errData.detail && typeof errData.detail === 'string') {
+                    errMsg = errData.detail;
+                } else if (Array.isArray(errData.detail)) {
+                    errMsg = errData.detail[0]?.msg || errMsg;
+                } else if (errData.details && Array.isArray(errData.details)) {
+                    // Custom validation error format from main.py
+                    errMsg = errData.details[0]?.msg || errMsg;
+                    if (errData.details[0]?.loc) {
+                        const field = errData.details[0].loc[errData.details[0].loc.length - 1];
+                        errMsg = `${field}: ${errMsg}`;
+                    }
+                }
+
+                return { success: false, message: errMsg };
+            }
+        } catch (err) {
+            console.warn("Native backend signup failed, trying Firebase fallback...", err);
+        }
+
+        // 2. Fallback: Firebase Signup
         try {
             const fbUser = await registerWithEmail(email, password, username);
-            const result = await firebaseSync(fbUser);
+            const result = await firebaseSync(fbUser, extraData);
             if (result.success) {
                 setUser(result.user);
                 localStorage.setItem('user', JSON.stringify(result.user));
@@ -475,7 +633,10 @@ export const AppProvider = ({ children }) => {
             return result;
         } catch (error) {
             console.error("Signup Error:", error);
-            return { success: false, message: error.message };
+            const msg = error.code === 'auth/admin-restricted-operation'
+                ? "New account signup is temporarily restricted. Please contact support."
+                : (error.message?.replace('Firebase: ', '') || "Registration failed");
+            return { success: false, message: msg };
         }
     };
 
@@ -589,9 +750,11 @@ export const AppProvider = ({ children }) => {
                     land_area: s.landMass,
                     population: s.population || 0,
                     density_multiplier: s.densityMultiplier,
-                    state_code: s.stateCode
+                    state_code: s.stateCode,
+                    country_code: s.countryCode
                 })),
-                discounts: newConfig.discounts
+                discounts: newConfig.discounts,
+                country_code: newConfig.countryCode
             };
 
             const response = await fetch(`${API_BASE_URL}/pricing/admin/config`, {
@@ -627,7 +790,11 @@ export const AppProvider = ({ children }) => {
     const addCampaign = async (campaign) => {
         try {
             console.log('Creating campaign at:', `${API_BASE_URL}/campaigns`);
-            console.log('Campaign data:', JSON.stringify(campaign, null, 2));
+
+            // Default to draft for new campaigns
+            if (!campaign.status) {
+                campaign.status = 'draft';
+            }
 
             const response = await fetch(`${API_BASE_URL}/campaigns`, {
                 method: 'POST',
@@ -639,70 +806,119 @@ export const AppProvider = ({ children }) => {
                 body: JSON.stringify(campaign)
             });
 
-
-            console.log('Response status:', response.status);
-            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-            // Get response text first to handle empty responses
             const responseText = await response.text();
-            console.log('Response text:', responseText);
-
             if (!responseText) {
-                throw new Error(`Empty response from server (status: ${response.status}). This may be a CORS or server error.`);
+                throw new Error(`Empty response from server (status: ${response.status})`);
             }
 
             let responseData;
             try {
                 responseData = JSON.parse(responseText);
-            } catch (parseError) {
-                console.error('JSON parse error:', parseError);
-                throw new Error(`Invalid JSON response: ${responseText.substring(0, 200)}`);
+            } catch (e) {
+                throw new Error("Invalid server response");
             }
 
-            if (response.ok) {
-                const newCamp = responseData;
-
-                // Ensure the new campaign is added to the local state immediately
-                const formattedNewCamp = {
-                    ...newCamp,
-                    startDate: newCamp.start_date || campaign.startDate
-                };
-
-                setCampaigns(prev => [formattedNewCamp, ...prev]);
-
-                // Refresh stats and notifications in parallel
-                const [statsRes, notifRes] = await Promise.all([
-                    fetch(`${API_BASE_URL}/stats`, {
-                        headers: { ...getAuthHeaders() },
-                        credentials: 'include'
-                    }),
-                    fetch(`${API_BASE_URL}/notifications`, {
-                        headers: { ...getAuthHeaders() },
-                        credentials: 'include'
-                    })
-                ]);
-
-                if (statsRes.ok) setStats(await statsRes.json());
-                if (notifRes.ok) setNotifications(await notifRes.json());
-
-                toast.success('Campaign Created', { description: `"${campaign.name}" stored in database.` });
-                return formattedNewCamp;
-            } else if (response.status === 401) {
-                localStorage.removeItem('user');
-                setUser(null);
-                window.location.href = '/login';
-                throw new Error("Session expired. Please log in again.");
-            } else {
-                throw new Error(responseData.message || responseData.error || `Server error: ${response.status}`);
+            if (!response.ok) {
+                throw new Error(responseData.error || responseData.detail || 'Failed to create campaign');
             }
+
+            toast.success('Campaign Created', { description: `"${campaign.name}" submitted for review.` });
+            fetchData(); // Refresh all data
+            return responseData;
         } catch (error) {
-            console.error("API Error:", error);
-            // Check for network/CORS errors
-            if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-                toast.error("Network Error", { description: "Cannot connect to server. Check if CORS is configured correctly." });
-            } else {
-                toast.error("Sync Error", { description: error.message || "Campaign not saved to backend." });
+            console.error("addCampaign failed:", error);
+            toast.error("Creation Failed", { description: error.message });
+            throw error;
+        }
+    };
+
+    const updateCampaign = async (campaign) => {
+        try {
+            if (!campaign.id) throw new Error("Campaign ID is required for update");
+
+            const response = await fetch(`${API_BASE_URL}/campaigns/${campaign.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...getAuthHeaders()
+                },
+                credentials: 'include',
+                body: JSON.stringify(campaign)
+            });
+
+            if (!response.ok) {
+                let errorData;
+                try {
+                    errorData = await response.json();
+                } catch (e) {
+                    throw new Error(`Server returned status ${response.status}`);
+                }
+
+                // Handle FastAPI validation errors (details array) vs standard error (detail string)
+                let errMsg = errorData.detail || errorData.message || 'Failed to update campaign';
+
+                if (errorData.details && Array.isArray(errorData.details)) {
+                    errMsg = errorData.details.map(d => `${d.loc?.[d.loc.length - 1] || 'Field'}: ${d.msg}`).join(', ');
+                } else if (Array.isArray(errMsg)) {
+                    errMsg = errMsg.map(e => e.msg || e).join(', ');
+                }
+
+                throw new Error(errMsg);
             }
+
+            const responseData = await response.json();
+            toast.success('Campaign Updated', { description: `"${campaign.name}" changes saved.` });
+            fetchData();
+            return responseData;
+        } catch (error) {
+            console.error("updateCampaign failed:", error);
+            toast.error("Update Failed", { description: error.message });
+            throw error;
+        }
+    };
+
+    const submitCampaignForReview = async (campaignId) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/campaigns/approval/submit`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...getAuthHeaders()
+                },
+                body: JSON.stringify({ campaign_id: campaignId })
+            });
+
+            if (!response.ok) {
+                let errorData;
+                try {
+                    errorData = await response.json();
+                } catch (e) {
+                    throw new Error(`Server returned status ${response.status}`);
+                }
+
+                // Handle different error formats
+                let param = errorData.detail || errorData.message || errorData.error || 'Submission failed';
+
+                // If param is array (Pydantic validation), join messages
+                if (Array.isArray(param)) {
+                    param = param.map(p => p.msg || p.message || JSON.stringify(p)).join(', ');
+                }
+
+                // If param is object (unexpected), stringify it
+                if (typeof param === 'object') {
+                    param = JSON.stringify(param);
+                }
+
+                throw new Error(param);
+            }
+
+            const data = await response.json();
+            toast.success('Submitted', { description: 'Campaign sent for admin review. All ads are reviewed within 24 hours.' });
+            fetchData();
+            return data;
+        } catch (error) {
+            console.error("submitCampaignForReview failed:", error);
+            toast.error("Submission Failed", { description: error.message });
             throw error;
         }
     };
@@ -714,7 +930,6 @@ export const AppProvider = ({ children }) => {
                 headers: { ...getAuthHeaders() },
                 credentials: 'include'
             });
-
             setNotifications(prev => prev.map(n => ({ ...n, read: true })));
         } catch (error) {
             console.error("Error marking as read:", error);
@@ -783,6 +998,7 @@ export const AppProvider = ({ children }) => {
             language,
             setLanguage,
             country,
+            detectedCountry,
             setCountry: handleCountryChange,
             isCurrencyOverridden,
             isLanguageOverridden,
@@ -792,6 +1008,8 @@ export const AppProvider = ({ children }) => {
             pricingData,
             savePricingConfig,
             addCampaign,
+            updateCampaign,
+            submitCampaignForReview,
             initiatePayment,
             formatCurrency: (amount) => formatCurrency(amount, currency),
             convertPrice: (amount, sourceCurrency) => convertCurrency(amount, sourceCurrency || 'USD', currency),
@@ -800,7 +1018,8 @@ export const AppProvider = ({ children }) => {
                 { id: 'mobile_leaderboard', name: 'Mobile Leaderboard (320x50)', width: 320, height: 50, category: 'mobile' },
                 { id: 'leaderboard', name: 'Leaderboard (728x90)', width: 728, height: 90, category: 'desktop' },
                 { id: 'medium_rectangle', name: 'Medium Rectangle (300x250)', width: 300, height: 250, category: 'universal' },
-                { id: 'skyscraper', name: 'Skyscraper (160x600)', width: 160, height: 600, category: 'desktop' }
+                { id: 'skyscraper', name: 'Skyscraper (160x600)', width: 160, height: 600, category: 'desktop' },
+                { id: 'email_newsletter', name: 'Email Newsletter (600x200)', width: 600, height: 200, category: 'email' }
             ],
             ctaOptions: [
                 'Learn More',
@@ -818,7 +1037,9 @@ export const AppProvider = ({ children }) => {
             login,
             signup,
             googleAuth,
-            authLoading
+            authLoading,
+            API_BASE_URL,
+            getAuthHeaders
         }}>
             {children}
         </AppContext.Provider>

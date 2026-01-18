@@ -4,7 +4,7 @@ import { MapPin, Globe, Layout, Building2, CheckCircle2, ChevronRight, Info } fr
 import { PaymentModal } from '../components/PaymentCheckout';
 
 const Pricing = () => {
-    const { pricingData, formatCurrency, t, country, formatIndustryName } = useApp();
+    const { pricingData, formatCurrency, t, country, formatIndustryName, user } = useApp();
     const [selectedIndustry, setSelectedIndustry] = useState({ name: 'Tech', multiplier: 1.0 });
     const [selectedAdType, setSelectedAdType] = useState({ name: 'Display', baseRate: 15.0 });
     const [coverageArea, setCoverageArea] = useState('radius'); // 'radius', 'state', 'national'
@@ -14,49 +14,63 @@ const Pricing = () => {
 
     // Sync defaults when data arrives
     React.useEffect(() => {
-        if (pricingData.industries?.length > 0 && selectedIndustry.name === 'Tech') {
-            setSelectedIndustry(pricingData.industries[0]);
+        if (pricingData && pricingData.industries && pricingData.industries.length > 0) {
+            // If user is logged in, force their industry
+            if (user?.industry) {
+                const userInd = pricingData.industries.find(i => i.name.toLowerCase() === user.industry.toLowerCase());
+                if (userInd) {
+                    setSelectedIndustry(userInd);
+                }
+            } else if (selectedIndustry.name === 'Tech') {
+                setSelectedIndustry(pricingData.industries[0]);
+            }
         }
-        if (pricingData.adTypes?.length > 0 && selectedAdType.baseRate === 15.0) {
-            setSelectedAdType(pricingData.adTypes[0]);
-        }
-        if (pricingData.states?.length > 0 && selectedState.name === 'New York') {
-            setSelectedState(pricingData.states[0]);
-        }
-    }, [pricingData]);
 
-    if (!pricingData.industries || pricingData.industries.length === 0) {
-        return (
-            <div className="min-h-[400px] flex items-center justify-center">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                    <p className="text-slate-400 font-medium animate-pulse">{t('common.loading')}...</p>
-                </div>
-            </div>
-        );
-    }
+        // Filter ad types to exclude 'Video' as requested
+        const validAdTypes = (pricingData.adTypes || []).filter(a => a.name !== 'Video');
+        if (validAdTypes.length > 0 && (selectedAdType.baseRate === 15.0 || selectedAdType.name === 'Video')) {
+            setSelectedAdType(validAdTypes[0]);
+        }
+
+        // Fix: Properly filter states by current country for initial selection
+        const countryStates = (pricingData.states || []).filter(s => s.countryCode === country);
+        if (countryStates.length > 0 && (selectedState.name === 'New York' || selectedState.countryCode !== country)) {
+            setSelectedState(countryStates[0]);
+        }
+    }, [pricingData, user, country]);
 
     // Pricing Logic Constants
     const RADIUS_AREA = 2827; // sq miles for 30 mile radius
 
     const calculation = useMemo(() => {
+        if (!pricingData || !pricingData.industries || pricingData.industries.length === 0) {
+            return {
+                basePrice: 0,
+                discountAmount: 0,
+                finalPrice: 0,
+                sections: "0.00",
+                discountPercent: "0",
+                areaDescription: ""
+            };
+        }
+
         let sections = 1;
         let discount = 0;
-        let areaDescription = t('pricing.radius_desc');
+        let areaDescription = t('pricing.radius_desc', { radius: 30 });
 
-        if (coverageArea === 'state') {
+        if (coverageArea === 'state' && selectedState) {
             const rawSections = selectedState.landMass / RADIUS_AREA;
             sections = rawSections * selectedState.densityMultiplier;
-            discount = pricingData.discounts.state;
+            discount = pricingData.discounts?.state || 0;
             areaDescription = t('pricing.state_desc', { state: selectedState.name });
         } else if (coverageArea === 'national') {
-            const totalSections = pricingData.states.reduce((acc, s) => acc + (s.landMass / RADIUS_AREA * s.densityMultiplier), 0);
+            const totalSections = (pricingData.states || []).reduce((acc, s) => acc + (s.landMass / RADIUS_AREA * s.densityMultiplier), 0);
             sections = totalSections;
-            discount = pricingData.discounts.national;
+            discount = pricingData.discounts?.national || 0;
             areaDescription = t('pricing.national_desc');
         }
 
-        const basePrice = sections * selectedAdType.baseRate * selectedIndustry.multiplier;
+        const basePrice = sections * (selectedAdType?.baseRate || 0) * (selectedIndustry?.multiplier || 1.0);
         const discountAmount = basePrice * discount;
         const finalPrice = basePrice - discountAmount;
 
@@ -69,6 +83,17 @@ const Pricing = () => {
             areaDescription
         };
     }, [coverageArea, selectedState, selectedAdType, selectedIndustry, pricingData, t]);
+
+    if (!pricingData.industries || pricingData.industries.length === 0) {
+        return (
+            <div className="min-h-[400px] flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                    <p className="text-slate-400 font-medium animate-pulse">{t('common.loading')}...</p>
+                </div>
+            </div>
+        );
+    }
 
     const coverageOptions = [
         { id: 'radius', label: t('campaign.radius_30'), icon: MapPin },
@@ -101,17 +126,24 @@ const Pricing = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-3">
                                 <label className="block text-xs font-black text-slate-500 uppercase tracking-widest px-1">{t('campaign.industry')}</label>
-                                <select
-                                    className="w-full bg-slate-900 border border-white/5 rounded-2xl px-5 py-4 text-slate-200 outline-none focus:ring-2 focus:ring-primary/50"
-                                    value={selectedIndustry.name}
-                                    onChange={(e) => setSelectedIndustry(pricingData.industries.find(i => i.name === e.target.value))}
-                                >
-                                    {pricingData.industries.map(i => (
-                                        <option key={i.name} value={i.name}>
-                                            {t(`industry.${i.name.toLowerCase().replace(/ /g, '_')}`) || i.displayName || formatIndustryName(i.name)}
-                                        </option>
-                                    ))}
-                                </select>
+                                {user ? (
+                                    <div className="w-full bg-slate-900/50 border border-white/5 rounded-2xl px-5 py-4 text-slate-100 font-bold flex items-center gap-3">
+                                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                                        {t(`industry.${(user.industry || '').toLowerCase().replace(/ /g, '_')}`) || formatIndustryName(user.industry)}
+                                    </div>
+                                ) : (
+                                    <select
+                                        className="w-full bg-slate-900 border border-white/5 rounded-2xl px-5 py-4 text-slate-200 outline-none focus:ring-2 focus:ring-primary/50"
+                                        value={selectedIndustry.name}
+                                        onChange={(e) => setSelectedIndustry(pricingData.industries.find(i => i.name === e.target.value))}
+                                    >
+                                        {pricingData.industries.map(i => (
+                                            <option key={i.name} value={i.name} className="bg-[#0f172a] text-slate-100">
+                                                {t(`industry.${(i.name || '').toLowerCase().replace(/ /g, '_')}`) || i.displayName || formatIndustryName(i.name)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                )}
                             </div>
 
                             <div className="space-y-3">
@@ -121,11 +153,13 @@ const Pricing = () => {
                                     value={selectedAdType.name}
                                     onChange={(e) => setSelectedAdType(pricingData.adTypes.find(a => a.name === e.target.value))}
                                 >
-                                    {pricingData.adTypes.map(a => (
-                                        <option key={a.name} value={a.name}>
-                                            {t(`formats.${a.name.toLowerCase().replace(/ /g, '_')}`) || a.name}
-                                        </option>
-                                    ))}
+                                    {pricingData.adTypes
+                                        .filter(a => a.name !== 'Video')
+                                        .map(a => (
+                                            <option key={a.name} value={a.name} className="bg-[#0f172a] text-slate-100">
+                                                {t(`formats.${a.name.toLowerCase().replace(/ /g, '_')}`) || a.name}
+                                            </option>
+                                        ))}
                                 </select>
                             </div>
                         </div>

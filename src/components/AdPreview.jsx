@@ -52,17 +52,20 @@ export const AdPreview = ({ formData = {} }) => {
     const getFormatStyles = () => {
         const fmt = (format || '').toLowerCase();
 
-        if (fmt.includes('skyscraper')) {
+        if (fmt === 'skyscraper') {
             return { w: 'w-[160px]', h: 'h-[600px]', layout: 'flex-col', imgH: 'h-1/3', text: 'p-4 text-center' };
         }
-        if (fmt.includes('leaderboard') && !fmt.includes('mobile')) {
+        if (fmt === 'leaderboard') {
             return { w: 'w-[728px]', h: 'h-[90px]', layout: 'flex-row', imgW: 'w-1/4', text: 'p-2 flex-row justify-between items-center' };
         }
-        if (fmt.includes('mobile leaderboard')) {
-            return { w: 'w-[320px]', h: 'h-[50px]', layout: 'flex-row', imgW: 'w-[60px]', text: 'p-1 justify-center' };
+        if (fmt === 'mobile_leaderboard') {
+            return { w: 'w-[320px]', h: 'h-[50px]', layout: 'flex-row', imgW: 'w-[80px]', text: 'pl-3 pr-2 flex-row items-center justify-between' };
         }
-        if (fmt.includes('medium rectangle') || fmt.includes('rectangle')) {
+        if (fmt === 'medium_rectangle') {
             return { w: 'w-[300px]', h: 'h-[250px]', layout: 'flex-col', imgH: 'h-1/2', text: 'p-4' };
+        }
+        if (fmt === 'email_newsletter') {
+            return { w: 'w-[600px]', h: 'h-[200px]', layout: 'flex-row', imgW: 'w-1/3', text: 'p-6' };
         }
 
         // Defaults based on tab

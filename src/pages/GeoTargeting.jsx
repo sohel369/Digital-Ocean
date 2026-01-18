@@ -22,7 +22,8 @@ const GeoTargeting = () => {
 
     const calculateStats = (radius) => {
         const area = Math.PI * radius * radius;
-        const reach = Math.floor(area * 850);
+        // Reduced multiplier for more realistic reach figures (e.g., users per sq mile)
+        const reach = Math.floor(area * 35);
         return { area: Math.floor(area), reach };
     };
 
@@ -80,7 +81,8 @@ const GeoTargeting = () => {
             // Interactions
             circleInstance.current.on('mouseover', function () {
                 this.setStyle({ fillOpacity: 0.35, weight: 3 });
-                this.bindPopup(`${t('geo.radius')}: ${settings.radius} ${t('geo.miles')}`).openPopup();
+                // Note: Popup content is now managed reactively in the useEffect
+                this.openPopup();
             });
             circleInstance.current.on('mouseout', function () {
                 this.setStyle({ fillOpacity: 0.15, weight: 2 });

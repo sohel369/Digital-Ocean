@@ -10,6 +10,8 @@ import stripe
 from ..database import get_db
 from .. import models, schemas, auth
 from ..config import settings
+from ..pricing import PricingEngine, get_pricing_engine
+import math
 
 # Initialize Stripe
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -28,7 +30,8 @@ async def create_checkout_session(
     cancel_url: str,
     currency: str = "usd",
     current_user: models.User = Depends(auth.get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    pricing_engine: PricingEngine = Depends(get_pricing_engine)
 ):
     """
     Create a Stripe Checkout session for campaign payment.
@@ -70,13 +73,33 @@ async def create_checkout_session(
     target_currency = currency.lower()
     
     multiplier = 1 if target_currency in zero_decimal_currencies else 100
+    
+    # Calculate breakdown
+    duration_days = (campaign.end_date - campaign.start_date).days
+    pricing_breakdown = pricing_engine.calculate_price(
+        industry_type=campaign.industry_type,
+        advert_type="display",
+        coverage_type=campaign.coverage_type,
+        duration_days=duration_days,
+        target_postcode=campaign.target_postcode,
+        target_state=campaign.target_state,
+        target_country=campaign.target_country
+    )
+    
+    # Verify totals match (sanity check)
+    # Note: campaign.calculated_price IS the source of truth, but we use breakdown for description
+    
+    months = pricing_breakdown.breakdown['billed_months']
+    monthly_avg = campaign.calculated_price / months if months > 0 else campaign.calculated_price
+    
     amount_smallest_unit = int(campaign.calculated_price * multiplier)
     
     if amount_smallest_unit <= 0:
-        # Fallback for campaigns with 0 calculated price (e.g. error) or free trials
-        amount_smallest_unit = 100 if multiplier == 100 else 1 # Minimum charge
-    
+        amount_smallest_unit = 100 if multiplier == 100 else 1
+
     try:
+        # Check for Sandbox/Live Configuration
+        # INJECTION POINT: Set STRIPE_SECRET_KEY in .env start with sk_test_ for Sandbox
         if not is_stripe_configured():
             # Return mock response
             import uuid
@@ -95,9 +118,12 @@ async def create_checkout_session(
                         'currency': target_currency,
                         'product_data': {
                             'name': f'Campaign: {campaign.name}',
-                            'description': f'{campaign.industry_type} - {campaign.coverage_type.value} coverage',
+                            'description': (
+                                f"{months} Month{'s' if months != 1 else ''} × {target_currency.upper()} {monthly_avg:,.2f}/mo "
+                                f"({campaign.coverage_area})"
+                            ),
                         },
-                        'unit_amount': amount_smallest_unit,
+                        'unit_amount': amount_smallest_unit, # Charging Total Amount as 1 unit to avoid rounding issues
                     },
                     'quantity': 1,
                 }
@@ -111,7 +137,8 @@ async def create_checkout_session(
                 'campaign_id': campaign_id,
                 'user_id': current_user.id,
                 'campaign_name': campaign.name,
-                'currency': target_currency 
+                'currency': target_currency,
+                'environment': 'sandbox' if 'test' in settings.STRIPE_SECRET_KEY else 'production'
             }
         )
         
@@ -233,7 +260,8 @@ async def stripe_webhook(
             # Update campaign status to ACTIVE (Paid & Active immediately)
             campaign = db.query(models.Campaign).filter(models.Campaign.id == campaign_id).first()
             if campaign:
-                campaign.status = models.CampaignStatus.ACTIVE
+                # Set to PENDING for Admin Approval instead of ACTIVE
+                campaign.status = models.CampaignStatus.PENDING_REVIEW
             
             db.commit()
     

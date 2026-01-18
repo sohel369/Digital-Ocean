@@ -47,28 +47,91 @@ const StatCard = ({ title, value, subtext, icon: Icon, trend, colorClass }) => (
             </div>
         </div>
         <div className="space-y-1">
-            <h3 className="text-slate-400 text-sm font-medium tracking-wide uppercase">{title}</h3>
-            <div className="flex items-baseline gap-2">
-                <p className="text-3xl font-black text-white">{value}</p>
+            <h3 className="text-slate-400 text-xs md:text-sm font-medium tracking-wide uppercase truncate" title={title}>{title}</h3>
+            <div className="flex flex-wrap items-baseline gap-2">
+                <p className="text-xl md:text-2xl lg:text-3xl font-black text-white truncate max-w-full" title={typeof value === 'string' ? value : ''}>{value}</p>
                 {trend && (
-                    <span className={`text-xs font-bold ${trend === 'up' ? 'text-emerald-400' : 'text-blue-400'}`}>
+                    <span className={`text-[10px] md:text-xs font-bold ${trend === 'up' ? 'text-emerald-400' : 'text-blue-400'}`}>
                         {trend === 'up' ? '↑ 12%' : '↓ 3%'}
                     </span>
                 )}
             </div>
-            <p className="text-xs text-slate-500 font-medium">{subtext}</p>
+            <p className="text-[10px] md:text-xs text-slate-500 font-medium truncate" title={subtext}>{subtext}</p>
         </div>
     </div>
 );
 
 const Dashboard = () => {
-    const { stats, campaigns, notifications, user, formatCurrency, t } = useApp();
+    const { stats, campaigns, notifications, user, formatCurrency, t, submitCampaignForReview } = useApp();
+    const [searchParams] = React.useState(new URLSearchParams(window.location.search));
 
-    const activeCampaignsCount = campaigns.filter(c => c.status === 'live').length;
-    const pendingCampaignsCount = campaigns.filter(c => c.status === 'review').length;
+    React.useEffect(() => {
+        if (searchParams.get('payment') === 'success') {
+            // Ideally use a toast library here if available in context, otherwise alert or console
+            // Check if we have toast in window or context. AppContext doesn't export toast directly but uses it.
+            // We can import it from sonner if it's used in the project.
+            // Assuming standard approach:
+            const successMsg = t('payment.success') || "Payment Successful! Campaign is now pending approval.";
+            // We'll rely on the fact that AppContext might trigger a refresh, 
+            // but let's just use a simple browser API or rely on the user seeing the 'Pending' status.
+            // Actually, let's see if we can use the toast from 'sonner' which seems to be used in other files.
+            import('sonner').then(({ toast }) => {
+                toast.success(successMsg);
+            });
+            // Clean URL
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+    }, []);
+
+    const activeCampaignsCount = campaigns.filter(c => ['live', 'active', 'approved'].includes(c.status)).length;
+    const pendingCampaignsCount = campaigns.filter(c => ['pending_review', 'submitted'].includes(c.status)).length;
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-700">
+            {/* Admin Feedback Banners */}
+            <div className="space-y-4">
+                {campaigns.filter(c => c.status === 'changes_required' || c.status === 'rejected').map(camp => (
+                    <div key={camp.id} className={`p-4 rounded-2xl border ${camp.status === 'rejected' ? 'bg-red-500/10 border-red-500/20' : 'bg-orange-500/10 border-orange-500/20'} animate-in fade-in slide-in-from-top-2 duration-500`}>
+                        <div className="flex items-start gap-4">
+                            <div className={`p-2 rounded-lg ${camp.status === 'rejected' ? 'bg-red-500/20 text-red-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                                <AlertCircle size={20} />
+                            </div>
+                            <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-bold text-white">
+                                        {camp.status === 'rejected' ? 'Campaign Rejected' : 'Changes Required'}: {camp.name}
+                                    </h3>
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                        {camp.reviewed_at ? new Date(camp.reviewed_at).toLocaleDateString() : 'Recently'}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-400 mt-1">
+                                    <span className="font-bold text-slate-300">Admin Feedback:</span> "{camp.admin_message || 'No specific feedback provided.'}"
+                                </p>
+                                <div className="mt-3 flex gap-2">
+                                    <Link to={`/campaigns/new/${camp.id}`} className={`px-4 py-1.5 ${camp.status === 'rejected' ? 'bg-red-500 hover:bg-red-600' : 'bg-orange-500 hover:bg-orange-600'} text-white text-[10px] font-black rounded-lg uppercase tracking-wider transition-colors`}>
+                                        {camp.status === 'rejected' ? 'Edit & Resubmit' : 'Update Campaign'}
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+
+                {campaigns.some(c => c.status === 'pending_review') && (
+                    <div className="p-4 rounded-2xl border bg-blue-500/10 border-blue-500/20">
+                        <div className="flex items-center gap-4">
+                            <div className="p-2 rounded-lg bg-blue-500/20 text-blue-400">
+                                <Clock size={20} />
+                            </div>
+                            <p className="text-xs font-medium text-slate-300">
+                                Your campaign has been submitted and will be reviewed by admin within 24 hours.
+                            </p>
+                        </div>
+                    </div>
+                )}
+            </div>
+
             {/* Header / Search */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -115,7 +178,7 @@ const Dashboard = () => {
                 <StatCard
                     title={t('dashboard.total_clicks')}
                     value={Math.floor((stats?.impressions || 0) * 0.024).toLocaleString()}
-                    subtext={`Avg. 2.4% ${t('dashboard.performance')}`}
+                    subtext={t('dashboard.avg_stats', { val: '2.4%', stat: t('dashboard.performance') })}
                     icon={MousePointer2}
                     trend="up"
                     colorClass="blue-400"
@@ -161,10 +224,10 @@ const Dashboard = () => {
                                                     <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-primary-light font-bold">
                                                         {camp.name.charAt(0)}
                                                     </div>
-                                                    <div>
-                                                        <p className="text-sm font-bold text-slate-100 group-hover:text-primary transition-colors">{camp.name}</p>
+                                                    <Link to={`/campaigns/new/${camp.id}`} className="group/name">
+                                                        <p className="text-sm font-bold text-slate-100 group-hover/name:text-primary transition-colors">{camp.name}</p>
                                                         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">{t('common.id')}: #{1000 + camp.id}</p>
-                                                    </div>
+                                                    </Link>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-5">
@@ -180,21 +243,43 @@ const Dashboard = () => {
                                             </td>
                                             <td className="px-6 py-5">
                                                 <div className="flex items-center gap-2">
-                                                    {camp.status === 'live' ? (
-                                                        <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-[10px] font-bold uppercase">
+                                                    {camp.status === 'live' || camp.status === 'active' || camp.status === 'approved' ? (
+                                                        <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-[10px] font-bold uppercase transition-all hover:bg-emerald-500/20">
                                                             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                                            {t('status.live')}
+                                                            {t('status.approved')}
                                                         </span>
-                                                    ) : camp.status === 'review' ? (
+                                                    ) : camp.status === 'pending_review' || camp.status === 'submitted' ? (
                                                         <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full text-[10px] font-bold uppercase">
                                                             <Clock size={12} />
-                                                            {t('status.review')}
+                                                            {t('status.pending_approval')}
+                                                        </span>
+                                                    ) : camp.status === 'rejected' ? (
+                                                        <span className="flex items-center gap-1.5 px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded-full text-[10px] font-bold uppercase group relative" title={camp.admin_message || 'Rejected'}>
+                                                            <AlertCircle size={12} />
+                                                            {t('status.rejected')}
+                                                            {camp.admin_message && <span className="lowercase text-[9px] opacity-70 ml-1 truncate max-w-[80px] hidden md:inline">({camp.admin_message})</span>}
+                                                        </span>
+                                                    ) : camp.status === 'changes_required' ? (
+                                                        <span className="flex items-center gap-1.5 px-3 py-1 bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-full text-[10px] font-bold uppercase">
+                                                            <AlertCircle size={12} />
+                                                            {t('status.changes_required')}
                                                         </span>
                                                     ) : (
-                                                        <span className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 text-slate-400 border border-slate-700/50 rounded-full text-[10px] font-bold uppercase">
-                                                            <AlertCircle size={12} />
-                                                            {t('status.draft')}
-                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 text-slate-400 border border-slate-700/50 rounded-full text-[10px] font-bold uppercase">
+                                                                <Clock size={12} />
+                                                                {t('status.draft')}
+                                                            </span>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    submitCampaignForReview(camp.id);
+                                                                }}
+                                                                className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-bold uppercase hover:bg-primary/20 transition-all"
+                                                            >
+                                                                Submit
+                                                            </button>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </td>

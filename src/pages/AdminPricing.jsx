@@ -17,6 +17,14 @@ const AdminPricing = () => {
         }
     }, [pricingData]);
 
+    // Load country specific data when selectedCountry changes
+    const { loadRegionsForCountry } = useApp();
+    React.useEffect(() => {
+        if (selectedCountry !== country) {
+            loadRegionsForCountry(selectedCountry);
+        }
+    }, [selectedCountry]);
+
     // Early return if data is not loaded yet
     if (!localPricing || !localPricing.industries || localPricing.industries.length === 0) {
         return <div className="p-8 text-white">{t('common.loading')}</div>;
@@ -50,17 +58,45 @@ const AdminPricing = () => {
     };
 
     const handleStateUpdate = (stateName, field, newValue) => {
+        let processedValue = newValue;
+
+        // Validation for Density Multiplier
+        if (field === 'densityMultiplier') {
+            const num = parseFloat(newValue);
+            // Allow empty string for typing, but clamp valid numbers
+            if (newValue !== '') {
+                if (num > 5.0) processedValue = 5.0;
+                else if (num < 0) processedValue = 0.5; // Prevent negative/zero logic issues
+                else processedValue = num;
+            }
+        } else {
+            processedValue = field === 'name' ? newValue : parseFloat(newValue) || 0;
+        }
+
         setLocalPricing(prev => ({
             ...prev,
             states: prev.states.map(s =>
-                s.name === stateName ? { ...s, [field]: field === 'name' ? newValue : parseFloat(newValue) || 0 } : s
+                s.name === stateName ? { ...s, [field]: processedValue } : s
             )
         }));
     };
 
+    const handleDensityBlur = (stateName, value) => {
+        // Enforce minimum of 0.5 on blur
+        const num = parseFloat(value);
+        if (num < 0.5) {
+            handleStateUpdate(stateName, 'densityMultiplier', 0.5);
+            toast.info("Density factor auto-adjusted to minimum 0.5");
+        }
+    };
+
     const handleSave = async () => {
         setIsSaving(true);
-        const success = await savePricingConfig(localPricing);
+        // Ensure we send the countryCode we are currently editing
+        const success = await savePricingConfig({
+            ...localPricing,
+            countryCode: selectedCountry
+        });
         setIsSaving(false);
     };
 
@@ -95,7 +131,7 @@ const AdminPricing = () => {
                         {localPricing.industries.map((ind) => (
                             <div key={ind.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-900/50 rounded-2xl border border-white/5 gap-3">
                                 <span className="text-slate-200 font-bold text-sm">
-                                    {t(`industry.${ind.name.toLowerCase().replace(/ /g, '_')} `) || ind.name}
+                                    {t(`industry.${ind.name.toLowerCase().replace(/ /g, '_').replace(/[()]/g, '')}`) || ind.name}
                                 </span>
                                 <div className="flex items-center gap-3">
                                     <input
@@ -104,7 +140,7 @@ const AdminPricing = () => {
                                         value={ind.multiplier}
                                         onChange={(e) => handleMultiplierChange(ind.name, e.target.value)}
                                     />
-                                    <span className="text-[10px] text-slate-500 font-bold uppercase">Multi</span>
+                                    <span className="text-[10px] text-slate-500 font-bold uppercase">x {t('admin.multiplier_short') || 'Factor'}</span>
                                 </div>
                             </div>
                         ))}
@@ -122,7 +158,7 @@ const AdminPricing = () => {
                         {localPricing.adTypes.map((ad) => (
                             <div key={ad.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-900/50 rounded-2xl border border-white/5 gap-3">
                                 <span className="text-slate-200 font-bold text-sm">
-                                    {t(`formats.${ad.name.toLowerCase().replace(/ /g, '_')} `) || ad.name}
+                                    {t(`formats.${ad.name.split('(')[0].trim().toLowerCase().replace(/ /g, '_')}`)}
                                 </span>
                                 <div className="flex items-center gap-3">
                                     <div className="relative">
@@ -134,7 +170,7 @@ const AdminPricing = () => {
                                             onChange={(e) => handleBaseRateChange(ad.name, e.target.value)}
                                         />
                                     </div>
-                                    <span className="text-[10px] text-slate-500 font-bold uppercase">Rate</span>
+                                    <span className="text-[10px] text-slate-500 font-bold uppercase">{t('admin.rate_short') || 'Rate'}</span>
                                 </div>
                             </div>
                         ))}
@@ -145,9 +181,14 @@ const AdminPricing = () => {
             {/* Geographic Factors */}
             <div className="glass-panel rounded-[2rem] p-8 space-y-6">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
-                    <div className="flex items-center gap-3">
-                        <Map className="text-blue-400" size={24} />
-                        <h2 className="text-xl font-bold text-white">{t('admin.geo_weightings')}</h2>
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-3">
+                            <Map className="text-blue-400" size={24} />
+                            <h2 className="text-xl font-bold text-white">{t('admin.geo_weightings')}</h2>
+                        </div>
+                        <p className="text-[10px] text-slate-500 font-medium italic">
+                            * Industry Specific proprietary algorithm optimising ad reach when considering geographic location and population density.
+                        </p>
                     </div>
 
                     <select
@@ -173,14 +214,21 @@ const AdminPricing = () => {
                                 <div>
                                     <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">{t('admin.density_multi')}</label>
                                     <input
-                                        type="number" step="0.1"
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-white font-black text-sm outline-none"
+                                        type="number" step="0.1" min="0.5" max="5.0"
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-white font-black text-sm outline-none focus:border-primary transition-colors"
                                         value={state.densityMultiplier}
                                         onChange={(e) => handleStateUpdate(state.name, 'densityMultiplier', e.target.value)}
+                                        onBlur={(e) => handleDensityBlur(state.name, e.target.value)}
                                     />
+                                    <p className="text-[9px] text-slate-500 mt-1 italic">
+                                        Range: 0.5 – 5.0 (Pop. Density)
+                                    </p>
                                 </div>
                                 <div>
-                                    <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">{t('admin.population')}</label>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label className="text-[10px] text-slate-500 font-bold uppercase">{t('admin.population')}</label>
+                                        <span className="text-[9px] bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded uppercase font-black tracking-wider">Demo Data</span>
+                                    </div>
                                     <input
                                         type="number"
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-white font-black text-sm outline-none"
@@ -210,7 +258,7 @@ const AdminPricing = () => {
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
                             <label className="text-sm font-bold text-slate-300 uppercase tracking-wider">{t('admin.region_discount')}</label>
-                            <span className="text-2xl font-black text-primary">{(localPricing.discounts.state * 100).toFixed(0)}%</span>
+                            <span className="text-2xl font-black text-primary">{(localPricing.discounts.state * 10).toFixed(1)}x</span>
                         </div>
                         <input
                             type="range" min="0" max="0.5" step="0.01"
@@ -224,7 +272,7 @@ const AdminPricing = () => {
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
                             <label className="text-sm font-bold text-slate-300 uppercase tracking-wider">{t('admin.country_discount')}</label>
-                            <span className="text-2xl font-black text-orange-400">{(localPricing.discounts.national * 100).toFixed(0)}%</span>
+                            <span className="text-2xl font-black text-orange-400">{(localPricing.discounts.national * 10).toFixed(1)}x</span>
                         </div>
                         <input
                             type="range" min="0" max="0.8" step="0.01"

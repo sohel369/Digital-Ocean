@@ -50,7 +50,7 @@ async def get_stats(
     # But for advertiser, show their own stats
     if current_user.role == models.UserRole.ADMIN:
         from sqlalchemy import func
-        total_spend = db.query(func.sum(models.Campaign.calculated_price)).scalar() or 0
+        total_spend = db.query(func.sum(models.Campaign.calculated_price)).filter(models.Campaign.status.in_([models.CampaignStatus.APPROVED, models.CampaignStatus.ACTIVE, models.CampaignStatus.COMPLETED])).scalar() or 0
         impressions = db.query(func.sum(models.Campaign.impressions)).scalar() or 0
         clicks = db.query(func.sum(models.Campaign.clicks)).scalar() or 0
         return {
@@ -63,7 +63,7 @@ async def get_stats(
     
     # Calculate for specific user
     user_campaigns = db.query(models.Campaign).filter(models.Campaign.advertiser_id == current_user.id).all()
-    total_spend = sum(c.calculated_price for c in user_campaigns if c.calculated_price)
+    total_spend = sum(c.calculated_price for c in user_campaigns if c.calculated_price and c.status in [models.CampaignStatus.APPROVED, models.CampaignStatus.ACTIVE, models.CampaignStatus.COMPLETED])
     impressions = sum(c.impressions for c in user_campaigns)
     clicks = sum(c.clicks for c in user_campaigns)
     
@@ -104,14 +104,18 @@ async def list_campaigns_compat(
             "spend": c.calculated_price or 0,
             "start_date": str(c.start_date),
             "end_date": str(c.end_date) if c.end_date else None,
-            "status": c.status.value,
+            "status": c.status.value.lower(),
             "impressions": c.impressions,
             "clicks": c.clicks,
             "ctr": c.ctr,
-            "ad_format": "Display",
-            "headline": c.name,
+            "ad_format": c.ad_format or "Display",
+            "headline": c.headline or c.name,
             "description": c.description or "",
             "image": None,
+            # Admin approval fields
+            "submitted_at": c.submitted_at.isoformat() if c.submitted_at else None,
+            "admin_message": c.admin_message,
+            "reviewed_at": c.reviewed_at.isoformat() if c.reviewed_at else None,
             "meta": {
                 "industry": c.industry_type,
                 "coverage": c.coverage_type.value,
@@ -175,6 +179,11 @@ async def create_campaign_compat(
         # Support both flat and nested 'meta' structures
         meta = data.get("meta", {})
         industry_val = data.get("industry") or meta.get("industry", "retail")
+        
+        # Enforce registered industry for non-admins
+        if current_user.role != models.UserRole.ADMIN and current_user.industry:
+             industry_val = current_user.industry
+             
         coverage_val = data.get("coverage") or meta.get("coverage", "radius")
         location_val = data.get("location") or meta.get("location") or data.get("state") or data.get("postcode")
         
@@ -194,10 +203,11 @@ async def create_campaign_compat(
         try:
             pricing_engine = PricingEngine(db)
             
-            # Calculate duration
+            # Calculate duration and dates
             try:
                 start_date = data.get("startDate") or data.get("start_date")
                 end_date = data.get("endDate") or data.get("end_date")
+                duration = data.get("duration")
                 
                 def parse_date(date_str):
                     if not date_str: return dt.now().date()
@@ -205,10 +215,17 @@ async def create_campaign_compat(
                     except: return dt.now().date()
                 
                 s_date = parse_date(start_date)
-                e_date = parse_date(end_date)
+                
+                if duration:
+                    # Auto-calculate end date from duration (months)
+                    from dateutil.relativedelta import relativedelta
+                    e_date = s_date + relativedelta(months=int(duration))
+                else:
+                    e_date = parse_date(end_date)
+                
                 duration_days = max((e_date - s_date).days, 1)
             except Exception as de:
-                logger.warning(f"⚠️ Date parsing failed: {str(de)}")
+                logger.warning(f"⚠️ Date/Duration calculation failed: {str(de)}")
                 duration_days = 30
                 s_date = dt.now().date()
                 e_date = s_date + timedelta(days=30)
@@ -234,6 +251,18 @@ async def create_campaign_compat(
         # Save to database
         try:
             logger.info(f"💾 Saving campaign to database...")
+            # Extract status from request or default to PENDING_REVIEW if not provided
+            req_status = data.get("status")
+            if req_status:
+                try:
+                    # Normalize to uppercase for DB enum compatibility
+                    target_status = models.CampaignStatus(req_status.upper())
+                except ValueError:
+                    # Fallback to PENDING_REVIEW if invalid
+                    target_status = models.CampaignStatus.PENDING_REVIEW
+            else:
+                target_status = models.CampaignStatus.PENDING_REVIEW
+
             new_campaign = models.Campaign(
                 advertiser_id=user.id,
                 name=data.get("name", "Untitled Campaign"),
@@ -242,7 +271,8 @@ async def create_campaign_compat(
                 end_date=e_date,
                 budget=float(data.get("budget", 0)),
                 calculated_price=calculated_price,
-                status=models.CampaignStatus.DRAFT,
+                status=target_status,
+                submitted_at=dt.utcnow() if target_status == models.CampaignStatus.PENDING_REVIEW else None,
                 coverage_type=coverage_type,
                 coverage_area=coverage_area_desc,
                 target_postcode=data.get("postcode") or (location_val if coverage_type == models.CoverageType.RADIUS_30 else None),
@@ -279,7 +309,7 @@ async def create_campaign_compat(
             "spend": new_campaign.calculated_price,
             "start_date": str(new_campaign.start_date),
             "end_date": str(new_campaign.end_date),
-            "status": new_campaign.status.value,
+            "status": new_campaign.status.value.lower(),
             "impressions": new_campaign.impressions,
             "clicks": new_campaign.clicks,
             "ctr": new_campaign.ctr
@@ -305,11 +335,34 @@ async def create_campaign_compat(
 
 
 @router.get("/notifications")
-async def get_notifications(current_user: models.User = Depends(auth.get_current_active_user)):
+async def get_notifications(
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
     """
     Get notifications for the authenticated user.
     """
-    return []
+    try:
+        # Check if notifications table exists before querying
+        notifications = db.query(models.Notification).filter(
+            models.Notification.user_id == current_user.id
+        ).order_by(models.Notification.created_at.desc()).limit(20).all()
+        
+        return [
+            {
+                "id": n.id,
+                "type": n.notification_type.value if hasattr(n.notification_type, 'value') else str(n.notification_type),
+                "title": n.title,
+                "message": n.message,
+                "campaign_id": n.campaign_id,
+                "is_read": n.is_read,
+                "time": n.created_at.strftime("%Y-%m-%d %H:%M") if n.created_at else None
+            }
+            for n in notifications
+        ]
+    except Exception as e:
+        logger.warning(f"Notifications fetch failed (table may not exist yet): {e}")
+        return []
 
 
 @router.post("/notifications/read")
@@ -333,6 +386,8 @@ async def google_auth_sync(request: Request, db: Session = Depends(get_db)):
     username = data.get("username")
     photo_url = data.get("photoURL")
     uid = data.get("uid")
+    industry = data.get("industry")
+    country = data.get("country")
     
     if not email:
         return JSONResponse(
@@ -359,6 +414,8 @@ async def google_auth_sync(request: Request, db: Session = Depends(get_db)):
             oauth_id=uid,
             profile_picture=photo_url,
             role=models.UserRole.ADVERTISER,
+            industry=industry,
+            country=country,
             last_login=datetime.utcnow()
         )
         db.add(user)

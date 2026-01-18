@@ -42,6 +42,17 @@ html, body {
   position: relative;
 }
 
+/* Global Select & Option Matching */
+select option {
+  background-color: #0F172A; /* Match Slate 900 */
+  color: #F8FAFC;
+  padding: 10px;
+}
+
+select {
+  color-scheme: dark;
+}
+
 /* Glassmorphism Refined */
 .glass-panel {
   background: var(--card-bg);

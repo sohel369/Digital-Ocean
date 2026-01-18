@@ -64,6 +64,10 @@ const Analytics = () => {
         a.click();
     };
 
+    // Helper for generating safer labels (no PPC terms)
+    const getEngagementLabel = () => t('analytics.ctr_trends') || "Engagement Rate";
+    const getReachLabel = () => t('analytics.daily_impressions') || "Daily Visibility";
+
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -96,11 +100,13 @@ const Analytics = () => {
                                 <Tooltip
                                     contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }}
                                     labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
+                                    formatter={(value) => [`${value}%`, 'Engagement Rate (Indicativeonly)']}
                                 />
                                 <Legend verticalAlign="top" height={36} iconType="circle" />
-                                <Line type="monotone" dataKey="ctr" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} name="CTR %" animationDuration={1000} />
+                                <Line type="monotone" dataKey="ctr" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} name="Eng. Rate %" animationDuration={1000} />
                             </LineChart>
                         </ResponsiveContainer>
+                        <p className="text-[10px] text-slate-600 text-center mt-2 italic">* Metrics are indicative and not used for billing.</p>
                     </div>
                 </div>
 
@@ -120,7 +126,6 @@ const Analytics = () => {
                     </div>
                 </div>
 
-                {/* 3. Budget Utilization */}
                 <div className="glass-panel p-5 md:p-6 rounded-3xl shadow-sm">
                     <h3 className="text-xs font-black text-slate-100 italic uppercase tracking-widest mb-6 px-1">{t('analytics.budget_utilization')}</h3>
                     <div className="h-[250px] md:h-[300px]">
@@ -135,7 +140,7 @@ const Analytics = () => {
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                                 <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} unit="%" />
-                                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }} />
+                                <Tooltip cursor={{ fill: '#1e293b' }} contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }} />
                                 <Area type="monotone" dataKey="budget" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorBudget)" name={t('dashboard.budget')} />
                             </AreaChart>
                         </ResponsiveContainer>

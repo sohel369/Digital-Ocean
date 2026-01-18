@@ -5,6 +5,8 @@ import { Terminal } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 import { signInWithGoogle } from '../firebase';
+import { SUPPORTED_INDUSTRIES } from '../config/industries';
+import { SUPPORTED_COUNTRIES } from '../config/i18nConfig';
 
 const Login = () => {
     const { login, signup, googleAuth, user, t } = useApp();
@@ -12,6 +14,8 @@ const Login = () => {
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [industry, setIndustry] = useState('');
+    const [selectedCountry, setSelectedCountry] = useState('United States');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
@@ -26,10 +30,12 @@ const Login = () => {
         try {
             const googleUser = await signInWithGoogle();
             const result = await googleAuth(googleUser);
-            if (result.success) {
-                toast.success(t('common.success'), { description: `Welcome back, ${result.user.username}` });
+            if (result.success && result.user) {
+                toast.success(t('common.success'), {
+                    description: `Welcome back, ${result.user.username || result.user.email || 'User'}`
+                });
                 navigate('/');
-            } else {
+            } else if (!result.success) {
                 toast.error(t('common.error'), { description: result.message });
             }
         } catch (error) {
@@ -57,14 +63,16 @@ const Login = () => {
                 }
 
                 const result = await login(email, password);
-                if (result.success) {
-                    toast.success(t('common.success'), { description: `Authorized as ${result.user.username}` });
+                if (result.success && result.user) {
+                    toast.success(t('common.success'), {
+                        description: `Authorized as ${result.user.username || result.user.email || 'User'}`
+                    });
                     navigate('/');
-                } else {
+                } else if (!result.success) {
                     toast.error(t('common.error'), { description: result.message || 'Invalid credentials provided.' });
                 }
             } else {
-                const result = await signup(username, email, password);
+                const result = await signup(username, email, password, { industry, country: selectedCountry });
                 if (result.success) {
                     toast.success(t('common.success'), { description: 'Welcome to the platform!' });
                     navigate('/');
@@ -124,23 +132,54 @@ const Login = () => {
                             value={isLogin ? email : username}
                             onChange={(e) => isLogin ? setEmail(e.target.value) : setUsername(e.target.value)}
                             className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-mono text-sm placeholder:text-slate-700"
-                            placeholder={isLogin ? "operator@adplatform.net" : "NEW_OPERATOR_01"}
+                            placeholder={isLogin ? "admin@adplatform.com" : "NEW_OPERATOR_01"}
                             required autoComplete="off"
                         />
                     </div>
 
                     {!isLogin && (
-                        <div className="space-y-1.5 animate-in slide-in-from-top-2">
-                            <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-600 ml-1">{t('auth.email_label')}</label>
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-mono text-sm placeholder:text-slate-700"
-                                placeholder="operator@adplatform.net"
-                                required
-                            />
-                        </div>
+                        <>
+                            <div className="space-y-1.5 animate-in slide-in-from-top-2">
+                                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-600 ml-1">{t('auth.email_label')}</label>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-mono text-sm placeholder:text-slate-700"
+                                    placeholder="operator@adplatform.com"
+                                    required
+                                />
+                            </div>
+
+                            <div className="space-y-1.5 animate-in slide-in-from-top-3">
+                                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-600 ml-1">Industry</label>
+                                <select
+                                    className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-mono text-sm placeholder:text-slate-700 appearance-none"
+                                    value={industry}
+                                    onChange={(e) => setIndustry(e.target.value)}
+                                    required
+                                >
+                                    <option value="" disabled>Select Industry</option>
+                                    {SUPPORTED_INDUSTRIES.map(ind => (
+                                        <option key={ind} value={ind}>{ind}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="space-y-1.5 animate-in slide-in-from-top-3">
+                                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-600 ml-1">Country</label>
+                                <select
+                                    className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-mono text-sm placeholder:text-slate-700 appearance-none"
+                                    value={selectedCountry}
+                                    onChange={(e) => setSelectedCountry(e.target.value)}
+                                    required
+                                >
+                                    {SUPPORTED_COUNTRIES.map(c => (
+                                        <option key={c.code} value={c.name}>{c.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </>
                     )}
 
                     <div className="space-y-1.5 focus-within:transform focus-within:translate-x-1 transition-transform">
@@ -175,11 +214,16 @@ const Login = () => {
 
                 {isLogin && (
                     <div className="mt-10 text-center">
-                        <p className="text-[10px] uppercase font-bold tracking-[0.3em] text-slate-700 mb-3">{t('auth.emergency') || 'Emergency Credentials'}</p>
-                        <div className="flex items-center justify-center gap-2">
-                            <span className="text-[9px] text-blue-500/40 font-bold hover:text-blue-500/60 cursor-pointer transition-colors">ADMIN</span>
-                            <span className="text-slate-800 text-[10px]">/</span>
-                            <span className="text-[9px] text-blue-500/40 font-bold hover:text-blue-500/60 cursor-pointer transition-colors">ADMIN123</span>
+                        <p className="text-[10px] uppercase font-bold tracking-[0.3em] text-slate-700 mb-3">{t('auth.emergency') || 'Master Credentials'}</p>
+                        <div className="flex flex-col items-center justify-center gap-1">
+                            <div className="flex items-center gap-2">
+                                <span className="text-[9px] text-blue-500/60 font-bold uppercase">Email:</span>
+                                <span className="text-[9px] text-slate-300 font-mono">admin@adplatform.com</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[9px] text-blue-500/60 font-bold uppercase">Pass:</span>
+                                <span className="text-[9px] text-slate-300 font-mono">admin123</span>
+                            </div>
                         </div>
                     </div>
                 )}

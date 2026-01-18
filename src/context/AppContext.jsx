@@ -46,8 +46,17 @@ export const AppProvider = ({ children }) => {
     const [detectedCountry, setDetectedCountry] = useState(null);
 
     // Base URL configuration for API calls
-    const API_BASE_URL = import.meta.env.VITE_API_URL
-        || (window.location.hostname === 'localhost' ? '/api' : 'https://balanced-wholeness-production-ca00.up.railway.app/api');
+    const getBaseUrl = () => {
+        const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
+        if (envUrl) {
+            // Ensure slash and /api
+            const cleanUrl = envUrl.endsWith('/') ? envUrl.slice(0, -1) : envUrl;
+            return cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
+        }
+        if (window.location.hostname === 'localhost') return '/api';
+        return 'https://balanced-wholeness-production-ca00.up.railway.app/api';
+    };
+    const API_BASE_URL = getBaseUrl();
 
     // IP-based Geo Location Detection
     const detectGeoLocation = async () => {
@@ -443,12 +452,13 @@ export const AppProvider = ({ children }) => {
 
                 if (response.ok) {
                     const data = await response.json();
-                    localStorage.setItem('access_token', data.access_token);
+                    const token = data.access_token;
+                    localStorage.setItem('access_token', token);
                     if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
 
-                    // Fetch real admin data to get name/username
+                    // Fetch real admin data
                     const meRes = await fetch(`${API_BASE_URL}/auth/me`, {
-                        headers: { 'Authorization': `Bearer ${data.access_token}` }
+                        headers: { 'Authorization': `Bearer ${token}` }
                     });
 
                     let userObj = { role: 'admin' };
@@ -479,9 +489,11 @@ export const AppProvider = ({ children }) => {
                 console.warn("Emergency bypass backend sync failed, using mock data.", err);
             }
 
-            const adminUser = { username: 'Administrator', email: 'admin@adplatform.net', role: 'admin', avatar: null };
+            const adminUser = { username: 'Administrator', email: 'admin@adplatform.com', role: 'admin', avatar: null };
             setUser(adminUser);
             localStorage.setItem('user', JSON.stringify(adminUser));
+            // Set a mock token so frontend calls don't fail immediately with missing header
+            localStorage.setItem('access_token', 'mock_admin_token_bypass');
             toast.success('System Access Granted', { description: 'Authenticated via emergency bypass.' });
             await fetchData();
             return { success: true, user: adminUser };

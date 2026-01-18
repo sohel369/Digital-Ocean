@@ -168,9 +168,11 @@ async def root():
 
 
 @app.get("/health", tags=["Root"])
+@app.get("/api/health", tags=["Root"])
 async def health_check():
     """
     Health check endpoint for monitoring.
+    Available at both /health and /api/health for compatibility.
     """
     return {
         "status": "healthy",

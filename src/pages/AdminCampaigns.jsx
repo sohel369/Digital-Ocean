@@ -108,11 +108,15 @@ const AdminCampaigns = () => {
                 const data = await response.json();
                 setPendingCampaigns(data);
             } else {
-                throw new Error('Failed to fetch pending campaigns');
+                const errData = await response.json().catch(() => ({}));
+                const msg = errData.error || errData.detail || 'Failed to fetch pending campaigns';
+                throw new Error(msg);
             }
         } catch (error) {
-            console.error('Error fetching pending campaigns:', error);
-            toast.error('Failed to load pending campaigns');
+            console.error('❌ Error fetching pending campaigns:', error);
+            toast.error('Failed to load pending campaigns', {
+                description: error.message
+            });
         } finally {
             setLoading(false);
         }

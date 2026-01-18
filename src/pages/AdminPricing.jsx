@@ -92,12 +92,22 @@ const AdminPricing = () => {
 
     const handleSave = async () => {
         setIsSaving(true);
-        // Ensure we send the countryCode we are currently editing
-        const success = await savePricingConfig({
-            ...localPricing,
-            countryCode: selectedCountry
-        });
-        setIsSaving(false);
+        try {
+            // Ensure we send the countryCode we are currently editing
+            const success = await savePricingConfig({
+                ...localPricing,
+                countryCode: selectedCountry
+            });
+
+            if (!success) {
+                console.error("❌ Pricing save returned success=false");
+            }
+        } catch (err) {
+            console.error("❌ Critical error in handleSave:", err);
+            toast.error("Save Failed", { description: err.message });
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (

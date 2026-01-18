@@ -68,6 +68,7 @@ export const AppProvider = ({ children }) => {
     // 2. Fallback: Localhost Proxy ('/api')
     // 3. Fallback: Production URL (Hardcoded safety net)
     const API_BASE_URL = import.meta.env.VITE_API_URL
+        || (window.location.hostname.includes('railway.app') ? `https://${window.location.hostname.replace('digital-ocean', 'balanced-wholeness')}/api` : '')
         || (window.location.hostname === 'localhost' ? '/api' : 'https://balanced-wholeness-production-ca00.up.railway.app/api');
 
     // Debugging helper
@@ -775,10 +776,13 @@ export const AppProvider = ({ children }) => {
                 setPricingData(newConfig);
                 toast.success("Pricing configurations updated successfully!");
                 return true;
+            } else {
+                const errData = await response.json().catch(() => ({}));
+                const msg = errData.error || errData.detail || `Server returned ${response.status}`;
+                throw new Error(msg);
             }
-            throw new Error("Failed to save pricing configuration");
         } catch (error) {
-            console.error("Save Error:", error);
+            console.error("❌ Pricing Save Error:", error);
             toast.error("Save Error", { description: error.message });
             return false;
         }

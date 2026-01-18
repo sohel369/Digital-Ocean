@@ -340,23 +340,23 @@ async def save_global_pricing_config(
     logger = logging.getLogger(__name__)
     
     try:
-        logger.info(f"💾 Saving Admin Config: {len(config.industries)} industries, {len(config.states)} states")
+        logger.info(f"💾 ADMIN SAVE INITIATED by {current_user.email}")
+        logger.info(f"📋 Config data: {len(config.industries)} industries, {len(config.ad_types)} ad types, {len(config.states)} states")
         
         # 0. Determine target country for these pricing rows
         target_country = config.country_code.upper() if config.country_code else "US"
-        logger.info(f"Targeting country: {target_country} for pricing updates")
+        logger.info(f"🎯 Target country: {target_country}")
 
         # 1. Update/Upsert Industry Multipliers in PricingMatrix
-        # We'll update entries that match this industry name AND the target country
         for ind in config.industries:
+            logger.debug(f"Updating industry: {ind.name} for {target_country}")
             affected = db.query(models.PricingMatrix).filter(
                 models.PricingMatrix.industry_type == ind.name,
                 models.PricingMatrix.country_id == target_country
-            ).update({"multiplier": ind.multiplier})
+            ).update({"multiplier": ind.multiplier}, synchronize_session=False)
             
             if affected == 0:
-                # If no rows affected, create a default entry for US
-                # This ensures subsequent GET calls return the data
+                logger.info(f"Creating new matrix entry for industry: {ind.name} ({target_country})")
                 new_entry = models.PricingMatrix(
                     industry_type=ind.name,
                     advert_type="display",
@@ -371,14 +371,16 @@ async def save_global_pricing_config(
             
         # 2. Update Ad Type Base Rates
         for ad in config.ad_types:
+            logger.debug(f"Updating ad type: {ad.name} for {target_country}")
             affected = db.query(models.PricingMatrix).filter(
                 models.PricingMatrix.advert_type == ad.name,
                 models.PricingMatrix.country_id == target_country
-            ).update({"base_rate": ad.base_rate})
+            ).update({"base_rate": ad.base_rate}, synchronize_session=False)
             
             if affected == 0:
+                logger.info(f"Creating new matrix entry for ad type: {ad.name} ({target_country})")
                 new_entry = models.PricingMatrix(
-                    industry_type="Tyres And Wheels",  # Default industry
+                    industry_type="General",
                     advert_type=ad.name,
                     coverage_type=models.CoverageType.RADIUS_30,
                     base_rate=ad.base_rate,
@@ -390,12 +392,13 @@ async def save_global_pricing_config(
                 db.add(new_entry)
             
         # 3. Update Discounts for this country
+        logger.info(f"Updating discounts for {target_country}: State={config.discounts.state}, National={config.discounts.national}")
         db.query(models.PricingMatrix).filter(
             models.PricingMatrix.country_id == target_country
         ).update({
             "state_discount": config.discounts.state,
             "national_discount": config.discounts.national
-        })
+        }, synchronize_session=False)
         
         # 4. Update Geo Data / Density Multipliers
         for state in config.states:

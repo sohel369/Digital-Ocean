@@ -22,13 +22,14 @@ print("🚀 STARTING ADVERTISING BACKEND VERSION: 1.0.3-reset 🚀")
 print("🚀 STARTING ADVERTISING BACKEND VERSION: 1.0.3-reset 🚀")
 print("🚀 STARTING ADVERTISING BACKEND VERSION: 1.0.3-reset 🚀")
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from sqlalchemy.orm import Session
 
-from .database import engine, Base, init_db
+from .database import engine, Base, init_db, get_db
 
 # Import routers
 from .routers import (

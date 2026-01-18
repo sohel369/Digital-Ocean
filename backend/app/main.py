@@ -222,6 +222,19 @@ async def debug_env():
         "app_env": os.environ.get("RAILWAY_ENVIRONMENT", "unknown")
     }
 
+@app.get("/api/debug/routes", tags=["Debug"])
+async def list_routes():
+    """Diagnostic: List all registered routes and their paths."""
+    routes = []
+    for route in app.routes:
+        if hasattr(route, "path"):
+            routes.append({
+                "path": route.path,
+                "name": route.name,
+                "methods": list(route.methods) if hasattr(route, "methods") else []
+            })
+    return {"routes": routes}
+
 @app.post("/api/debug/reset", tags=["Debug"])
 async def reset_db_state(db: Session = Depends(get_db)):
     """EMERGENCY ONLY: Force re-seeds pricing and admin data."""

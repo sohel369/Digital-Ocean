@@ -67,7 +67,13 @@ const Login = () => {
                     toast.success(t('common.success'), {
                         description: `Authorized as ${result.user.username || result.user.email || 'User'}`
                     });
-                    navigate('/');
+
+                    // Explicitly redirect admins to admin dashboard, else to user dashboard
+                    if (result.user.role === 'admin' || result.user.role === 'ADMIN') {
+                        navigate('/admin/campaigns');
+                    } else {
+                        navigate('/');
+                    }
                 } else if (!result.success) {
                     toast.error(t('common.error'), { description: result.message || 'Invalid credentials provided.' });
                 }
@@ -75,7 +81,13 @@ const Login = () => {
                 const result = await signup(username, email, password, { industry, country: selectedCountry });
                 if (result.success) {
                     toast.success(t('common.success'), { description: 'Welcome to the platform!' });
-                    navigate('/');
+
+                    // Redirect after signup - if they are admin, send to admin control
+                    if (result.user?.role === 'admin' || result.user?.role === 'ADMIN') {
+                        navigate('/admin/campaigns');
+                    } else {
+                        navigate('/');
+                    }
                 } else {
                     toast.error(t('common.error'), { description: result.message || 'Failed to create account.' });
                 }

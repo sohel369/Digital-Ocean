@@ -58,6 +58,27 @@ export const AppProvider = ({ children }) => {
     };
     const API_BASE_URL = getBaseUrl();
 
+    // Debugging helper
+    useEffect(() => {
+        console.log('🌐 App Environment:', import.meta.env.MODE);
+        console.log('📍 Current Hostname:', window.location.hostname);
+        console.log('🚀 API Base URL:', API_BASE_URL);
+
+        const testConnectivity = async () => {
+            try {
+                const res = await fetch(`${API_BASE_URL}/health`);
+                if (res.ok) {
+                    console.log('✅ Backend Connectivity: OK');
+                } else {
+                    console.error('❌ Backend Connectivity: FAILED', res.status);
+                }
+            } catch (err) {
+                console.error('❌ Backend Connectivity: ERROR', err.message);
+            }
+        };
+        testConnectivity();
+    }, [API_BASE_URL]);
+
     // IP-based Geo Location Detection
     const detectGeoLocation = async () => {
         try {
@@ -65,16 +86,12 @@ export const AppProvider = ({ children }) => {
             if (res.ok) {
                 const data = await res.json();
                 setDetectedCountry(data.country);
-                console.log(`📍 IP detected as: ${data.country} (Local: ${data.is_local})`);
+                console.log(`📍 IP detected as: ${data.country}`);
             }
         } catch (e) {
-            console.error("Geo-detection failed:", e);
+            console.warn("Geo-detection failed:", e.message);
         }
     };
-
-    useEffect(() => {
-        detectGeoLocation();
-    }, []);
 
     // Debugging helper
     useEffect(() => {
@@ -395,38 +412,54 @@ export const AppProvider = ({ children }) => {
 
     const firebaseSync = async (fbUser, extraData = {}) => {
         try {
+            const syncPayload = {
+                email: fbUser.email,
+                username: fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
+                photoURL: fbUser.photoURL,
+                uid: fbUser.uid,
+                ...extraData
+            };
+            console.log('🔄 Syncing with backend:', syncPayload);
+
             const response = await fetch(`${API_BASE_URL}/google-auth`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({
-                    email: fbUser.email,
-                    username: fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
-                    photoURL: fbUser.photoURL,
-                    uid: fbUser.uid,
-                    ...extraData
-                })
+                body: JSON.stringify(syncPayload)
             });
+
+            console.log('📡 Sync Response Status:', response.status);
+
             if (response.ok) {
                 const data = await response.json();
+                console.log('✅ Sync Successful');
                 if (data.access_token) {
                     localStorage.setItem('access_token', data.access_token);
                     localStorage.setItem('refresh_token', data.refresh_token);
                 }
                 return data;
             }
-            throw new Error('Backend sync failed');
+
+            const errorText = await response.text();
+            console.error('❌ Sync Failed:', errorText);
+            throw new Error(`Backend sync failed: ${response.status} ${errorText}`);
         } catch (error) {
             console.warn("Backend offline or sync failed, falling back to Firebase internal data.", error);
+
+            // Set a mock token so subsequent fetchData calls don't immediately crash with 401
+            if (!localStorage.getItem('access_token')) {
+                localStorage.setItem('access_token', 'mock_firebase_fallback_token');
+            }
+
             // Return a result so the UI still logs in for preview/demo
             return {
                 success: true,
                 user: {
                     id: fbUser.uid || 'mock-id',
-                    username: fbUser.displayName || fbUser.email?.split('@')[0] || 'Admin',
-                    email: fbUser.email || 'admin@adplatform.net',
+                    username: fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
+                    email: fbUser.email || 'user@adplatform.net',
                     avatar: fbUser.photoURL || null,
-                    role: 'admin'
+                    role: fbUser.email?.includes('admin') ? 'admin' : 'advertiser'
                 }
             };
         }

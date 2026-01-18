@@ -117,24 +117,32 @@ async def list_pending_campaigns(
     
     result = []
     for c in pending_campaigns:
-        # Get advertiser info
-        advertiser = db.query(models.User).filter(models.User.id == c.advertiser_id).first()
-        
-        result.append(schemas.PendingCampaignResponse(
-            id=c.id,
-            name=c.name,
-            advertiser_id=c.advertiser_id,
-            advertiser_name=advertiser.name if advertiser else "Unknown",
-            advertiser_email=advertiser.email if advertiser else "Unknown",
-            industry_type=c.industry_type,
-            ad_format=c.ad_format,
-            coverage_type=c.coverage_type.value,
-            coverage_area=c.coverage_area,
-            target_country=c.target_country,
-            calculated_price=c.calculated_price,
-            submitted_at=c.submitted_at,
-            status=c.status
-        ))
+        try:
+            # Get advertiser info
+            advertiser = db.query(models.User).filter(models.User.id == c.advertiser_id).first()
+            
+            # Safely get enum values as strings
+            status_val = c.status.value if hasattr(c.status, 'value') else str(c.status)
+            coverage_val = c.coverage_type.value if hasattr(c.coverage_type, 'value') else str(c.coverage_type)
+            
+            result.append(schemas.PendingCampaignResponse(
+                id=c.id,
+                name=c.name or "Untitled Campaign",
+                advertiser_id=c.advertiser_id,
+                advertiser_name=advertiser.name if advertiser else "Unknown Advertiser",
+                advertiser_email=advertiser.email if advertiser else "unknown@email.com",
+                industry_type=c.industry_type or "General",
+                ad_format=c.ad_format or "Display",
+                coverage_type=coverage_val,
+                coverage_area=c.coverage_area or "Not Specified",
+                target_country=c.target_country or "US",
+                calculated_price=c.calculated_price or 0.0,
+                submitted_at=c.submitted_at,
+                status=status_val.lower()
+            ))
+        except Exception as item_err:
+            logger.error(f"❌ Error processing pending campaign {c.id}: {item_err}")
+            continue
     
     logger.info(f"📋 Admin {admin_user.email} fetched {len(result)} pending campaigns")
     return result

@@ -184,20 +184,24 @@ export const AppProvider = ({ children }) => {
 
 
 
-            // Clear session only if we HAD a token and it's now invalid
-            if (statsRes.status === 401 || campaignsRes.status === 401) {
+            // Handle 401 Unauthorized globally
+            if (statsRes.status === 401 || campaignsRes.status === 401 || pricingRes.status === 401) {
+                console.warn("⚠️ API returned 401 Unauthorized. Session might be invalid.");
                 const hasToken = localStorage.getItem('access_token');
-                if (hasToken && localStorage.getItem('user')) {
+
+                // If we have a token but got 401, it's definitely expired/invalid
+                if (hasToken && (statsRes.status === 401 || campaignsRes.status === 401)) {
                     console.warn("Session expired. Clearing local user data.");
                     localStorage.removeItem('user');
                     localStorage.removeItem('access_token');
                     setUser(null);
                     setAuthLoading(false);
-                    if (window.location.pathname !== '/login') {
+                    if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
                         window.location.href = '/login';
                     }
+                    return;
                 }
-                return;
+                // If no token, maybe it was a guest request that failed, we continue to fallbacks
             }
 
             if (statsRes.ok) {

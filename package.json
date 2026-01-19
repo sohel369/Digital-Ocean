@@ -6,12 +6,13 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "vite preview --port $PORT --host 0.0.0.0",
+    "start": "node serve.js",
     "backend": "cd backend && start.bat"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^5.4.1",
     "@stripe/stripe-js": "^8.5.3",
+    "express": "^4.18.2",
     "clsx": "^2.0.0",
     "date-fns": "^2.30.0",
     "firebase": "^11.0.0",

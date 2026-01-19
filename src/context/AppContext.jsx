@@ -60,12 +60,14 @@ export const AppProvider = ({ children }) => {
         }
 
         // 3. Smart Fallback for Railway/Production
-        // If we are on a Railway domain, we try to guess the backend URL if not provided
         const hostname = window.location.hostname;
+
+        // CUSTOM FIX: If on your específico digital-ocean domain, force connection to balanced-wholeness backend
+        if (hostname === 'digital-ocean-production-01ee.up.railway.app') {
+            return 'https://balanced-wholeness-production-ca00.up.railway.app/api';
+        }
+
         if (hostname.includes('railway.app')) {
-            // Check if we are already on a subpath, or if we should use the same domain
-            // Usually if both are mono-repo on same service, relative '/api' works.
-            // If they are separate services, the user MUST set VITE_API_URL.
             return '/api';
         }
 

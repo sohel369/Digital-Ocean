@@ -47,14 +47,30 @@ export const AppProvider = ({ children }) => {
 
     // Base URL configuration for API calls
     const getBaseUrl = () => {
+        // 1. Try environment variables (Vite)
         const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
         if (envUrl) {
-            // Ensure slash and /api
             const cleanUrl = envUrl.endsWith('/') ? envUrl.slice(0, -1) : envUrl;
             return cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
         }
-        if (window.location.hostname === 'localhost') return '/api';
-        return 'https://balanced-wholeness-production-ca00.up.railway.app/api';
+
+        // 2. Handle Local Development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            return '/api';
+        }
+
+        // 3. Smart Fallback for Railway/Production
+        // If we are on a Railway domain, we try to guess the backend URL if not provided
+        const hostname = window.location.hostname;
+        if (hostname.includes('railway.app')) {
+            // Check if we are already on a subpath, or if we should use the same domain
+            // Usually if both are mono-repo on same service, relative '/api' works.
+            // If they are separate services, the user MUST set VITE_API_URL.
+            return '/api';
+        }
+
+        // 4. Ultimate Fallback (Default to relative)
+        return '/api';
     };
     const API_BASE_URL = getBaseUrl();
 

@@ -296,6 +296,20 @@ async def startup_event():
         try:
             init_db()
             logger.info("✅ Database tables initialized successfully")
+            
+            # SCHEMA MIGRATION: Ensure 'industry' column exists in 'users' table (Production Fix)
+            from sqlalchemy import text
+            with engine.connect() as conn:
+                try:
+                    # Check if column exists
+                    result = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='users' AND column_name='industry'"))
+                    if not result.fetchone():
+                        logger.info("🔧 Migrating database: Adding 'industry' column to 'users' table...")
+                        conn.execute(text("ALTER TABLE users ADD COLUMN industry VARCHAR(255)"))
+                        conn.commit()
+                        logger.info("✅ Successfully added 'industry' column to 'users' table")
+                except Exception as mig_err:
+                    logger.warning(f"Note: Users table migration check: {mig_err}")
         except Exception as e:
             logger.error(f"⚠️ init_db failed: {e}")
         

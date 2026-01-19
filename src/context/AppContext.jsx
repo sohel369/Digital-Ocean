@@ -83,10 +83,15 @@ export const AppProvider = ({ children }) => {
         const testConnectivity = async () => {
             try {
                 const res = await fetch(`${API_BASE_URL}/health`);
-                if (res.ok) {
+                const contentType = res.headers.get('content-type');
+
+                if (res.ok && contentType && contentType.includes('application/json')) {
                     console.log('✅ Backend Connectivity: OK');
-                } else {
-                    console.error('❌ Backend Connectivity: FAILED', res.status);
+                } else if (!res.ok) {
+                    console.error(`❌ Backend Connectivity: FAILED (HTTP ${res.status})`);
+                } else if (contentType && contentType.includes('text/html')) {
+                    console.error('❌ Backend Connectivity: ERROR - Received HTML instead of JSON. Your API URL might be incorrect or pointing to the frontend itself.');
+                    console.warn('💡 Tip: Ensure VITE_API_URL is set in Railway for the frontend service.');
                 }
             } catch (err) {
                 console.error('❌ Backend Connectivity: ERROR', err.message);

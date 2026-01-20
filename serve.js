@@ -22,10 +22,12 @@ const RAW_BACKEND_URL = (process.env.VITE_API_URL || process.env.BACKEND_URL || 
 // 2. The target for the proxy should be the base domain (without /api)
 const BACKEND_BASE = RAW_BACKEND_URL.replace(/\/api$/, '');
 
-const DEPLOY_VERSION = "1.0.5-proxy-fix-v2";
-console.log(`🚀 Starting Frontend Server Version: ${DEPLOY_VERSION}`);
-console.log(`📅 Build Time: ${new Date().toISOString()}`);
-console.log(`🔌 API Proxy configured: /api -> ${BACKEND_BASE}/api`);
+const DEPLOY_VERSION = "1.1.0-ULTIMATE-FIX";
+console.log("=========================================");
+console.log(`🚀 DEPLOYMENT VERSION: ${DEPLOY_VERSION}`);
+console.log(`📡 BACKEND TARGET: ${BACKEND_BASE}`);
+console.log(`📅 TIMESTAMP: ${new Date().toLocaleString()}`);
+console.log("=========================================");
 
 // Use pathFilter to catch /api while preserving the full URL path
 app.use(createProxyMiddleware({

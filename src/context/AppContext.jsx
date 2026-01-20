@@ -47,32 +47,34 @@ export const AppProvider = ({ children }) => {
 
     // Base URL configuration for API calls
     const getBaseUrl = () => {
-        // 1. Try environment variables (Vite)
+        // 1. Try environment variables (Vite - baked into build)
         const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
-        if (envUrl) {
-            const cleanUrl = envUrl.endsWith('/') ? envUrl.slice(0, -1) : envUrl;
+
+        // 2. Try window global (runtime injection potential)
+        const globalUrl = window.VITE_API_URL;
+
+        const priorityUrl = envUrl || globalUrl;
+
+        if (priorityUrl) {
+            const cleanUrl = priorityUrl.endsWith('/') ? priorityUrl.slice(0, -1) : priorityUrl;
             return cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
         }
 
-        // 2. Handle Local Development
+        // 3. Handle Local Development
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
             return '/api';
         }
 
-        // 3. Smart Fallback for Railway/Production
+        // 4. Smart Fallback for Railway/Production
         const hostname = window.location.hostname;
 
-        // If we are on Railway, try to use relative path first as it's safer than hardcoded outdated URLs
+        // If we are on Railway, we use relative /api because serve.js now acts as a reverse proxy.
+        // This is the most reliable way to avoid hardcoded domain mismatches.
         if (hostname.includes('railway.app')) {
-            // Priority fallback for known domain - ONLY if hostname specifically matches the old one
-            if (hostname.includes('balanced-wholeness')) {
-                return 'https://balanced-wholeness-production-ca00.up.railway.app/api';
-            }
-            // Default to relative - this works if services are mapped/proxied or on same domain
             return '/api';
         }
 
-        // 4. Ultimate Fallback (Default to relative)
+        // 5. Ultimate Fallback (Default to relative)
         return '/api';
     };
     const API_BASE_URL = getBaseUrl();
@@ -81,7 +83,11 @@ export const AppProvider = ({ children }) => {
     useEffect(() => {
         console.log('🌐 App Environment:', import.meta.env.MODE);
         console.log('📍 Current Hostname:', window.location.hostname);
-        console.log('🚀 API Base URL:', API_BASE_URL);
+        console.log('🚀 Final API URL:', API_BASE_URL);
+
+        if (API_BASE_URL === '/api' && !import.meta.env.VITE_API_URL) {
+            console.log('ℹ️ Note: Using relative /api path. The frontend server must proxy this to the backend.');
+        }
 
         const testConnectivity = async () => {
             try {

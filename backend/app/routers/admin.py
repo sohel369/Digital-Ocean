@@ -47,6 +47,27 @@ async def get_all_users(
     return users
 
 
+@router.get("/users/count")
+async def get_user_count(
+    role: Optional[str] = Query(None, description="Filter by user role"),
+    current_user: models.User = Depends(auth.get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get the total count of users (Admin only).
+    """
+    query = db.query(func.count(models.User.id))
+    if role:
+        try:
+            role_enum = models.UserRole(role)
+            query = query.filter(models.User.role == role_enum)
+        except ValueError:
+            pass
+            
+    count = query.scalar()
+    return {"count": count}
+
+
 @router.get("/users/{user_id}", response_model=schemas.UserResponse)
 async def get_user_by_id(
     user_id: int,

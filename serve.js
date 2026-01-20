@@ -16,27 +16,25 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 1. API Proxy Configuration - MUST BE FIRST
-const RAW_BACKEND_URL = process.env.VITE_API_URL || process.env.BACKEND_URL || 'https://balanced-wholeness-production-ca00.up.railway.app/api';
-const PROXY_TARGET = RAW_BACKEND_URL.replace(/\/$/, '').replace(/\/api$/, '');
+// 1. Get the raw URL from environment and CLEAN it
+const RAW_BACKEND_URL = (process.env.VITE_API_URL || process.env.BACKEND_URL || 'https://balanced-wholeness-production-ca00.up.railway.app/api').replace(/\/$/, '');
 
-console.log(`🔌 Initializing API Proxy: /api -> ${PROXY_TARGET}/api`);
+// 2. The target for the proxy should be the base domain
+const PROXY_TARGET = RAW_BACKEND_URL.replace(/\/api$/, '');
+
+console.log(`🔌 API Proxy: /api -> ${PROXY_TARGET}/api`);
 
 app.use('/api', createProxyMiddleware({
     target: PROXY_TARGET,
     changeOrigin: true,
     logLevel: 'debug',
+    // DO NOT rewrite the path - keep /api so the backend receives the full route
     onProxyReq: (proxyReq, req, res) => {
         console.log(`📡 [PROXY] ${req.method} ${req.originalUrl} -> ${PROXY_TARGET}${req.originalUrl}`);
     },
     onError: (err, req, res) => {
         console.error('❌ Proxy Error:', err.message);
-        res.status(502).json({
-            error: 'Backend Unreachable',
-            message: 'Failed to connect to backend service. Check Railway variables.',
-            detail: err.message,
-            target: PROXY_TARGET
-        });
+        res.status(502).json({ error: 'Backend Unreachable', detail: err.message });
     }
 }));
 

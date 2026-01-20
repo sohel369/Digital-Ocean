@@ -19,22 +19,29 @@ const PORT = process.env.PORT || 3000;
 // 1. Get the raw URL from environment and CLEAN it
 const RAW_BACKEND_URL = (process.env.VITE_API_URL || process.env.BACKEND_URL || 'https://balanced-wholeness-production-ca00.up.railway.app/api').replace(/\/$/, '');
 
-// 2. The target for the proxy should be the base domain
-const PROXY_TARGET = RAW_BACKEND_URL.replace(/\/api$/, '');
+// 2. The target for the proxy should be the base domain (without /api)
+const BACKEND_BASE = RAW_BACKEND_URL.replace(/\/api$/, '');
 
-console.log(`🔌 API Proxy: /api -> ${PROXY_TARGET}/api`);
+console.log(`🔌 API Proxy configured: /api -> ${BACKEND_BASE}/api`);
 
-app.use('/api', createProxyMiddleware({
-    target: PROXY_TARGET,
+// Use pathFilter to catch /api while preserving the full URL path
+app.use(createProxyMiddleware({
+    target: BACKEND_BASE,
     changeOrigin: true,
+    pathFilter: '/api',
     logLevel: 'debug',
-    // DO NOT rewrite the path - keep /api so the backend receives the full route
     onProxyReq: (proxyReq, req, res) => {
-        console.log(`📡 [PROXY] ${req.method} ${req.originalUrl} -> ${PROXY_TARGET}${req.originalUrl}`);
+        // req.originalUrl contains the full path including /api
+        console.log(`📡 [PROXY] ${req.method} ${req.originalUrl} -> ${BACKEND_BASE}${req.originalUrl}`);
     },
     onError: (err, req, res) => {
         console.error('❌ Proxy Error:', err.message);
-        res.status(502).json({ error: 'Backend Unreachable', detail: err.message });
+        res.status(502).json({
+            error: 'Backend Unreachable',
+            detail: err.message,
+            target: BACKEND_BASE,
+            path: req.originalUrl
+        });
     }
 }));
 

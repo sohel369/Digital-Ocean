@@ -46,34 +46,45 @@ async def get_stats(
     """
     Get dashboard statistics for the authenticated user.
     """
-    # If admin, show system-wide stats or just 0s as per original compat intent
-    # But for advertiser, show their own stats
-    if current_user.role == models.UserRole.ADMIN:
-        from sqlalchemy import func
-        total_spend = db.query(func.sum(models.Campaign.calculated_price)).filter(models.Campaign.status.in_([models.CampaignStatus.APPROVED, models.CampaignStatus.ACTIVE, models.CampaignStatus.COMPLETED])).scalar() or 0
-        impressions = db.query(func.sum(models.Campaign.impressions)).scalar() or 0
-        clicks = db.query(func.sum(models.Campaign.clicks)).scalar() or 0
+    try:
+        # If admin, show system-wide stats or just 0s as per original compat intent
+        # But for advertiser, show their own stats
+        if current_user.role == models.UserRole.ADMIN:
+            from sqlalchemy import func
+            total_spend = db.query(func.sum(models.Campaign.calculated_price)).filter(models.Campaign.status.in_([models.CampaignStatus.APPROVED, models.CampaignStatus.ACTIVE, models.CampaignStatus.COMPLETED])).scalar() or 0
+            impressions = db.query(func.sum(models.Campaign.impressions)).scalar() or 0
+            clicks = db.query(func.sum(models.Campaign.clicks)).scalar() or 0
+            return {
+                "totalSpend": round(float(total_spend), 2),
+                "impressions": int(impressions),
+                "clicks": int(clicks),
+                "ctr": round((clicks / impressions * 100) if impressions > 0 else 0, 2),
+                "budgetRemaining": 0
+            }
+        
+        # Calculate for specific user
+        user_campaigns = db.query(models.Campaign).filter(models.Campaign.advertiser_id == current_user.id).all()
+        total_spend = sum(c.calculated_price for c in user_campaigns if c.calculated_price and c.status in [models.CampaignStatus.APPROVED, models.CampaignStatus.ACTIVE, models.CampaignStatus.COMPLETED])
+        impressions = sum(c.impressions for c in user_campaigns)
+        clicks = sum(c.clicks for c in user_campaigns)
+        
         return {
             "totalSpend": round(float(total_spend), 2),
             "impressions": int(impressions),
             "clicks": int(clicks),
             "ctr": round((clicks / impressions * 100) if impressions > 0 else 0, 2),
+            "budgetRemaining": sum(c.budget for c in user_campaigns) - total_spend
+        }
+    except Exception as e:
+        logger.error(f"❌ Error in get_stats: {str(e)}", exc_info=True)
+        # Return empty stats instead of 500
+        return {
+            "totalSpend": 0,
+            "impressions": 0,
+            "clicks": 0,
+            "ctr": 0,
             "budgetRemaining": 0
         }
-    
-    # Calculate for specific user
-    user_campaigns = db.query(models.Campaign).filter(models.Campaign.advertiser_id == current_user.id).all()
-    total_spend = sum(c.calculated_price for c in user_campaigns if c.calculated_price and c.status in [models.CampaignStatus.APPROVED, models.CampaignStatus.ACTIVE, models.CampaignStatus.COMPLETED])
-    impressions = sum(c.impressions for c in user_campaigns)
-    clicks = sum(c.clicks for c in user_campaigns)
-    
-    return {
-        "totalSpend": round(float(total_spend), 2),
-        "impressions": int(impressions),
-        "clicks": int(clicks),
-        "ctr": round((clicks / impressions * 100) if impressions > 0 else 0, 2),
-        "budgetRemaining": sum(c.budget for c in user_campaigns) - total_spend
-    }
 
 
 
@@ -86,44 +97,48 @@ async def list_campaigns_compat(
     List campaigns with strict data isolation.
     If admin -> all campaigns. If advertiser -> only own campaigns.
     """
-    query = db.query(models.Campaign)
-    
-    # Role-based filtering
-    if current_user.role != models.UserRole.ADMIN:
-        query = query.filter(models.Campaign.advertiser_id == current_user.id)
+    try:
+        query = db.query(models.Campaign)
         
-    campaigns = query.order_by(models.Campaign.created_at.desc()).limit(50).all()
+        # Role-based filtering
+        if current_user.role != models.UserRole.ADMIN:
+            query = query.filter(models.Campaign.advertiser_id == current_user.id)
+            
+        campaigns = query.order_by(models.Campaign.created_at.desc()).limit(50).all()
 
-    
-    # Transform to frontend format
-    return [
-        {
-            "id": c.id,
-            "name": c.name,
-            "budget": c.budget,
-            "spend": c.calculated_price or 0,
-            "start_date": str(c.start_date),
-            "end_date": str(c.end_date) if c.end_date else None,
-            "status": c.status.value.lower(),
-            "impressions": c.impressions,
-            "clicks": c.clicks,
-            "ctr": c.ctr,
-            "ad_format": c.ad_format or "Display",
-            "headline": c.headline or c.name,
-            "description": c.description or "",
-            "image": None,
-            # Admin approval fields
-            "submitted_at": c.submitted_at.isoformat() if c.submitted_at else None,
-            "admin_message": c.admin_message,
-            "reviewed_at": c.reviewed_at.isoformat() if c.reviewed_at else None,
-            "meta": {
-                "industry": c.industry_type,
-                "coverage": c.coverage_type.value,
-                "location": c.target_state or c.target_postcode or c.target_country
+        
+        # Transform to frontend format
+        return [
+            {
+                "id": c.id,
+                "name": c.name or "Untitled",
+                "budget": c.budget or 0,
+                "spend": c.calculated_price or 0,
+                "start_date": str(c.start_date) if c.start_date else str(datetime.now().date()),
+                "end_date": str(c.end_date) if c.end_date else None,
+                "status": (c.status.value.lower() if hasattr(c.status, 'value') else str(c.status).lower()) if c.status else "draft",
+                "impressions": c.impressions or 0,
+                "clicks": c.clicks or 0,
+                "ctr": c.ctr or 0,
+                "ad_format": c.ad_format or "Display",
+                "headline": c.headline or c.name,
+                "description": c.description or "",
+                "image": None,
+                # Admin approval fields
+                "submitted_at": c.submitted_at.isoformat() if c.submitted_at else None,
+                "admin_message": c.admin_message,
+                "reviewed_at": c.reviewed_at.isoformat() if c.reviewed_at else None,
+                "meta": {
+                    "industry": c.industry_type,
+                    "coverage": c.coverage_type.value if hasattr(c.coverage_type, 'value') else str(c.coverage_type),
+                    "location": c.target_state or c.target_postcode or c.target_country
+                }
             }
-        }
-        for c in campaigns
-    ]
+            for c in campaigns
+        ]
+    except Exception as e:
+        logger.error(f"❌ Error in list_campaigns_compat: {str(e)}", exc_info=True)
+        return []
 
 
 @router.post("/campaigns")
@@ -178,7 +193,7 @@ async def create_campaign_compat(
         # Map legacy/compat fields to backend schema
         # Support both flat and nested 'meta' structures
         meta = data.get("meta", {})
-        industry_val = data.get("industry") or meta.get("industry", "retail")
+        industry_val = data.get("industry") or meta.get("industry") or "General"
         
         # Enforce registered industry for non-admins
         if current_user.role != models.UserRole.ADMIN and current_user.industry:

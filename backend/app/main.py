@@ -345,15 +345,35 @@ async def startup_event():
             from sqlalchemy import text
             with engine.connect() as conn:
                 try:
-                    # Check if column exists
-                    result = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='users' AND column_name='industry'"))
-                    if not result.fetchone():
-                        logger.info("🔧 Migrating database: Adding 'industry' column to 'users' table...")
-                        conn.execute(text("ALTER TABLE users ADD COLUMN industry VARCHAR(255)"))
-                        conn.commit()
-                        logger.info("✅ Successfully added 'industry' column to 'users' table")
+                    # Use PostgreSQL-specific syntax to add column if not exists
+                    logger.info("🔧 Checking/adding 'industry' column to 'users' table...")
+                    
+                    # PostgreSQL 9.6+ supports IF NOT EXISTS
+                    conn.execute(text("""
+                        DO $$ 
+                        BEGIN 
+                            IF NOT EXISTS (
+                                SELECT 1 FROM information_schema.columns 
+                                WHERE table_name='users' AND column_name='industry'
+                            ) THEN
+                                ALTER TABLE users ADD COLUMN industry VARCHAR(255);
+                                RAISE NOTICE 'Added industry column to users table';
+                            ELSE
+                                RAISE NOTICE 'Industry column already exists';
+                            END IF;
+                        END $$;
+                    """))
+                    conn.commit()
+                    logger.info("✅ Users table 'industry' column verified/added")
                 except Exception as mig_err:
                     logger.warning(f"Note: Users table migration check: {mig_err}")
+                    # Try alternative method for older PostgreSQL versions
+                    try:
+                        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS industry VARCHAR(255)"))
+                        conn.commit()
+                        logger.info("✅ Users table 'industry' column added (alternative method)")
+                    except Exception as alt_err:
+                        logger.warning(f"Alternative migration also failed: {alt_err}")
         except Exception as e:
             logger.error(f"⚠️ init_db failed: {e}")
         

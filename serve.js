@@ -8,48 +8,45 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import { createProxyMiddleware } from 'http-proxy-middleware';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Serve static files from dist directory
-app.use(express.static(path.join(__dirname, 'dist')));
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-    res.json({ status: 'healthy', service: 'frontend' });
-});
-
-import { createProxyMiddleware } from 'http-proxy-middleware';
-
-// 1. Get the raw URL from environment
+// 1. API Proxy Configuration - MUST BE FIRST
 const RAW_BACKEND_URL = process.env.VITE_API_URL || process.env.BACKEND_URL || 'https://balanced-wholeness-production-ca00.up.railway.app/api';
-
-// 2. Normalize: Remove trailing slash and /api suffix to get the BASE domain
-// This ensures that proxying /api/login goes to target + /api/login correctly.
 const PROXY_TARGET = RAW_BACKEND_URL.replace(/\/$/, '').replace(/\/api$/, '');
 
-console.log(`🔌 API Proxy configured: /api -> ${PROXY_TARGET}/api`);
+console.log(`🔌 Initializing API Proxy: /api -> ${PROXY_TARGET}/api`);
 
 app.use('/api', createProxyMiddleware({
     target: PROXY_TARGET,
     changeOrigin: true,
     logLevel: 'debug',
     onProxyReq: (proxyReq, req, res) => {
-        console.log(`📡 Proxying ${req.method} ${req.url} -> ${PROXY_TARGET}${req.originalUrl}`);
+        console.log(`📡 [PROXY] ${req.method} ${req.originalUrl} -> ${PROXY_TARGET}${req.originalUrl}`);
     },
     onError: (err, req, res) => {
-        console.error('❌ Proxy Error:', err);
+        console.error('❌ Proxy Error:', err.message);
         res.status(502).json({
-            error: 'Proxy Error',
-            message: 'Failed to connect to backend service. Check if BACKEND_URL is correct.',
+            error: 'Backend Unreachable',
+            message: 'Failed to connect to backend service. Check Railway variables.',
             detail: err.message,
             target: PROXY_TARGET
         });
     }
 }));
+
+// 2. Static Files
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// 3. Health check
+app.get('/health', (req, res) => {
+    res.json({ status: 'healthy', service: 'frontend', proxy_target: PROXY_TARGET });
+});
 
 // SPA fallback - serve index.html for all other routes
 app.get('*', (req, res) => {

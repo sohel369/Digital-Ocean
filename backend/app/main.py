@@ -292,11 +292,37 @@ async def startup_event():
     """
     logger.info("🚀 STARTUP: Beginning initialization...")
     
-    # Check SECRET_KEY stability
+    # Check SECRET_KEY stability - ENHANCED DIAGNOSTICS
+    logger.info("="*80)
+    logger.info("🔐 JWT SECRET CONFIGURATION CHECK")
+    logger.info("="*80)
+    logger.info(f"SECRET_KEY Source: Environment variable JWT_SECRET")
+    logger.info(f"SECRET_KEY Length: {len(settings.SECRET_KEY)} characters")
+    logger.info(f"SECRET_KEY Preview: {settings.SECRET_KEY[:15]}...{settings.SECRET_KEY[-15:]}")
+    logger.info(f"Algorithm: {settings.ALGORITHM}")
+    logger.info(f"Access Token Expiration: {settings.ACCESS_TOKEN_EXPIRE_MINUTES} minutes")
+    logger.info(f"Refresh Token Expiration: {settings.REFRESH_TOKEN_EXPIRE_DAYS} days")
+    
     if settings.SECRET_KEY == "dev_secret_key_change_me_in_production":
         logger.warning("⚠️  SECURITY: Using default development JWT_SECRET. Tokens will be invalid if the server restarts and this key changes.")
+        logger.warning("⚠️  ACTION REQUIRED: Set JWT_SECRET environment variable in Railway!")
     else:
-        logger.info(f"🔑 SECURITY: Custom JWT_SECRET detected (Length: {len(settings.SECRET_KEY)})")
+        logger.info(f"✅ SECURITY: Custom JWT_SECRET detected")
+        
+        # Test token generation and validation
+        try:
+            from . import auth as auth_module
+            test_payload = {"sub": "1", "email": "test@example.com", "role": "admin"}
+            test_token = auth_module.create_access_token(data=test_payload)
+            logger.info(f"✅ JWT Token Generation Test: SUCCESS (token length: {len(test_token)})")
+            
+            # Try to decode it
+            decoded = auth_module.decode_token(test_token)
+            logger.info(f"✅ JWT Token Validation Test: SUCCESS (decoded sub: {decoded.get('sub')})")
+        except Exception as token_err:
+            logger.error(f"❌ JWT Token Test FAILED: {token_err}")
+            
+    logger.info("="*80)
 
     try:
         # Initialize database immediately (creates tables if they don't exist)

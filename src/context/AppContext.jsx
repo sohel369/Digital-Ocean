@@ -62,14 +62,13 @@ export const AppProvider = ({ children }) => {
         // 3. Smart Fallback for Railway/Production
         const hostname = window.location.hostname;
 
-        // NEW ROBUST LOGIC: Try to detect backend from frontend domain
-        // If frontend is x-production.up.railway.app, often backend is y-production.up.railway.app
+        // If we are on Railway, try to use relative path first as it's safer than hardcoded outdated URLs
         if (hostname.includes('railway.app')) {
-            // Priority fallback for known domain
-            if (hostname.includes('digital-ocean')) {
+            // Priority fallback for known domain - ONLY if hostname specifically matches the old one
+            if (hostname.includes('balanced-wholeness')) {
                 return 'https://balanced-wholeness-production-ca00.up.railway.app/api';
             }
-            // If they are on the same domain or using a proxy
+            // Default to relative - this works if services are mapped/proxied or on same domain
             return '/api';
         }
 
@@ -124,8 +123,14 @@ export const AppProvider = ({ children }) => {
     // Auth header helper
     const getAuthHeaders = () => {
         const token = localStorage.getItem('access_token');
-        // Do NOT send mock tokens to the server
-        if (!token || token.includes('mock_')) return {};
+        if (!token) return {};
+
+        // If we have a mock token, we still send it but log a warning.
+        // This prevents silent failures in the frontend and lets the backend return 401 officially.
+        if (token.includes('mock_')) {
+            console.warn("🛠️ Using mock token - API requests will likely return 401 unless backend is also in mock mode.");
+        }
+
         return { 'Authorization': `Bearer ${token}` };
     };
 
@@ -904,7 +909,15 @@ export const AppProvider = ({ children }) => {
             return responseData;
         } catch (error) {
             console.error("addCampaign failed:", error);
-            toast.error("Creation Failed", { description: error.message });
+
+            // Handle specific "Not authenticated" error with better UI guidance
+            if (error.message.includes('authenticated') || error.message.includes('credentials')) {
+                toast.error("Authentication Error", {
+                    description: "Your session has expired or you are not logged in correctly. Please log out and log back in."
+                });
+            } else {
+                toast.error("Creation Failed", { description: error.message });
+            }
             throw error;
         }
     };

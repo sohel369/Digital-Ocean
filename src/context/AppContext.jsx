@@ -504,74 +504,16 @@ export const AppProvider = ({ children }) => {
         }
     };
 
-
     const login = async (email, password) => {
         const cleanEmail = (email || '').trim();
         const cleanPassword = (password || '').trim();
 
-        // 1. Handle Emergency Credentials
+        // 1. Handle Admin Shortcut
         if (cleanEmail.toUpperCase() === 'ADMIN' && cleanPassword.toUpperCase() === 'ADMIN123') {
-            try {
-                const params = new URLSearchParams();
-                params.append('username', 'admin@adplatform.com');
-                params.append('password', 'admin123');
-
-                const response = await fetch(`${API_BASE_URL}/auth/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: params
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const token = data.access_token;
-                    localStorage.setItem('access_token', token);
-                    if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
-
-                    // Fetch real admin data
-                    const meRes = await fetch(`${API_BASE_URL}/auth/me`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-
-                    let userObj = { role: 'admin' };
-                    if (meRes.ok) {
-                        const adminData = await meRes.json();
-                        userObj = {
-                            id: adminData.id,
-                            username: adminData.name,
-                            email: adminData.email,
-                            role: adminData.role,
-                            avatar: adminData.profile_picture
-                        };
-                    } else {
-                        userObj = {
-                            username: 'Administrator',
-                            email: 'admin@adplatform.com',
-                            role: 'admin'
-                        };
-                    }
-
-                    setUser(userObj);
-                    localStorage.setItem('user', JSON.stringify(userObj));
-                    toast.success('System Access Granted', { description: 'Authenticated via emergency bypass.' });
-                    await fetchData();
-                    return { success: true, user: userObj };
-                }
-            } catch (err) {
-                console.warn("Emergency bypass backend sync failed, using mock data.", err);
-            }
-
-            const adminUser = { username: 'Administrator', email: 'admin@adplatform.com', role: 'admin', avatar: null };
-            setUser(adminUser);
-            localStorage.setItem('user', JSON.stringify(adminUser));
-            // Set a mock token so frontend calls don't fail immediately with missing header
-            localStorage.setItem('access_token', 'mock_admin_token_bypass');
-            toast.success('System Access Granted', { description: 'Authenticated via emergency bypass.' });
-            await fetchData();
-            return { success: true, user: adminUser };
+            return await login('admin@adplatform.com', 'admin123');
         }
 
-        // 2. Primary: Native Backend Authentication (No Firebase dependency)
+        // 2. Try Native Backend Login
         try {
             const response = await fetch(`${API_BASE_URL}/auth/login/json`, {
                 method: 'POST',
@@ -584,34 +526,35 @@ export const AppProvider = ({ children }) => {
                 localStorage.setItem('access_token', data.access_token);
                 if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
 
-                // Fetch full user profile
+                // Fetch profile
                 const meRes = await fetch(`${API_BASE_URL}/auth/me`, {
                     headers: { 'Authorization': `Bearer ${data.access_token}` }
                 });
+
+                let userObj;
                 if (meRes.ok) {
                     const userData = await meRes.json();
-                    const userObj = {
+                    userObj = {
                         id: userData.id,
-                        username: userData.name,
+                        username: userData.name || userData.username,
                         email: userData.email,
                         role: userData.role,
                         avatar: userData.profile_picture
                     };
-                    setUser(userObj);
-                    localStorage.setItem('user', JSON.stringify(userObj));
-                    await fetchData();
-                    return { success: true, user: userObj };
+                } else {
+                    userObj = { email: cleanEmail, role: 'advertiser' };
                 }
-            } else if (response.status === 401 || response.status === 403 || response.status === 400) {
-                const errData = await response.json();
-                const errMsg = errData.error || errData.detail || "Incorrect email or password";
-                return { success: false, message: errMsg };
+
+                setUser(userObj);
+                localStorage.setItem('user', JSON.stringify(userObj));
+                await fetchData();
+                return { success: true, user: userObj };
             }
-        } catch (err) {
-            console.warn("Native backend auth failed, trying Firebase fallback...", err);
+        } catch (error) {
+            console.warn("Native login failed:", error.message);
         }
 
-        // 3. Fallback: Firebase Authentication
+        // 3. Fallback to Firebase
         try {
             const fbUser = await loginWithEmail(email, password);
             const result = await firebaseSync(fbUser);
@@ -621,14 +564,16 @@ export const AppProvider = ({ children }) => {
                 await fetchData();
                 return { success: true, user: result.user };
             }
-            return { success: false, message: "Sync failed" };
         } catch (error) {
-            console.error("Authentication Error:", error);
-            // If Firebase is restricted or misconfigured, show a descriptive error
-            const msg = error.code === 'auth/admin-restricted-operation'
-                ? "Account registration is currently managed by platform administrators."
-                : (error.message?.replace('Firebase: ', '') || "Authentication failed");
-            return { success: false, message: msg };
+            // Last resort: Emergency Local Bypass for admin
+            if (cleanEmail === 'admin@adplatform.com' && cleanPassword === 'admin123') {
+                const adminUser = { username: 'Administrator', email: email, role: 'admin' };
+                setUser(adminUser);
+                localStorage.setItem('user', JSON.stringify(adminUser));
+                localStorage.setItem('access_token', 'mock_admin_token');
+                return { success: true, user: adminUser };
+            }
+            return { success: false, message: error.message };
         }
     };
 
@@ -917,12 +862,17 @@ export const AppProvider = ({ children }) => {
             console.error("addCampaign failed:", error);
 
             // Handle specific "Not authenticated" error with better UI guidance
-            if (error.message.includes('authenticated') || error.message.includes('credentials')) {
-                toast.error("Authentication Error", {
-                    description: "Your session has expired or you are not logged in correctly. Please log out and log back in."
+            if (error.message.includes('authenticated') || error.message.includes('credentials') || error.message.includes('401')) {
+                console.warn("🛡️ Auth error detected, clearing invalid session...");
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('user');
+                setUser(null);
+
+                toast.error("Session Expired", {
+                    description: "Your session has expired. Please log in again to continue."
                 });
             } else {
-                toast.error("Creation Failed", { description: error.message });
+                toast.error("Action Failed", { description: error.message });
             }
             throw error;
         }

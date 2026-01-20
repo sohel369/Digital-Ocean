@@ -291,6 +291,13 @@ async def startup_event():
     Initialize database, connections, etc.
     """
     logger.info("🚀 STARTUP: Beginning initialization...")
+    
+    # Check SECRET_KEY stability
+    if settings.SECRET_KEY == "dev_secret_key_change_me_in_production":
+        logger.warning("⚠️  SECURITY: Using default development JWT_SECRET. Tokens will be invalid if the server restarts and this key changes.")
+    else:
+        logger.info(f"🔑 SECURITY: Custom JWT_SECRET detected (Length: {len(settings.SECRET_KEY)})")
+
     try:
         # Initialize database immediately (creates tables if they don't exist)
         try:

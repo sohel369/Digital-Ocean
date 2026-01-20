@@ -145,21 +145,33 @@ async def get_current_user(
     )
     
     try:
+        # Debug: Log the token arrival (masked)
+        token_preview = f"{token[:10]}...{token[-10:]}" if token and len(token) > 20 else "short_token"
+        print(f"🔐 AUTH: Validating token {token_preview}")
+        
         payload = decode_token(token)
         sub = payload.get("sub")
         if sub is None:
+            print("❌ AUTH ERROR: Token payload missing 'sub'")
             raise credentials_exception
         try:
             user_id = int(sub)
         except (ValueError, TypeError):
             print(f"❌ AUTH ERROR: Invalid user ID format in token sub: {sub}")
             raise credentials_exception
-    except JWTError:
+    except JWTError as e:
+        print(f"❌ AUTH ERROR: JWT Error: {str(e)}")
+        raise credentials_exception
+    except Exception as e:
+        print(f"❌ AUTH ERROR: Token decode failed: {str(e)}")
         raise credentials_exception
     
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if user is None:
+        print(f"❌ AUTH ERROR: User ID {user_id} from token not found in database")
         raise credentials_exception
+    
+    print(f"✅ AUTH: Validated user {user.email} (ID: {user.id})")
     
     # Update last login (non-critical, wrap in try to prevent request crash)
     try:

@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     DATABASE_MAX_OVERFLOW: int = 0
     
     # JWT
-    SECRET_KEY: str = "dev_secret_key_change_me_in_production"
+    SECRET_KEY: str = os.environ.get("JWT_SECRET", "dev_secret_key_change_me_in_production")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7

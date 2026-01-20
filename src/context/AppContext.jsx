@@ -62,12 +62,14 @@ export const AppProvider = ({ children }) => {
         // 3. Smart Fallback for Railway/Production
         const hostname = window.location.hostname;
 
-        // CUSTOM FIX: If on your específico digital-ocean domain, force connection to balanced-wholeness backend
-        if (hostname === 'digital-ocean-production-01ee.up.railway.app') {
-            return 'https://balanced-wholeness-production-ca00.up.railway.app/api';
-        }
-
+        // NEW ROBUST LOGIC: Try to detect backend from frontend domain
+        // If frontend is x-production.up.railway.app, often backend is y-production.up.railway.app
         if (hostname.includes('railway.app')) {
+            // Priority fallback for known domain
+            if (hostname.includes('digital-ocean')) {
+                return 'https://balanced-wholeness-production-ca00.up.railway.app/api';
+            }
+            // If they are on the same domain or using a proxy
             return '/api';
         }
 
@@ -91,9 +93,12 @@ export const AppProvider = ({ children }) => {
                     console.log('✅ Backend Connectivity: OK');
                 } else if (!res.ok) {
                     console.error(`❌ Backend Connectivity: FAILED (HTTP ${res.status})`);
+                    if (res.status === 404) {
+                        console.warn('💡 Tip: Your API URL might be wrong. Check VITE_API_URL in Railway.');
+                    }
                 } else if (contentType && contentType.includes('text/html')) {
-                    console.error('❌ Backend Connectivity: ERROR - Received HTML instead of JSON. Your API URL might be incorrect or pointing to the frontend itself.');
-                    console.warn('💡 Tip: Ensure VITE_API_URL is set in Railway for the frontend service.');
+                    console.error('❌ Backend Connectivity: ERROR - Received HTML instead of JSON. Your API URL might be incorrectly pointing to the frontend itself.');
+                    console.warn('💡 Tip: Ensure VITE_API_URL is set in Railway to your BACKEND service URL.');
                 }
             } catch (err) {
                 console.error('❌ Backend Connectivity: ERROR', err.message);
@@ -116,22 +121,12 @@ export const AppProvider = ({ children }) => {
         }
     };
 
-    // Debugging helper
-    useEffect(() => {
-        console.log('🌐 App Environment:', import.meta.env.MODE);
-        console.log('📍 Current Hostname:', window.location.hostname);
-        console.log('🚀 API Base URL:', API_BASE_URL);
-
-        // Connectivity test
-        fetch(`${API_BASE_URL}/health`)
-            .then(() => console.log('✅ API Connection Verified'))
-            .catch(err => console.error('⚠️ Primary API seems unreachable:', err.message));
-    }, [API_BASE_URL]);
-
     // Auth header helper
     const getAuthHeaders = () => {
         const token = localStorage.getItem('access_token');
-        return token ? { 'Authorization': `Bearer ${token}` } : {};
+        // Do NOT send mock tokens to the server
+        if (!token || token.includes('mock_')) return {};
+        return { 'Authorization': `Bearer ${token}` };
     };
 
     // Helper to load regions (states) dynamically for the selected country
@@ -208,6 +203,15 @@ export const AppProvider = ({ children }) => {
 
     const fetchData = async () => {
         try {
+            const hasAuth = !!localStorage.getItem('access_token');
+            const isMock = localStorage.getItem('access_token')?.includes('mock_');
+
+            // Skip authenticated calls if using a mock token to avoid 401 loops
+            if (isMock && hasAuth) {
+                console.warn("Using mock token, skipping sensitive data fetch");
+                return;
+            }
+
             // Fetch basic data in parallel
             const [statsRes, campaignsRes, notifRes, pricingRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/stats`, {
@@ -233,13 +237,14 @@ export const AppProvider = ({ children }) => {
             // Handle 401 Unauthorized globally
             if (statsRes.status === 401 || campaignsRes.status === 401 || pricingRes.status === 401) {
                 console.warn("⚠️ API returned 401 Unauthorized. Session might be invalid.");
-                const hasToken = localStorage.getItem('access_token');
+                const token = localStorage.getItem('access_token');
 
-                // If we have a token but got 401, it's definitely expired/invalid
-                if (hasToken && (statsRes.status === 401 || campaignsRes.status === 401)) {
+                // If we have a REAL token but got 401, it's definitely expired/invalid
+                if (token && !token.includes('mock_') && (statsRes.status === 401 || campaignsRes.status === 401)) {
                     console.warn("Session expired. Clearing local user data.");
                     localStorage.removeItem('user');
                     localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
                     setUser(null);
                     setAuthLoading(false);
                     if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
@@ -247,7 +252,7 @@ export const AppProvider = ({ children }) => {
                     }
                     return;
                 }
-                // If no token, maybe it was a guest request that failed, we continue to fallbacks
+                // If it's a mock token or we're on the login page already, don't redirect
             }
 
             if (statsRes.ok) {

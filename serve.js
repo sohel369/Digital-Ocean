@@ -22,7 +22,7 @@ const RAW_BACKEND_URL = (process.env.VITE_API_URL || process.env.BACKEND_URL || 
 // 2. The target for the proxy should be the base domain (without /api)
 const BACKEND_BASE = RAW_BACKEND_URL.replace(/\/api$/, '');
 
-const DEPLOY_VERSION = "1.1.0-ULTIMATE-FIX";
+const DEPLOY_VERSION = "1.1.1-FORCE-V3";
 console.log("=========================================");
 console.log(`🚀 DEPLOYMENT VERSION: ${DEPLOY_VERSION}`);
 console.log(`📡 BACKEND TARGET: ${BACKEND_BASE}`);

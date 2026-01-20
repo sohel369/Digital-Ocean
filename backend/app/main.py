@@ -300,14 +300,25 @@ async def startup_event():
     logger.info(f"SECRET_KEY Length: {len(settings.SECRET_KEY)} characters")
     logger.info(f"SECRET_KEY Preview: {settings.SECRET_KEY[:15]}...{settings.SECRET_KEY[-15:]}")
     logger.info(f"Algorithm: {settings.ALGORITHM}")
-    logger.info(f"Access Token Expiration: {settings.ACCESS_TOKEN_EXPIRE_MINUTES} minutes")
+    logger.info(f"Access Token Expiration: {settings.ACCESS_TOKEN_EXPIRE_MINUTES} minutes ({settings.ACCESS_TOKEN_EXPIRE_MINUTES/60:.1f} hours)")
     logger.info(f"Refresh Token Expiration: {settings.REFRESH_TOKEN_EXPIRE_DAYS} days")
     
     if settings.SECRET_KEY == "dev_secret_key_change_me_in_production":
-        logger.warning("⚠️  SECURITY: Using default development JWT_SECRET. Tokens will be invalid if the server restarts and this key changes.")
-        logger.warning("⚠️  ACTION REQUIRED: Set JWT_SECRET environment variable in Railway!")
+        logger.warning("="*80)
+        logger.warning("⚠️  CRITICAL SECURITY WARNING!")
+        logger.warning("⚠️  Using default development JWT_SECRET")
+        logger.warning("⚠️  Tokens will be INVALID if server restarts!")
+        logger.warning("⚠️  ")
+        logger.warning("⚠️  ACTION REQUIRED:")
+        logger.warning("⚠️  1. Go to Railway Dashboard")
+        logger.warning("⚠️  2. Select your Backend Service")
+        logger.warning("⚠️  3. Go to Variables tab")
+        logger.warning("⚠️  4. Add: JWT_SECRET=<your_secure_random_64_char_secret>")
+        logger.warning("⚠️  5. Add: ACCESS_TOKEN_EXPIRE_MINUTES=1440")
+        logger.warning("⚠️  6. Add: REFRESH_TOKEN_EXPIRE_DAYS=30")
+        logger.warning("="*80)
     else:
-        logger.info(f"✅ SECURITY: Custom JWT_SECRET detected")
+        logger.info(f"✅ SECURITY: Custom JWT_SECRET detected (Length: {len(settings.SECRET_KEY)})")
         
         # Test token generation and validation
         try:

@@ -8,7 +8,7 @@ nixpacksConfigPath = "nixpacks.frontend.toml"
 [deploy]
 # Frontend start command
 startCommand = "sh -c 'npm run start'"
-healthcheckPath = "/"
+healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3

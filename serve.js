@@ -7,7 +7,6 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
 import { createProxyMiddleware } from 'http-proxy-middleware';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -16,27 +15,33 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 1. Get the raw URL from environment and CLEAN it
+// 0. HEALTH CHECK FIRST
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'healthy',
+        service: 'frontend',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
+});
+
+// 1. Get and sanitize Backend URL
 const RAW_BACKEND_URL = (process.env.VITE_API_URL || process.env.BACKEND_URL || 'https://balanced-wholeness-production-ca00.up.railway.app/api').replace(/\/$/, '');
+const BACKEND_BASE = RAW_BACKEND_URL.includes('/api') ? RAW_BACKEND_URL.split('/api')[0] : RAW_BACKEND_URL;
 
-// 2. The target for the proxy should be the base domain (without /api)
-const BACKEND_BASE = RAW_BACKEND_URL.replace(/\/api$/, '');
-
-const DEPLOY_VERSION = "1.1.1-FORCE-V3";
 console.log("=========================================");
-console.log(`🚀 DEPLOYMENT VERSION: ${DEPLOY_VERSION}`);
-console.log(`📡 BACKEND TARGET: ${BACKEND_BASE}`);
-console.log(`📅 TIMESTAMP: ${new Date().toLocaleString()}`);
+console.log(`🚀 FRONTEND STARTING...`);
+console.log(`📡 PROXY TARGET: ${BACKEND_BASE}`);
+console.log(`🌍 PORT: ${PORT}`);
 console.log("=========================================");
 
-// Use pathFilter to catch /api while preserving the full URL path
+// 2. Proxy Middleware
 app.use(createProxyMiddleware({
     target: BACKEND_BASE,
     changeOrigin: true,
     pathFilter: '/api',
     logLevel: 'debug',
     onProxyReq: (proxyReq, req, res) => {
-        // req.originalUrl contains the full path including /api
         console.log(`📡 [PROXY] ${req.method} ${req.originalUrl} -> ${BACKEND_BASE}${req.originalUrl}`);
     },
     onError: (err, req, res) => {
@@ -50,15 +55,10 @@ app.use(createProxyMiddleware({
     }
 }));
 
-// 2. Static Files
+// 3. Static Files
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// 3. Health check
-app.get('/health', (req, res) => {
-    res.json({ status: 'healthy', service: 'frontend', proxy_target: BACKEND_BASE });
-});
-
-// SPA fallback - serve index.html for all other routes
+// 4. SPA fallback
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
@@ -66,5 +66,4 @@ app.get('*', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Frontend server running on port ${PORT}`);
     console.log(`📁 Serving files from: ${path.join(__dirname, 'dist')}`);
-    console.log(`🌐 Access at: http://0.0.0.0:${PORT}`);
 });

@@ -129,7 +129,7 @@ const AdminPricing = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Industry Multipliers */}
-                <div className="glass-panel rounded-[2rem] p-8 space-y-6">
+                <div className="glass-panel rounded-[2rem] p-8 space-y-6 relative z-10">
                     <div className="flex items-center justify-between border-b border-white/5 pb-4">
                         <div className="flex items-center gap-3">
                             <Briefcase className="text-primary" size={24} />
@@ -137,9 +137,9 @@ const AdminPricing = () => {
                         </div>
                     </div>
 
-                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                         {localPricing.industries.map((ind) => (
-                            <div key={ind.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-900/50 rounded-2xl border border-white/5 gap-3">
+                            <div key={ind.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-900/50 rounded-2xl border border-white/5 gap-3 hover:border-primary/30 transition-colors">
                                 <span className="text-slate-200 font-bold text-sm">
                                     {t(`industry.${ind.name.toLowerCase().replace(/ /g, '_').replace(/[()]/g, '')}`) || ind.name}
                                 </span>

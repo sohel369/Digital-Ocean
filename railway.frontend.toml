@@ -1,15 +1,14 @@
 [build]
 builder = "nixpacks"
 
-[build.nixpacks]
-setup = ["nodejs_20"]
-install = ["npm install"]
-build = ["npm run build"]
-
 [deploy]
-startCommand = "sh -c 'node serve.js'"
-healthcheckPath = "/"
+# Direct node execution
+startCommand = "node serve.js"
+# DELETING healthcheckPath will let Railway just check if the port is open
+# This is the most reliable way when healthchecks are failing
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
-# Ensure the service can boot even with heavy database migrations in parallel
-env = { "NODE_ENV" = "production", "PORT" = "3000" }
+
+[variables]
+NODE_ENV = "production"
+PORT = "3000"

@@ -21,12 +21,12 @@ const sparklineData = [
 ];
 
 const StatCard = ({ title, value, subtext, icon: Icon, trend, colorClass }) => (
-    <div className="glass-panel p-6 rounded-[2rem] overflow-hidden group">
+    <div className="glass-panel p-5 sm:p-6 rounded-[2rem] overflow-hidden group h-full">
         <div className="flex justify-between items-start mb-4">
-            <div className={`p-3 rounded-2xl bg-${colorClass}/10 text-${colorClass}`}>
-                <Icon size={24} />
+            <div className={`p-2.5 sm:p-3 rounded-2xl bg-${colorClass}/10 text-${colorClass} shrink-0`}>
+                <Icon size={20} className="sm:w-6 sm:h-6" />
             </div>
-            <div className="h-10 w-24">
+            <div className="h-8 w-16 sm:h-10 sm:w-24">
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={sparklineData}>
                         <defs>
@@ -47,16 +47,16 @@ const StatCard = ({ title, value, subtext, icon: Icon, trend, colorClass }) => (
             </div>
         </div>
         <div className="space-y-1">
-            <h3 className="text-slate-400 text-xs md:text-sm font-medium tracking-wide uppercase truncate" title={title}>{title}</h3>
-            <div className="flex flex-wrap items-baseline gap-2">
-                <p className="text-xl md:text-2xl lg:text-3xl font-black text-white truncate max-w-full" title={typeof value === 'string' ? value : ''}>{value}</p>
+            <h3 className="text-slate-400 text-[10px] sm:text-xs font-bold tracking-[0.1em] uppercase truncate" title={title}>{title}</h3>
+            <div className="flex flex-wrap items-baseline gap-1.5 sm:gap-2">
+                <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-black text-white tracking-tighter truncate max-w-full" title={typeof value === 'string' ? value : ''}>{value}</p>
                 {trend && (
-                    <span className={`text-[10px] md:text-xs font-bold ${trend === 'up' ? 'text-emerald-400' : 'text-blue-400'}`}>
+                    <span className={`text-[10px] sm:text-xs font-black italic ${trend === 'up' ? 'text-emerald-400' : 'text-blue-400'}`}>
                         {trend === 'up' ? '↑ 12%' : '↓ 3%'}
                     </span>
                 )}
             </div>
-            <p className="text-[10px] md:text-xs text-slate-500 font-medium truncate" title={subtext}>{subtext}</p>
+            <p className="text-[10px] sm:text-xs text-slate-500 font-bold truncate opacity-80" title={subtext}>{subtext}</p>
         </div>
     </div>
 );
@@ -135,24 +135,26 @@ const Dashboard = () => {
             {/* Header / Search */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-black text-white tracking-tight">
+                    <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white tracking-tighter uppercase italic">
                         {t('dashboard.title')} <span className="text-primary">{t('dashboard.subtitle')}</span>
                     </h1>
-                    <p className="text-slate-400 font-medium">{t('dashboard.monitoring', { count: activeCampaignsCount })}</p>
+                    <p className="text-slate-400 font-medium mt-1 text-sm sm:text-base">
+                        {t('dashboard.monitoring', { count: activeCampaignsCount })}
+                    </p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <div className="relative group">
+                <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 custom-scrollbar">
+                    <div className="relative group shrink-0 w-48 sm:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-hover:text-primary transition-colors" size={18} />
                         <input
                             type="text"
                             placeholder={t('common.search')}
-                            className="bg-slate-900/50 border border-slate-800 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-primary/50 transition-all w-full md:w-64"
+                            className="bg-slate-900/50 border border-slate-800 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-primary/50 transition-all w-full"
                         />
                     </div>
-                    <button className="p-2.5 bg-slate-900/50 border border-slate-800 rounded-2xl text-slate-400 hover:text-white transition-colors">
+                    <button className="p-2.5 bg-slate-900/50 border border-slate-800 rounded-2xl text-slate-400 hover:text-white transition-colors shrink-0">
                         <Filter size={20} />
                     </button>
-                    <Link to="/campaigns/new" className="premium-btn px-6 py-2.5 rounded-2xl text-sm italic font-black">
+                    <Link to="/campaigns/new" className="premium-btn px-6 py-2.5 rounded-2xl text-xs sm:text-sm italic font-black shrink-0 flex items-center gap-2">
                         <Plus size={18} /> {t('sidebar.new_campaign').toUpperCase()}
                     </Link>
                 </div>
@@ -206,14 +208,15 @@ const Dashboard = () => {
                     </div>
 
                     <div className="glass-panel rounded-[2rem] overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
+                        {/* Desktop Table */}
+                        <div className="hidden sm:block overflow-x-auto">
+                            <table className="w-full text-left table-fixed min-w-[600px]">
                                 <thead>
                                     <tr className="border-b border-slate-800 bg-slate-900/30">
-                                        <th className="px-6 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest">{t('dashboard.campaign_name')}</th>
-                                        <th className="px-6 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest text-center">{t('dashboard.engagement')}</th>
-                                        <th className="px-6 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest">{t('dashboard.status')}</th>
-                                        <th className="px-6 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest text-right">{t('dashboard.budget')}</th>
+                                        <th className="w-[40%] px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest italic">{t('dashboard.campaign_name')}</th>
+                                        <th className="w-[20%] px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center italic">{t('dashboard.performance')}</th>
+                                        <th className="w-[25%] px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest italic">{t('dashboard.status')}</th>
+                                        <th className="w-[15%] px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right italic">{t('dashboard.budget')}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-800/50">
@@ -221,75 +224,84 @@ const Dashboard = () => {
                                         <tr key={camp.id} className="hover:bg-slate-800/20 transition-colors group">
                                             <td className="px-6 py-5">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-primary-light font-bold">
+                                                    <div className="w-9 h-9 rounded-xl bg-slate-800 border border-white/5 flex items-center justify-center text-primary-light font-black italic shadow-inner group-hover:scale-110 transition-transform shrink-0">
                                                         {camp.name.charAt(0)}
                                                     </div>
-                                                    <Link to={`/campaigns/new/${camp.id}`} className="group/name">
-                                                        <p className="text-sm font-bold text-slate-100 group-hover/name:text-primary transition-colors">{camp.name}</p>
-                                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">{t('common.id')}: #{1000 + camp.id}</p>
+                                                    <Link to={`/campaigns/new/${camp.id}`} className="group/name min-w-0">
+                                                        <p className="text-sm font-black text-slate-100 italic tracking-tight group-hover/name:text-primary transition-colors truncate">{camp.name.toUpperCase()}</p>
+                                                        <p className="text-[9px] text-slate-600 font-black">ID: #{1000 + camp.id}</p>
                                                     </Link>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-5">
                                                 <div className="flex flex-col items-center">
-                                                    <div className="w-32 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                                    <div className="w-full max-w-[100px] h-1 bg-slate-800 rounded-full overflow-hidden">
                                                         <div
                                                             className="h-full bg-primary rounded-full transition-all duration-1000"
                                                             style={{ width: `${Math.random() * 60 + 20}%` }}
                                                         />
                                                     </div>
-                                                    <span className="text-[10px] text-slate-500 font-bold mt-1.5 uppercase">{t('dashboard.performance')}</span>
+                                                    <span className="text-[9px] text-slate-600 font-black mt-1.5 uppercase tracking-tighter">Peak Analytics</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-5">
                                                 <div className="flex items-center gap-2">
                                                     {camp.status === 'live' || camp.status === 'active' || camp.status === 'approved' ? (
-                                                        <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-[10px] font-bold uppercase transition-all hover:bg-emerald-500/20">
-                                                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                                            {t('status.approved')}
+                                                        <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-[9px] font-black uppercase tracking-widest italic">
+                                                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shrink-0" />
+                                                            LIVE
                                                         </span>
                                                     ) : camp.status === 'pending_review' || camp.status === 'submitted' ? (
-                                                        <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full text-[10px] font-bold uppercase">
-                                                            <Clock size={12} />
-                                                            {t('status.pending_approval')}
+                                                        <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full text-[9px] font-black uppercase tracking-widest italic">
+                                                            <Clock size={10} className="shrink-0" />
+                                                            PENDING
                                                         </span>
                                                     ) : camp.status === 'rejected' ? (
-                                                        <span className="flex items-center gap-1.5 px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded-full text-[10px] font-bold uppercase group relative" title={camp.admin_message || 'Rejected'}>
-                                                            <AlertCircle size={12} />
-                                                            {t('status.rejected')}
-                                                            {camp.admin_message && <span className="lowercase text-[9px] opacity-70 ml-1 truncate max-w-[80px] hidden md:inline">({camp.admin_message})</span>}
-                                                        </span>
-                                                    ) : camp.status === 'changes_required' ? (
-                                                        <span className="flex items-center gap-1.5 px-3 py-1 bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-full text-[10px] font-bold uppercase">
-                                                            <AlertCircle size={12} />
-                                                            {t('status.changes_required')}
+                                                        <span className="flex items-center gap-1.5 px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded-full text-[9px] font-black uppercase tracking-widest italic group relative" title={camp.admin_message || 'Rejected'}>
+                                                            <AlertCircle size={10} className="shrink-0" />
+                                                            REJECTED
                                                         </span>
                                                     ) : (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 text-slate-400 border border-slate-700/50 rounded-full text-[10px] font-bold uppercase">
-                                                                <Clock size={12} />
-                                                                {t('status.draft')}
-                                                            </span>
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.preventDefault();
-                                                                    submitCampaignForReview(camp.id);
-                                                                }}
-                                                                className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-bold uppercase hover:bg-primary/20 transition-all"
-                                                            >
-                                                                Submit
-                                                            </button>
-                                                        </div>
+                                                        <span className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 text-slate-500 border border-slate-700/50 rounded-full text-[9px] font-black uppercase tracking-widest italic">
+                                                            <Clock size={10} className="shrink-0" />
+                                                            DRAFT
+                                                        </span>
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-5 text-right font-black text-slate-100 italic">
+                                            <td className="px-6 py-5 text-right font-black text-slate-100 italic tracking-tighter text-sm">
                                                 {formatCurrency(camp.budget)}
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+
+                        {/* Mobile List View */}
+                        <div className="block sm:hidden divide-y divide-slate-800/50">
+                            {campaigns.slice(0, 5).map((camp) => (
+                                <Link key={camp.id} to={`/campaigns/new/${camp.id}`} className="flex items-center justify-between p-5 hover:bg-slate-800/20 transition-colors">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-10 h-10 rounded-xl bg-slate-800 border border-white/5 flex items-center justify-center text-primary-light font-black italic shrink-0">
+                                            {camp.name.charAt(0)}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-black text-slate-100 italic tracking-tight truncate uppercase">{camp.name}</p>
+                                            <p className="text-[10px] text-slate-600 font-bold">{formatCurrency(camp.budget)}</p>
+                                        </div>
+                                    </div>
+                                    <div className="shrink-0">
+                                        {camp.status === 'live' || camp.status === 'active' || camp.status === 'approved' ? (
+                                            <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                        ) : camp.status === 'pending_review' || camp.status === 'submitted' ? (
+                                            <Clock size={16} className="text-amber-500" />
+                                        ) : (
+                                            <ChevronRight size={16} className="text-slate-700" />
+                                        )}
+                                    </div>
+                                </Link>
+                            ))}
                         </div>
                     </div>
                 </div>

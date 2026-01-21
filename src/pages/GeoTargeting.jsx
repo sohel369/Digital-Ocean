@@ -158,8 +158,10 @@ const GeoTargeting = () => {
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div>
-                <h1 className="text-2xl font-bold text-slate-100">{t('geo.title')}</h1>
-                <p className="text-slate-400 mt-1">{t('geo.subtitle')}</p>
+                <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white tracking-tighter uppercase italic">
+                    {t('geo.title')}
+                </h1>
+                <p className="text-slate-400 mt-1 text-sm sm:text-base font-medium">{t('geo.subtitle')}</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

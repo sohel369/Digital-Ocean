@@ -104,10 +104,10 @@ const Pricing = () => {
     return (
         <div className="max-w-7xl mx-auto px-4 py-8 animate-in fade-in duration-700">
             <header className="mb-12 text-center lg:text-left">
-                <h1 className="text-4xl font-extrabold text-white tracking-tight mb-3 italic uppercase">
+                <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white tracking-tighter mb-3 italic uppercase">
                     {t('pricing.title')} <span className="text-primary-light">{t('pricing.subtitle')}</span>
                 </h1>
-                <p className="text-slate-400 max-w-2xl text-lg mx-auto lg:mx-0 font-medium">
+                <p className="text-slate-400 max-w-2xl text-sm sm:text-base md:text-lg mx-auto lg:mx-0 font-medium">
                     {t('pricing.description')}
                 </p>
             </header>
@@ -117,23 +117,23 @@ const Pricing = () => {
                 <div className="lg:col-span-8 space-y-8">
 
                     {/* Consolidated Details */}
-                    <div className="glass-panel p-6 md:p-8 rounded-[2rem]">
-                        <h3 className="text-xl font-bold text-white flex items-center gap-3 mb-8">
+                    <div className="glass-panel p-5 sm:p-8 rounded-[2rem]">
+                        <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-3 mb-8">
                             <Layout size={24} className="text-primary" />
                             {t('pricing.config')}
                         </h3>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                             <div className="space-y-3">
                                 <label className="block text-xs font-black text-slate-500 uppercase tracking-widest px-1">{t('campaign.industry')}</label>
                                 {user ? (
-                                    <div className="w-full bg-slate-900/50 border border-white/5 rounded-2xl px-5 py-4 text-slate-100 font-bold flex items-center gap-3">
-                                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                                        {t(`industry.${(user.industry || '').toLowerCase().replace(/ /g, '_')}`) || formatIndustryName(user.industry)}
+                                    <div className="w-full bg-slate-900/50 border border-white/5 rounded-2xl px-5 py-4 text-slate-100 font-bold flex items-center gap-3 text-sm">
+                                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
+                                        <span className="truncate">{t(`industry.${(user.industry || '').toLowerCase().replace(/ /g, '_')}`) || formatIndustryName(user.industry)}</span>
                                     </div>
                                 ) : (
                                     <select
-                                        className="w-full bg-slate-900 border border-white/5 rounded-2xl px-5 py-4 text-slate-200 outline-none focus:ring-2 focus:ring-primary/50"
+                                        className="w-full bg-slate-900 border border-white/5 rounded-2xl px-5 py-4 text-slate-200 text-sm outline-none focus:ring-2 focus:ring-primary/50"
                                         value={selectedIndustry.name}
                                         onChange={(e) => setSelectedIndustry(pricingData.industries.find(i => i.name === e.target.value))}
                                     >
@@ -149,7 +149,7 @@ const Pricing = () => {
                             <div className="space-y-3">
                                 <label className="block text-xs font-black text-slate-500 uppercase tracking-widest px-1">{t('campaign.format')}</label>
                                 <select
-                                    className="w-full bg-slate-900 border border-white/5 rounded-2xl px-5 py-4 text-slate-200 outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="w-full bg-slate-900 border border-white/5 rounded-2xl px-5 py-4 text-slate-200 text-sm outline-none focus:ring-2 focus:ring-primary/50"
                                     value={selectedAdType.name}
                                     onChange={(e) => setSelectedAdType(pricingData.adTypes.find(a => a.name === e.target.value))}
                                 >
@@ -205,15 +205,15 @@ const Pricing = () => {
                             {coverageArea === 'state' && (
                                 <div className="space-y-4">
                                     <label className="text-xs font-black text-slate-500 uppercase tracking-widest px-1">{t('campaign.select_region')}</label>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                                         {pricingData.states
                                             .filter(state => state.countryCode === country)
                                             .map(state => (
                                                 <button
                                                     key={state.name}
                                                     onClick={() => setSelectedState(state)}
-                                                    className={`px-4 py-3 rounded-xl text-xs font-black transition-all border ${selectedState.name === state.name
-                                                        ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20'
+                                                    className={`px-3 sm:px-4 py-3 rounded-xl text-[10px] sm:text-xs font-black transition-all border ${selectedState.name === state.name
+                                                        ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-[1.05]'
                                                         : 'bg-slate-800/40 text-slate-400 border-white/5 hover:bg-slate-800'
                                                         }`}
                                                 >
@@ -243,11 +243,11 @@ const Pricing = () => {
                 </div>
 
                 {/* Summary Card */}
-                <div className="lg:col-span-4">
-                    <div className="glass-panel p-8 rounded-[2rem] sticky top-24 border-t-0 bg-slate-950/80">
+                <div className="lg:col-span-4 mt-8 lg:mt-0">
+                    <div className="glass-panel p-6 sm:p-8 rounded-[2rem] lg:sticky lg:top-24 border-t-0 bg-slate-950/80">
                         <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-r from-primary via-indigo-500 to-purple-600 rounded-full" />
 
-                        <h3 className="text-xl font-bold text-white mb-8">{t('pricing.summary')}</h3>
+                        <h3 className="text-lg sm:text-xl font-bold text-white mb-8 italic uppercase tracking-tighter">{t('pricing.summary')}</h3>
 
                         <div className="space-y-6">
                             {/* Details Section */}

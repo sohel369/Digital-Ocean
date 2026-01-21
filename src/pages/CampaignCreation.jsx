@@ -140,14 +140,16 @@ const CampaignCreation = () => {
             {/* Form Section */}
             <div className="lg:col-span-7 space-y-6">
                 <div>
-                    <h1 className="text-3xl font-black text-white italic">{t('campaign.launch')} <span className="text-primary">{t('campaign.campaign')}</span></h1>
-                    <p className="text-slate-400 mt-1 font-medium">{t('campaign.define_target')}</p>
+                    <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white tracking-tighter uppercase italic">
+                        {t('campaign.launch')} <span className="text-primary">{t('campaign.campaign')}</span>
+                    </h1>
+                    <p className="text-slate-400 mt-1 text-sm sm:text-base font-medium">{t('campaign.define_target')}</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6 pb-20">
                     {/* General Info */}
-                    <div className="glass-panel rounded-3xl p-8 space-y-6">
-                        <h3 className="text-sm font-bold text-slate-100 uppercase tracking-widest border-b border-white/5 pb-4">1. {t('campaign.basics')}</h3>
+                    <div className="glass-panel rounded-3xl p-5 sm:p-8 space-y-6">
+                        <h3 className="text-xs sm:text-sm font-bold text-slate-100 uppercase tracking-widest border-b border-white/5 pb-4">1. {t('campaign.basics')}</h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="md:col-span-2">
@@ -221,8 +223,8 @@ const CampaignCreation = () => {
                     </div>
 
                     {/* Targeting */}
-                    <div className="glass-panel rounded-3xl p-8 space-y-6">
-                        <h3 className="text-sm font-bold text-slate-100 uppercase tracking-widest border-b border-white/5 pb-4">2. {t('campaign.geo_target')}</h3>
+                    <div className="glass-panel rounded-3xl p-5 sm:p-8 space-y-6">
+                        <h3 className="text-xs sm:text-sm font-bold text-slate-100 uppercase tracking-widest border-b border-white/5 pb-4">2. {t('campaign.geo_target')}</h3>
 
                         <div className="flex flex-wrap gap-2">
                             {coverageOptions.map(opt => (
@@ -303,8 +305,8 @@ const CampaignCreation = () => {
                     </div>
 
                     {/* Creative Assets */}
-                    <div className="glass-panel rounded-3xl p-8 space-y-6">
-                        <h3 className="text-sm font-bold text-slate-100 uppercase tracking-widest border-b border-white/5 pb-4">3. {t('campaign.creative')}</h3>
+                    <div className="glass-panel rounded-3xl p-5 sm:p-8 space-y-6">
+                        <h3 className="text-xs sm:text-sm font-bold text-slate-100 uppercase tracking-widest border-b border-white/5 pb-4">3. {t('campaign.creative')}</h3>
 
                         {/* File Upload */}
                         <div
@@ -425,9 +427,9 @@ const CampaignCreation = () => {
                     </div>
 
                     {/* Pricing */}
-                    <div className="glass-panel rounded-3xl p-8 space-y-6">
+                    <div className="glass-panel rounded-3xl p-5 sm:p-8 space-y-6">
                         <div className="flex justify-between items-center border-b border-white/5 pb-4">
-                            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-widest">4. {t('campaign.cost_title')}</h3>
+                            <h3 className="text-xs sm:text-sm font-bold text-slate-100 uppercase tracking-widest">4. {t('campaign.cost_title')}</h3>
                             {/* "Pay As You Go" badge removed to reflect Fixed Monthly Pricing model */}
                         </div>
 
@@ -513,18 +515,18 @@ const CampaignCreation = () => {
                     )}
 
                     {!isReadOnly && (
-                        <div className="pt-2 px-4 py-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-3">
-                            <div className="p-1.5 bg-amber-500/20 rounded-lg text-amber-500">
+                        <div className="mx-1 pt-2 px-4 py-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-3">
+                            <div className="p-1.5 bg-amber-500/20 rounded-lg text-amber-500 shrink-0">
                                 <ShieldAlert size={16} />
                             </div>
-                            <p className="text-xs font-bold text-amber-500/90">{t('campaign.approval_alert')}</p>
+                            <p className="text-[10px] sm:text-xs font-bold text-amber-500/90">{t('campaign.approval_alert')}</p>
                         </div>
                     )}
 
-                    <div className="pt-2 flex flex-col sm:flex-row gap-4">
+                    <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-row gap-4">
                         <button
                             type="button"
-                            className="flex-1 py-4 border border-slate-800 rounded-2xl text-slate-400 font-bold uppercase transition-all hover:bg-slate-800/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full py-4 border border-slate-800 rounded-2xl text-slate-400 font-bold uppercase transition-all hover:bg-slate-800/50 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                             onClick={() => navigate('/')}
                         >
                             {t('common.discard') || 'Discard'}
@@ -533,7 +535,7 @@ const CampaignCreation = () => {
                         {!isReadOnly && (
                             <button
                                 type="button"
-                                className="flex-1 py-4 border border-slate-700 bg-slate-800/30 rounded-2xl text-slate-300 font-bold uppercase transition-all hover:bg-slate-800/60"
+                                className="w-full py-4 border border-slate-700 bg-slate-800/30 rounded-2xl text-slate-300 font-bold uppercase transition-all hover:bg-slate-800/60 text-sm"
                                 onClick={() => handleSubmit(null, true)}
                             >
                                 {t('campaign.save_draft')}
@@ -543,7 +545,7 @@ const CampaignCreation = () => {
                         <button
                             type="submit"
                             disabled={isReadOnly}
-                            className={`flex-[2] py-4 rounded-2xl text-lg group font-black italic transition-all ${isReadOnly ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'premium-btn text-white'}`}
+                            className={`w-full py-4 rounded-2xl text-base sm:text-lg group font-black italic transition-all sm:col-span-2 lg:flex-[2] ${isReadOnly ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'premium-btn text-white'}`}
                         >
                             {isReadOnly ? (formData.status === 'approved' ? t('campaign.status_approved_caps') : t('campaign.status_under_review_caps')) : (formData.status === 'rejected' ? t('campaign.resubmit_campaign_caps') : t('campaign.submit').toUpperCase())}
                             {!isReadOnly && <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform inline ml-1" />}

@@ -114,8 +114,12 @@ const AdminPricing = () => {
         <div className="space-y-8 animate-in fade-in duration-700">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-black text-white italic tracking-tight uppercase">{t('admin.title')} <span className="text-primary">{t('admin.title_sub')}</span></h1>
-                    <p className="text-slate-400 text-sm font-medium">{pricingData.description || 'Global configuration for industry multipliers and base rates.'}</p>
+                    <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white italic tracking-tighter uppercase">
+                        {t('admin.title')} <span className="text-primary">{t('admin.title_sub')}</span>
+                    </h1>
+                    <p className="text-slate-400 text-sm sm:text-base font-medium mt-1">
+                        {pricingData.description || 'Global configuration for industry multipliers and base rates.'}
+                    </p>
                 </div>
                 <button
                     onClick={handleSave}
@@ -129,15 +133,15 @@ const AdminPricing = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Industry Multipliers */}
-                <div className="glass-panel rounded-[2rem] p-8 space-y-6 relative z-10">
-                    <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                <div className="glass-panel rounded-[2rem] p-8 space-y-6 relative overflow-hidden flex flex-col">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-2 sticky top-0 z-20 bg-slate-900/80 backdrop-blur-md">
                         <div className="flex items-center gap-3">
                             <Briefcase className="text-primary" size={24} />
-                            <h2 className="text-xl font-bold text-white">{t('admin.industry_multipliers')}</h2>
+                            <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">{t('admin.industry_multipliers')}</h2>
                         </div>
                     </div>
 
-                    <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar relative z-10 pb-4">
                         {localPricing.industries.map((ind) => (
                             <div key={ind.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-900/50 rounded-2xl border border-white/5 gap-3 hover:border-primary/30 transition-colors">
                                 <span className="text-slate-200 font-bold text-sm">
@@ -158,13 +162,13 @@ const AdminPricing = () => {
                 </div>
 
                 {/* Ad Type Base Rates */}
-                <div className="glass-panel rounded-[2rem] p-8 space-y-6">
-                    <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                <div className="glass-panel rounded-[2rem] p-8 space-y-6 relative overflow-hidden flex flex-col">
+                    <div className="flex items-center gap-3 border-b border-white/5 pb-4 mb-2 sticky top-0 z-20 bg-slate-900/80 backdrop-blur-md">
                         <TrendingUp className="text-emerald-500" size={24} />
-                        <h2 className="text-xl font-bold text-white">{t('admin.base_rates')}</h2>
+                        <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">{t('admin.base_rates')}</h2>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar relative z-10 pb-4">
                         {localPricing.adTypes.map((ad) => (
                             <div key={ad.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-900/50 rounded-2xl border border-white/5 gap-3">
                                 <span className="text-slate-200 font-bold text-sm">
@@ -194,7 +198,7 @@ const AdminPricing = () => {
                     <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-3">
                             <Map className="text-blue-400" size={24} />
-                            <h2 className="text-xl font-bold text-white">{t('admin.geo_weightings')}</h2>
+                            <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">{t('admin.geo_weightings')}</h2>
                         </div>
                         <p className="text-[10px] text-slate-500 font-medium italic">
                             * Industry Specific proprietary algorithm optimising ad reach when considering geographic location and population density.
@@ -261,7 +265,7 @@ const AdminPricing = () => {
             <div className="glass-panel rounded-[2rem] p-8 space-y-8">
                 <div className="flex items-center gap-3 border-b border-white/5 pb-4">
                     <TrendingUp className="text-orange-400" size={24} />
-                    <h2 className="text-xl font-bold text-white">{t('admin.discounts')}</h2>
+                    <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">{t('admin.discounts')}</h2>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12">

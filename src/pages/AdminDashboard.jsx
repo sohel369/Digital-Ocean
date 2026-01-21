@@ -27,10 +27,10 @@ const AdminStatCard = ({ title, value, subtext, icon: Icon, colorClass }) => (
             <Activity size={16} className="text-slate-700 opacity-50" />
         </div>
 
-        <div className="space-y-1 relative z-10">
-            <h3 className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">{title}</h3>
-            <p className="text-3xl font-black text-white italic tracking-tighter">{value}</p>
-            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">{subtext}</p>
+        <div className="space-y-1 relative z-10 min-w-0">
+            <h3 className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] truncate">{title}</h3>
+            <p className="text-2xl min-[400px]:text-3xl font-black text-white italic tracking-tighter truncate">{value}</p>
+            <p className="text-[10px] min-[400px]:text-xs text-slate-500 font-bold uppercase tracking-wider truncate">{subtext}</p>
         </div>
     </div>
 );
@@ -86,10 +86,10 @@ const AdminDashboard = () => {
                             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                         </div>
                     </div>
-                    <h1 className="text-4xl font-black text-white tracking-tighter italic uppercase">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tighter italic uppercase leading-none">
                         Admin <span className="text-primary">Command</span>
                     </h1>
-                    <p className="text-slate-400 font-medium">Platform-wide overview and operational controls.</p>
+                    <p className="text-slate-400 font-medium text-sm sm:text-base mt-2">Platform-wide overview and operational controls.</p>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -107,7 +107,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* Platform Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 <AdminStatCard
                     title="Platform Revenue"
                     value={formatCurrency(stats?.totalSpend || 0)}

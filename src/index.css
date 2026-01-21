@@ -40,6 +40,19 @@ html, body {
   width: 100%;
   overflow-x: hidden;
   position: relative;
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  html {
+    font-size: 13px;
+  }
 }
 
 /* Global Select & Option Matching */
@@ -159,5 +172,24 @@ select {
 
 .animate-float {
   animation: float 6s ease-in-out infinite;
+}
+
+/* Responsive Typography Utilities */
+.text-responsive-h1 {
+  font-size: clamp(1.875rem, 5vw, 3rem); /* 30px to 48px */
+  line-height: 1.1;
+}
+
+.text-responsive-h2 {
+  font-size: clamp(1.5rem, 4vw, 2.25rem); /* 24px to 36px */
+  line-height: 1.2;
+}
+
+.text-responsive-h3 {
+  font-size: clamp(1.25rem, 3vw, 1.875rem); /* 20px to 30px */
+}
+
+.text-responsive-body {
+  font-size: clamp(0.875rem, 2vw, 1rem); /* 14px to 16px */
 }
 

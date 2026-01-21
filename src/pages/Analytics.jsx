@@ -72,8 +72,10 @@ const Analytics = () => {
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-100">{t('analytics.title')}</h1>
-                    <p className="text-slate-400 mt-1">{t('analytics.subtitle')}</p>
+                    <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white tracking-tighter uppercase italic">
+                        {t('analytics.title')}
+                    </h1>
+                    <p className="text-slate-400 mt-1 text-sm sm:text-base font-medium">{t('analytics.subtitle')}</p>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
                     <button onClick={handleExportCSV} className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-xs sm:text-sm font-medium hover:bg-slate-700 text-slate-200 transition-colors">
@@ -171,8 +173,8 @@ const Analytics = () => {
                         {/* Legend Overlay Center */}
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <div className="text-center">
-                                <p className="text-2xl md:text-3xl font-black text-white italic">65%</p>
-                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{t('campaign.mobile')}</p>
+                                <p className="text-2xl sm:text-3xl md:text-4xl font-black text-white italic tracking-tighter">65%</p>
+                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{t('campaign.mobile')}</p>
                             </div>
                         </div>
                     </div>

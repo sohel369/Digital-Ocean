@@ -339,54 +339,72 @@ async def startup_event():
         logger.info("="*80)
 
         # COMPREHENSIVE SCHEMA MIGRATION (Ensures Railway DB matches local models)
+        # COMPREHENSIVE SCHEMA MIGRATION (Ensures Railway DB matches local models)
+        logger.info("🔧 Starting Database Synchronization...")
+        
+        # helper for individual column migrations
+        def add_column_safely(table_name, col_name, col_type):
+            try:
+                from sqlalchemy import text
+                with engine.connect() as conn:
+                    # Check if column exists first (Postgres specific check for safety)
+                    check_query = text(f"""
+                        SELECT count(*) 
+                        FROM information_schema.columns 
+                        WHERE table_name = '{table_name}' AND column_name = '{col_name}'
+                    """)
+                    exists = conn.execute(check_query).scalar()
+                    
+                    if not exists:
+                        logger.info(f"➕ Adding column {col_name} to {table_name}...")
+                        conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_type}"))
+                        conn.commit()
+                        logger.info(f"✅ Added {col_name} to {table_name}")
+                    else:
+                        logger.debug(f"⏭️  Column {col_name} already exists in {table_name}")
+            except Exception as e:
+                logger.error(f"❌ Migration Error adding {col_name} to {table_name}: {e}")
+
         try:
-            from sqlalchemy import text
-            with engine.begin() as conn:
-                logger.info("🔧 Synchronising Database Schema...")
-                
-                # 1. USERS Table: Add ALL columns from the model that might be missing
-                user_cols = [
-                    ("role", "VARCHAR(50) DEFAULT 'advertiser'"),
-                    ("country", "VARCHAR(100)"),
-                    ("industry", "VARCHAR(255)"),
-                    ("oauth_provider", "VARCHAR(50)"),
-                    ("oauth_id", "VARCHAR(255)"),
-                    ("profile_picture", "VARCHAR(500)"),
-                    ("last_login", "TIMESTAMP WITH TIME ZONE")
-                ]
-                for col_name, col_type in user_cols:
-                    try:
-                        conn.execute(text(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
-                    except Exception as e:
-                        logger.debug(f"Migrate Users: {col_name} check: {e}")
+            # 1. USERS Table Columns
+            user_cols = [
+                ("role", "VARCHAR(50) DEFAULT 'advertiser'"),
+                ("country", "VARCHAR(100)"),
+                ("industry", "VARCHAR(255)"),
+                ("oauth_provider", "VARCHAR(50)"),
+                ("oauth_id", "VARCHAR(255)"),
+                ("profile_picture", "VARCHAR(500)"),
+                ("last_login", "TIMESTAMP WITH TIME ZONE")
+            ]
+            for name, dtype in user_cols:
+                add_column_safely("users", name, dtype)
 
-                # 2. CAMPAIGNS Table: Add ALL columns from the model
-                campaign_cols = [
-                    ("headline", "VARCHAR(500)"),
-                    ("landing_page_url", "VARCHAR(500)"),
-                    ("ad_format", "VARCHAR(100)"),
-                    ("description", "TEXT"),
-                    ("tags", "JSON"),
-                    ("calculated_price", "FLOAT"),
-                    ("coverage_area", "VARCHAR(255)"),
-                    ("submitted_at", "TIMESTAMP WITH TIME ZONE"),
-                    ("admin_message", "TEXT"),
-                    ("reviewed_by", "INTEGER"),
-                    ("reviewed_at", "TIMESTAMP WITH TIME ZONE"),
-                    ("impressions", "INTEGER DEFAULT 0"),
-                    ("clicks", "INTEGER DEFAULT 0"),
-                    ("target_postcode", "VARCHAR(20)"),
-                    ("target_state", "VARCHAR(100)"),
-                    ("target_country", "VARCHAR(100)")
-                ]
-                for col_name, col_type in campaign_cols:
-                    try:
-                        conn.execute(text(f"ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
-                    except Exception as e:
-                        logger.debug(f"Migrate Campaigns: {col_name} check: {e}")
+            # 2. CAMPAIGNS Table Columns
+            campaign_cols = [
+                ("headline", "VARCHAR(500)"),
+                ("landing_page_url", "VARCHAR(500)"),
+                ("ad_format", "VARCHAR(100)"),
+                ("description", "TEXT"),
+                ("tags", "JSON"),
+                ("calculated_price", "FLOAT"),
+                ("coverage_area", "VARCHAR(255)"),
+                ("submitted_at", "TIMESTAMP WITH TIME ZONE"),
+                ("admin_message", "TEXT"),
+                ("reviewed_by", "INTEGER"),
+                ("reviewed_at", "TIMESTAMP WITH TIME ZONE"),
+                ("impressions", "INTEGER DEFAULT 0"),
+                ("clicks", "INTEGER DEFAULT 0"),
+                ("target_postcode", "VARCHAR(20)"),
+                ("target_state", "VARCHAR(100)"),
+                ("target_country", "VARCHAR(100)")
+            ]
+            for name, dtype in campaign_cols:
+                add_column_safely("campaigns", name, dtype)
 
-                # 3. Create notifications table if not exists (redundancy)
-                try:
+            # 3. Handle Notifications table correctly
+            try:
+                from sqlalchemy import text
+                with engine.connect() as conn:
                     conn.execute(text("""
                         CREATE TABLE IF NOT EXISTS notifications (
                             id SERIAL PRIMARY KEY,
@@ -400,10 +418,12 @@ async def startup_event():
                             read_at TIMESTAMP WITH TIME ZONE
                         )
                     """))
-                except Exception:
-                    pass
-                
-                logger.info("✅ Database synchronisation complete")
+                    conn.commit()
+                    logger.info("✅ Notifications table checked/created")
+            except Exception as e:
+                logger.error(f"⚠️ Notifications table check failed: {e}")
+
+            logger.info("✅ Database synchronization complete")
         except Exception as mig_err:
             logger.error(f"❌ COMPREHENSIVE MIGRATION FAILED: {mig_err}")
 

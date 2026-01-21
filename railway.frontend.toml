@@ -1,6 +1,3 @@
-# Composite Railway configuration for Frontend
-# This handles build and deploy in one file to avoid context issues
-
 [build]
 builder = "nixpacks"
 
@@ -14,3 +11,5 @@ startCommand = "sh -c 'node serve.js'"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
+# Ensure the service can boot even with heavy database migrations in parallel
+env = { "NODE_ENV" = "production", "PORT" = "3000" }

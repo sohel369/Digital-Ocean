@@ -426,9 +426,8 @@ async def startup_event():
             # 4. Sync Enums (Postgres specific)
             try:
                 from sqlalchemy import text
-                with engine.connect() as conn:
-                    # PG Enum values cannot be added within a transaction block in some versions
-                    # but since we are not using engine.begin() here, we can try to execute them
+                # Use execution_options(isolation_level="AUTOCOMMIT") for ALTER TYPE
+                with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
                     status_values = [
                         "DRAFT", "SUBMITTED", "PENDING_REVIEW", "APPROVED", 
                         "REJECTED", "CHANGES_REQUIRED", "ACTIVE", "PAUSED", 
@@ -436,14 +435,11 @@ async def startup_event():
                     ]
                     for val in status_values:
                         try:
-                            # We use a sub-try block because ADD VALUE will error if it already exists
                             conn.execute(text(f"ALTER TYPE campaignstatus ADD VALUE '{val}'"))
-                            conn.commit()
                             logger.info(f"💾 Added Enum Value: {val} to campaignstatus type")
-                        except Exception as val_err:
-                            # Usually means the value already exists, which is fine
-                            logger.debug(f"Enum sync: {val} already exists or failed: {val_err}")
-                            conn.rollback()
+                        except Exception:
+                            # Most likely already exists, ignore
+                            pass
             except Exception as enum_err:
                 logger.warning(f"⚠️ Enum synchronization skipped: {enum_err}")
 

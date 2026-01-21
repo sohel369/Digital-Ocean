@@ -4,8 +4,8 @@ dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand = "sh -c 'cd backend && /opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}'"
-healthcheckPath = "/health"
-healthcheckTimeout = 120
+healthcheckPath = "/api/health"
+healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 # Deployment version: 2.2.0 - Using Dockerfile to avoid Nixpacks ENV errors
 

@@ -229,8 +229,12 @@ const Login = () => {
                         <p className="text-[10px] uppercase font-bold tracking-[0.3em] text-slate-700 mb-3">{t('auth.emergency') || 'Master Credentials'}</p>
                         <div className="flex flex-col items-center justify-center gap-1">
                             <div className="flex items-center gap-2">
+                                <span className="text-[9px] text-blue-500/60 font-bold uppercase">Email:</span>
+                                <span className="text-[9px] text-slate-300 font-mono">admin@adplatform.com</span>
                             </div>
                             <div className="flex items-center gap-2">
+                                <span className="text-[9px] text-blue-500/60 font-bold uppercase">Pass:</span>
+                                <span className="text-[9px] text-slate-300 font-mono">admin123</span>
                             </div>
                         </div>
                     </div>

@@ -1,7 +1,6 @@
 /**
  * Simple static file server for SPA (Single Page Application)
  * Serves the dist folder and redirects all routes to index.html
- * This is needed for React Router to work on Railway deployment
  */
 
 import express from 'express';
@@ -15,14 +14,15 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 0. HEALTH CHECK FIRST
+// Request logging for Railway debugging
+app.use((req, res, next) => {
+    console.log(`📡 [${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});
+
+// 0. HEALTH CHECK (Ensures Railway knows we are alive)
 app.get('/health', (req, res) => {
-    res.status(200).json({
-        status: 'healthy',
-        service: 'frontend',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime()
-    });
+    res.status(200).send('OK');
 });
 
 // 1. Get and sanitize Backend URL
@@ -32,38 +32,36 @@ const BACKEND_BASE = RAW_BACKEND_URL.includes('/api') ? RAW_BACKEND_URL.split('/
 console.log("=========================================");
 console.log(`🚀 FRONTEND STARTING...`);
 console.log(`📡 PROXY TARGET: ${BACKEND_BASE}`);
-console.log(`🌍 PORT: ${PORT}`);
+console.log(`🌍 LISTENING ON PORT: ${PORT}`);
 console.log("=========================================");
 
-// 2. Proxy Middleware
+// 2. Proxy Middleware for API
 app.use(createProxyMiddleware({
     target: BACKEND_BASE,
     changeOrigin: true,
     pathFilter: '/api',
-    logLevel: 'debug',
     onProxyReq: (proxyReq, req, res) => {
-        console.log(`📡 [PROXY] ${req.method} ${req.originalUrl} -> ${BACKEND_BASE}${req.originalUrl}`);
+        // Log proxy requests
     },
     onError: (err, req, res) => {
         console.error('❌ Proxy Error:', err.message);
-        res.status(502).json({
-            error: 'Backend Unreachable',
-            detail: err.message,
-            target: BACKEND_BASE,
-            path: req.originalUrl
-        });
+        res.status(502).json({ error: 'Backend Unreachable' });
     }
 }));
 
-// 3. Static Files
+// 3. Static Files (ensure dist exists)
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// 4. SPA fallback
+// 4. SPA fallback (Very important for React Router)
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'), (err) => {
+        if (err) {
+            console.error('❌ Error sending index.html:', err.message);
+            res.status(500).send('Internal Server Error: dist/index.html not found. Make sure build succeeded.');
+        }
+    });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Frontend server running on port ${PORT}`);
-    console.log(`📁 Serving files from: ${path.join(__dirname, 'dist')}`);
+    console.log(`🚀 Frontend server fully operational on port ${PORT}`);
 });

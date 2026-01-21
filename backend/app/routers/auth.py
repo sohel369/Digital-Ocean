@@ -95,9 +95,15 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Update last login
-    user.last_login = datetime.utcnow()
-    db.commit()
+    # Update last login (non-critical, wrap in try to prevent request crash)
+    try:
+        user.last_login = datetime.utcnow()
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        # Log error but don't fail authentication
+        from ..main import logger
+        logger.warning(f"⚠️ Failed to update last_login for {user.email}: {e}")
     
     # Generate tokens
     tokens = auth.create_user_tokens(user)
@@ -122,9 +128,15 @@ async def login_json(user_credentials: schemas.UserLogin, db: Session = Depends(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Update last login
-    user.last_login = datetime.utcnow()
-    db.commit()
+    # Update last login (non-critical, wrap in try to prevent request crash)
+    try:
+        user.last_login = datetime.utcnow()
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        # Log error but don't fail authentication
+        from ..main import logger
+        logger.warning(f"⚠️ Failed to update last_login for {user.email}: {e}")
     
     # Generate tokens
     tokens = auth.create_user_tokens(user)

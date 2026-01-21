@@ -42,7 +42,8 @@ from .routers import (
     payment,
     frontend_compat,
     geo,
-    campaign_approval
+    campaign_approval,
+    debug
 )
 
 
@@ -277,6 +278,7 @@ app.include_router(media.router, prefix="/api")
 app.include_router(pricing.router, prefix="/api")
 app.include_router(payment.router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
+app.include_router(debug.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(geo.router, prefix="/api")
 app.include_router(campaign_approval.router, prefix="/api")
@@ -292,156 +294,118 @@ async def startup_event():
     """
     logger.info("🚀 STARTUP: Beginning initialization...")
     
-    # Check SECRET_KEY stability - ENHANCED DIAGNOSTICS
-    logger.info("="*80)
-    logger.info("🔐 JWT SECRET CONFIGURATION CHECK")
-    logger.info("="*80)
-    logger.info(f"SECRET_KEY Source: Environment variable JWT_SECRET")
-    logger.info(f"SECRET_KEY Length: {len(settings.SECRET_KEY)} characters")
-    logger.info(f"SECRET_KEY Preview: {settings.SECRET_KEY[:15]}...{settings.SECRET_KEY[-15:]}")
-    logger.info(f"Algorithm: {settings.ALGORITHM}")
-    logger.info(f"Access Token Expiration: {settings.ACCESS_TOKEN_EXPIRE_MINUTES} minutes ({settings.ACCESS_TOKEN_EXPIRE_MINUTES/60:.1f} hours)")
-    logger.info(f"Refresh Token Expiration: {settings.REFRESH_TOKEN_EXPIRE_DAYS} days")
-    
-    if settings.SECRET_KEY == "dev_secret_key_change_me_in_production":
-        logger.warning("="*80)
-        logger.warning("⚠️  CRITICAL SECURITY WARNING!")
-        logger.warning("⚠️  Using default development JWT_SECRET")
-        logger.warning("⚠️  Tokens will be INVALID if server restarts!")
-        logger.warning("⚠️  ")
-        logger.warning("⚠️  ACTION REQUIRED:")
-        logger.warning("⚠️  1. Go to Railway Dashboard")
-        logger.warning("⚠️  2. Select your Backend Service")
-        logger.warning("⚠️  3. Go to Variables tab")
-        logger.warning("⚠️  4. Add: JWT_SECRET=<your_secure_random_64_char_secret>")
-        logger.warning("⚠️  5. Add: ACCESS_TOKEN_EXPIRE_MINUTES=1440")
-        logger.warning("⚠️  6. Add: REFRESH_TOKEN_EXPIRE_DAYS=30")
-        logger.warning("="*80)
-    else:
-        logger.info(f"✅ SECURITY: Custom JWT_SECRET detected (Length: {len(settings.SECRET_KEY)})")
-        
-        # Test token generation and validation
-        try:
-            from . import auth as auth_module
-            test_payload = {"sub": "1", "email": "test@example.com", "role": "admin"}
-            test_token = auth_module.create_access_token(data=test_payload)
-            logger.info(f"✅ JWT Token Generation Test: SUCCESS (token length: {len(test_token)})")
-            
-            # Try to decode it
-            decoded = auth_module.decode_token(test_token)
-            logger.info(f"✅ JWT Token Validation Test: SUCCESS (decoded sub: {decoded.get('sub')})")
-        except Exception as token_err:
-            logger.error(f"❌ JWT Token Test FAILED: {token_err}")
-            
-    logger.info("="*80)
-
     try:
-        # Initialize database immediately (creates tables if they don't exist)
-        try:
-            init_db()
-            logger.info("✅ Database tables initialized successfully")
-            
-            # SCHEMA MIGRATION: Ensure 'industry' column exists in 'users' table (Production Fix)
-            from sqlalchemy import text
-            with engine.connect() as conn:
-                try:
-                    # Use PostgreSQL-specific syntax to add column if not exists
-                    logger.info("🔧 Checking/adding 'industry' column to 'users' table...")
-                    
-                    # PostgreSQL 9.6+ supports IF NOT EXISTS
-                    conn.execute(text("""
-                        DO $$ 
-                        BEGIN 
-                            IF NOT EXISTS (
-                                SELECT 1 FROM information_schema.columns 
-                                WHERE table_name='users' AND column_name='industry'
-                            ) THEN
-                                ALTER TABLE users ADD COLUMN industry VARCHAR(255);
-                                RAISE NOTICE 'Added industry column to users table';
-                            ELSE
-                                RAISE NOTICE 'Industry column already exists';
-                            END IF;
-                        END $$;
-                    """))
-                    conn.commit()
-                    logger.info("✅ Users table 'industry' column verified/added")
-                except Exception as mig_err:
-                    logger.warning(f"Note: Users table migration check: {mig_err}")
-                    # Try alternative method for older PostgreSQL versions
-                    try:
-                        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS industry VARCHAR(255)"))
-                        conn.commit()
-                        logger.info("✅ Users table 'industry' column added (alternative method)")
-                    except Exception as alt_err:
-                        logger.warning(f"Alternative migration also failed: {alt_err}")
-        except Exception as e:
-            logger.error(f"⚠️ init_db failed: {e}")
+        # Check SECRET_KEY stability - ENHANCED DIAGNOSTICS
+        logger.info("="*80)
+        logger.info("🔐 JWT SECRET CONFIGURATION CHECK")
+        logger.info("="*80)
+        logger.info(f"SECRET_KEY Source: Environment variable JWT_SECRET")
+        logger.info(f"SECRET_KEY Length: {len(settings.SECRET_KEY)} characters")
+        logger.info(f"SECRET_KEY Preview: {settings.SECRET_KEY[:15]}...{settings.SECRET_KEY[-15:]}")
+        logger.info(f"Algorithm: {settings.ALGORITHM}")
+        logger.info(f"Access Token Expiration: {settings.ACCESS_TOKEN_EXPIRE_MINUTES} minutes ({settings.ACCESS_TOKEN_EXPIRE_MINUTES/60:.1f} hours)")
+        logger.info(f"Refresh Token Expiration: {settings.REFRESH_TOKEN_EXPIRE_DAYS} days")
         
-        # Schema Migration: Add missing columns if they don't exist (Production Fix)
-        try:
-            from .database import engine, SessionLocal
-            from sqlalchemy import text
+        if settings.SECRET_KEY == "dev_secret_key_change_me_in_production":
+            logger.warning("="*80)
+            logger.warning("⚠️  CRITICAL SECURITY WARNING!")
+            logger.warning("⚠️  Using default development JWT_SECRET")
+            logger.warning("⚠️  Tokens will be INVALID if server restarts!")
+            logger.warning("⚠️  ")
+            logger.warning("⚠️  ACTION REQUIRED:")
+            logger.warning("⚠️  1. Go to Railway Dashboard")
+            logger.warning("⚠️  2. Select your Backend Service")
+            logger.warning("⚠️  3. Go to Variables tab")
+            logger.warning("⚠️  4. Add: JWT_SECRET=<your_secure_random_64_char_secret>")
+            logger.warning("⚠️  5. Add: ACCESS_TOKEN_EXPIRE_MINUTES=1440")
+            logger.warning("⚠️  6. Add: REFRESH_TOKEN_EXPIRE_DAYS=30")
+            logger.warning("="*80)
+        else:
+            logger.info(f"✅ SECURITY: Custom JWT_SECRET detected (Length: {len(settings.SECRET_KEY)})")
             
-            with engine.connect() as conn:
-                logger.info("🛠️ Checking for schema migrations...")
+            # Test token generation and validation
+            try:
+                from . import auth as auth_module
+                test_payload = {"sub": "1", "email": "test@example.com", "role": "admin"}
+                test_token = auth_module.create_access_token(data=test_payload)
+                logger.info(f"✅ JWT Token Generation Test: SUCCESS (token length: {len(test_token)})")
+                
+                # Try to decode it
+                decoded = auth_module.decode_token(test_token)
+                logger.info(f"✅ JWT Token Validation Test: SUCCESS (decoded sub: {decoded.get('sub')})")
+            except Exception as token_err:
+                logger.error(f"❌ JWT Token Test FAILED: {token_err}")
+                
+        logger.info("="*80)
+
+        # COMPREHENSIVE SCHEMA MIGRATION (Ensures Railway DB matches local models)
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                logger.info("🔧 Synchronising Database Schema...")
+                
+                # 1. USERS Table: Add ALL columns from the model that might be missing
+                user_cols = [
+                    ("role", "VARCHAR(50) DEFAULT 'advertiser'"),
+                    ("country", "VARCHAR(100)"),
+                    ("industry", "VARCHAR(255)"),
+                    ("oauth_provider", "VARCHAR(50)"),
+                    ("oauth_id", "VARCHAR(255)"),
+                    ("profile_picture", "VARCHAR(500)"),
+                    ("last_login", "TIMESTAMP WITH TIME ZONE")
+                ]
+                for col_name, col_type in user_cols:
+                    try:
+                        conn.execute(text(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
+                    except Exception as e:
+                        logger.debug(f"Migrate Users: {col_name} check: {e}")
+
+                # 2. CAMPAIGNS Table: Add ALL columns from the model
+                campaign_cols = [
+                    ("headline", "VARCHAR(500)"),
+                    ("landing_page_url", "VARCHAR(500)"),
+                    ("ad_format", "VARCHAR(100)"),
+                    ("description", "TEXT"),
+                    ("tags", "JSON"),
+                    ("calculated_price", "FLOAT"),
+                    ("coverage_area", "VARCHAR(255)"),
+                    ("submitted_at", "TIMESTAMP WITH TIME ZONE"),
+                    ("admin_message", "TEXT"),
+                    ("reviewed_by", "INTEGER"),
+                    ("reviewed_at", "TIMESTAMP WITH TIME ZONE"),
+                    ("impressions", "INTEGER DEFAULT 0"),
+                    ("clicks", "INTEGER DEFAULT 0"),
+                    ("target_postcode", "VARCHAR(20)"),
+                    ("target_state", "VARCHAR(100)"),
+                    ("target_country", "VARCHAR(100)")
+                ]
+                for col_name, col_type in campaign_cols:
+                    try:
+                        conn.execute(text(f"ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
+                    except Exception as e:
+                        logger.debug(f"Migrate Campaigns: {col_name} check: {e}")
+
+                # 3. Create notifications table if not exists (redundancy)
                 try:
-                    # 1. Add missing columns to campaigns table
-                    columns_to_add = [
-                        ("headline", "VARCHAR(500)"),
-                        ("landing_page_url", "VARCHAR(500)"),
-                        ("ad_format", "VARCHAR(100)"),
-                        ("description", "TEXT"),
-                        ("tags", "JSON"),
-                        ("calculated_price", "FLOAT"),
-                        ("coverage_area", "VARCHAR(255)"),
-                        # Admin approval workflow columns
-                        ("submitted_at", "TIMESTAMP WITH TIME ZONE"),
-                        ("admin_message", "TEXT"),
-                        ("reviewed_by", "INTEGER"),
-                        ("reviewed_at", "TIMESTAMP WITH TIME ZONE")
-                    ]
-                    
-                    for col_name, col_type in columns_to_add:
-                        try:
-                            # Using text() explicitly for safety
-                            conn.execute(text(f"ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
-                            conn.commit()
-                        except Exception as col_err:
-                            logger.warning(f"Note: Column {col_name} check: {col_err}")
-                    
-                    # 2. Add missing columns to users table (if any)
-                    try:
-                        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE"))
-                        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture VARCHAR(500)"))
-                        conn.commit()
-                    except Exception:
-                        pass
-                    
-                    # 3. Create notifications table if not exists
-                    try:
-                        conn.execute(text("""
-                            CREATE TABLE IF NOT EXISTS notifications (
-                                id SERIAL PRIMARY KEY,
-                                user_id INTEGER NOT NULL REFERENCES users(id),
-                                campaign_id INTEGER REFERENCES campaigns(id),
-                                notification_type VARCHAR(50) NOT NULL,
-                                title VARCHAR(255) NOT NULL,
-                                message TEXT NOT NULL,
-                                is_read BOOLEAN DEFAULT FALSE,
-                                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                                read_at TIMESTAMP WITH TIME ZONE
-                            )
-                        """))
-                        conn.commit()
-                        logger.info("✅ Notifications table created/verified")
-                    except Exception as notif_err:
-                        logger.warning(f"Note: Notifications table check: {notif_err}")
-                        
-                    logger.info("✅ Schema migrations checked/applied")
-                except Exception as e:
-                    logger.error(f"❌ Migration check failed: {e}")
-        except Exception as e:
-            logger.error(f"⚠️ Migration outer block failed: {e}")
+                    conn.execute(text("""
+                        CREATE TABLE IF NOT EXISTS notifications (
+                            id SERIAL PRIMARY KEY,
+                            user_id INTEGER NOT NULL REFERENCES users(id),
+                            campaign_id INTEGER REFERENCES campaigns(id),
+                            notification_type VARCHAR(50) NOT NULL,
+                            title VARCHAR(255) NOT NULL,
+                            message TEXT NOT NULL,
+                            is_read BOOLEAN DEFAULT FALSE,
+                            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                            read_at TIMESTAMP WITH TIME ZONE
+                        )
+                    """))
+                except Exception:
+                    pass
+                
+                logger.info("✅ Database synchronisation complete")
+        except Exception as mig_err:
+            logger.error(f"❌ COMPREHENSIVE MIGRATION FAILED: {mig_err}")
 
         # Ensure PricingMatrix and GeoData are initialized (Production Fix)
         try:

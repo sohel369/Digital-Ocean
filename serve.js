@@ -55,7 +55,7 @@ app.use(express.static(path.join(__dirname, 'dist')));
 
 // 3. Health check
 app.get('/health', (req, res) => {
-    res.json({ status: 'healthy', service: 'frontend', proxy_target: PROXY_TARGET });
+    res.json({ status: 'healthy', service: 'frontend', proxy_target: BACKEND_BASE });
 });
 
 // SPA fallback - serve index.html for all other routes

@@ -99,15 +99,34 @@
 1. `src/pages/AdminPricing.jsx`
 2. `src/pages/CampaignCreation.jsx`
 
+### 4. ✅ Railway Database Schema Sync (NEW)
+**Problem**: Railway login was failing with `column users.industry does not exist` despite local working perfectly.
+
+**Solution**: 
+- Re-implemented migration logic in `backend/app/main.py` using `engine.begin()` for atomic transactions.
+- Added `IF NOT EXISTS` to all migration commands for safety.
+- Verified that `JWT_SECRET` is now correctly set on Railway.
+
+**File**: `backend/app/main.py` (Startup event)
+
+## Deployment Verification (Railway)
+
+### Test 1: Health Check
+- URL: `https://balanced-wholeness-production-ca00.up.railway.app/health`
+- Result: Should show version `1.0.3-migration-fix` and status `healthy`.
+
+### Test 2: Admin Login
+- URL: `https://balanced-wholeness-production-ca00.up.railway.app/api/auth/login/json`
+- Credentials: `admin@adplatform.com` / `admin123`
+- Result: Should return `access_token` (No more "column not found" error).
+
+### Test 3: Environment Check
+- URL: `https://balanced-wholeness-production-ca00.up.railway.app/api/debug/env`
+- Result: `JWT_SECRET` should be present in `env_keys`.
+
 ## Next Steps If Issues Persist
 
-If campaigns still don't save:
-1. Share the browser console errors (F12 → Console)
-2. Share backend terminal output
-3. Check if http://localhost:8000/docs is accessible
-4. Try creating a campaign via the Swagger UI at http://localhost:8000/docs
-
-If admin config doesn't save:
-1. Verify user role is "admin" (check localStorage or user profile)
-2. Check network tab (F12 → Network) for the POST request to `/pricing/admin/config`
-3. Look for 403 Forbidden or 401 Unauthorized responses
+If you still see "Could not validate credentials" on Railway:
+1. **Clear Browser Cache**: `localStorage.clear(); location.reload();` in console.
+2. **Check Railway Logs**: Ensure uvicorn started without "CRITICAL MIGRATION ERROR".
+3. **Manual Migration**: If all else fails, run `python migrate_add_industry_column.py` if you have Railway CLI configured, or use the Railway Console tab to run the SQL directly.

@@ -186,17 +186,20 @@ ACCESS_TOKEN_EXPIRE_MINUTES=1440
 
 ---
 
-### Login হওয়ার পরেই logout হচ্ছে
+### Error: "500 Internal Server Error" on Login
 
-**Possible Causes:**
-1. JWT_SECRET সেট না থাকা (main cause)
-2. Token decode error
-3. User not found in database
+**Reason:** Database Schema imbalance. নতুন columns (যেমন: `industry`, `oauth_provider`) তৈরি না হওয়ার কারণে backend crash করছে।
 
 **Solution:**
-1. JWT_SECRET সেট করুন (Step 1)
-2. Backend logs দেখুন JWT error আছে কিনা
-3. Database-এ admin user আছে কিনা verify করুন
+1. Backend automatic migration এখন সব columns যোগ করে দিবে।
+2. যদি তবুও সমস্যা হয়, সরাসরি **Railway Console**-এ এই query রান করতে পারেন:
+   ```sql
+   ALTER TABLE users ADD COLUMN IF NOT EXISTS industry VARCHAR(255);
+   ALTER TABLE users ADD COLUMN IF NOT EXISTS oauth_provider VARCHAR(50);
+   ALTER TABLE users ADD COLUMN IF NOT EXISTS oauth_id VARCHAR(255);
+   ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;
+   ```
+3. Backend Logs-এ দেখুন **"✅ Database synchronisation complete"** মেসেজটি আসছে কিনা।
 
 ---
 

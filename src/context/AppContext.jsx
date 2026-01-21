@@ -129,7 +129,11 @@ export const AppProvider = ({ children }) => {
     // Auth header helper
     const getAuthHeaders = () => {
         const token = localStorage.getItem('access_token');
-        if (!token) return {};
+
+        // STRICT VALIDATION: Only send token if it's a non-empty string and not 'null'/'undefined'
+        if (!token || token === 'null' || token === 'undefined') {
+            return {};
+        }
 
         // If we have a mock token, we still send it but log a warning.
         // This prevents silent failures in the frontend and lets the backend return 401 officially.
@@ -250,20 +254,22 @@ export const AppProvider = ({ children }) => {
                 console.warn("⚠️ API returned 401 Unauthorized. Session might be invalid.");
                 const token = localStorage.getItem('access_token');
 
-                // If we have a REAL token but got 401, it's definitely expired/invalid
-                if (token && !token.includes('mock_') && (statsRes.status === 401 || campaignsRes.status === 401)) {
-                    console.warn("Session expired. Clearing local user data.");
+                // If we have a REAL token but got 401, it's definitely expired/invalid or JWT_SECRET changed
+                if (token && !token.includes('mock_')) {
+                    console.warn("Session invalid or expired. Clearing local user data.");
                     localStorage.removeItem('user');
                     localStorage.removeItem('access_token');
                     localStorage.removeItem('refresh_token');
                     setUser(null);
                     setAuthLoading(false);
+
+                    // Only redirect if we are not already on the login page or landing page
                     if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+                        toast.error("Session Expired", { description: "Your session has expired or is invalid. Please login again." });
                         window.location.href = '/login';
                     }
                     return;
                 }
-                // If it's a mock token or we're on the login page already, don't redirect
             }
 
             if (statsRes.ok) {

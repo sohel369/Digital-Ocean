@@ -1,13 +1,16 @@
-# Railway configuration for Frontend deployment ONLY
-# This is for the "Digital-Ocean" service
+# Composite Railway configuration for Frontend
+# This handles build and deploy in one file to avoid context issues
 
 [build]
 builder = "nixpacks"
-nixpacksConfigPath = "nixpacks.frontend.toml"
+
+[build.nixpacks]
+setup = ["nodejs_20"]
+install = ["npm install"]
+build = ["npm run build"]
 
 [deploy]
-# Frontend start command (sh -c is REQUIRED for nixpacks to find node)
 startCommand = "sh -c 'node serve.js'"
 healthcheckPath = "/health"
-healthcheckTimeout = 120
+healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

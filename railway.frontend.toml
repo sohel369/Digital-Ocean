@@ -6,7 +6,8 @@ builder = "nixpacks"
 nixpacksConfigPath = "nixpacks.frontend.toml"
 
 [deploy]
-# Frontend start command
-startCommand = "node serve.js"
+# Frontend start command (sh -c is REQUIRED for nixpacks to find node)
+startCommand = "sh -c 'node serve.js'"
+healthcheckPath = "/health"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"

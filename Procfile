@@ -1,1 +1,2 @@
-web: cd backend && /opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port $PORT
+web: sh -c "cd backend && /opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+

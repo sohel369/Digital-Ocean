@@ -443,6 +443,25 @@ async def startup_event():
             except Exception as enum_err:
                 logger.warning(f"⚠️ Enum synchronization skipped: {enum_err}")
 
+            # 5. Fix Foreign Key Constraints (Cascade Delete)
+            try:
+                from sqlalchemy import text
+                with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+                    # Notifications -> Campaigns Cascade
+                    conn.execute(text("""
+                        DO $$ 
+                        BEGIN 
+                            IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'notifications_campaign_id_fkey') THEN
+                                ALTER TABLE notifications DROP CONSTRAINT notifications_campaign_id_fkey;
+                                ALTER TABLE notifications ADD CONSTRAINT notifications_campaign_id_fkey 
+                                FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE;
+                            END IF;
+                        END $$;
+                    """))
+                    logger.info("✅ Notifications FK updated to CASCADE")
+            except Exception as fk_err:
+                logger.warning(f"⚠️ FK migration skipped: {fk_err}")
+
             logger.info("✅ Database synchronization complete")
         except Exception as mig_err:
             logger.error(f"❌ COMPREHENSIVE MIGRATION FAILED: {mig_err}")

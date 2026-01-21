@@ -8,7 +8,7 @@ build = ["npm run build"]
 
 [deploy]
 startCommand = "sh -c 'node serve.js'"
-healthcheckPath = "/health"
+healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 # Ensure the service can boot even with heavy database migrations in parallel

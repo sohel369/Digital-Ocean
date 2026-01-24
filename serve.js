@@ -30,7 +30,10 @@ app.get('/', (req, res, next) => {
 });
 
 // 3. Backend URL
-const BACKEND_URL = process.env.BACKEND_URL || process.env.VITE_API_URL || 'https://digital-ocean-production-01ee.up.railway.app';
+// 3. Backend URL - DEFAULT TO ENV VARS
+// IF YOU SEE THIS, YOU MUST SET 'VITE_API_URL' IN RAILWAY FRONTEND SERVICE VARIABLES
+const BACKEND_URL = process.env.BACKEND_URL || process.env.VITE_API_URL || 'http://localhost:8000';
+console.log(`🔌 Proxy Configured: /api -> ${BACKEND_URL}`);
 const API_TARGET = BACKEND_URL.replace(/\/api$/, '');
 
 // 4. API Proxy

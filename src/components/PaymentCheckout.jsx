@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { ShieldCheck, CheckCircle2, Clock, ChevronRight } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import { toast } from 'sonner';
 
 /**
  * PaymentCheckout Component
@@ -18,200 +21,129 @@ import React, { useState } from 'react';
  */
 export const PaymentCheckout = ({
     amount = 500,
-    currency = '$',
-    onSuccess,
+    currency = 'USD',
+    campaignId,
     onCancel
 }) => {
+    const { initiatePayment, formatCurrency } = useApp();
     const [isProcessing, setIsProcessing] = useState(false);
-    const [formData, setFormData] = useState({
-        name: '',
-        cardNumber: '',
-        expiry: '',
-        cvc: ''
-    });
 
-    // Simulate processing
-    const handleSubmit = (e) => {
-        e.preventDefault();
+    const handleStripeCheckout = async () => {
+        if (!campaignId) {
+            toast.error("Missing Campaign ID. Please create a campaign first.");
+            return;
+        }
         setIsProcessing(true);
-
-        // Fake API delay
-        setTimeout(() => {
+        try {
+            await initiatePayment(campaignId, currency);
+        } catch (error) {
+            console.error("Stripe Redirect Error:", error);
             setIsProcessing(false);
-            if (onSuccess) onSuccess();
-        }, 2000);
-    };
-
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        // Simple mock formatting would go here in a real app
-        setFormData(prev => ({ ...prev, [name]: value }));
+        }
     };
 
     return (
-        <div className="w-full max-w-md mx-auto bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden font-sans text-slate-200">
-
+        <div className="w-full max-w-md mx-auto bg-slate-950/90 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden font-sans text-slate-200">
             {/* Header / Summary */}
-            <div className="bg-slate-800/50 p-6 border-b border-slate-700/50 flex justify-between items-center">
-                <div>
-                    <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Total due</h2>
-                    <div className="text-3xl font-bold text-white mt-1">{currency}{amount}</div>
+            <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-8 border-b border-white/5 flex justify-between items-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl rounded-full -mr-16 -mt-16"></div>
+                <div className="relative z-10">
+                    <h2 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Total Term Investment</h2>
+                    <div className="text-4xl font-black text-white mt-1 tracking-tighter">
+                        {formatCurrency(amount)}
+                    </div>
                 </div>
-                <div className="h-10 w-10 bg-indigo-500/10 rounded-full flex items-center justify-center text-indigo-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
+                <div className="relative z-10 h-14 w-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary shadow-[0_0_20px_rgba(59,130,246,0.3)]">
+                    <ShieldCheck size={28} />
                 </div>
             </div>
 
-            {/* Payment Form */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
-
-                {/* Card Number */}
-                <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-400 ml-1">Card information</label>
-                    <div className="relative group">
-                        <input
-                            type="text"
-                            name="cardNumber"
-                            placeholder="0000 0000 0000 0000"
-                            className="w-full bg-slate-950/50 border border-slate-700 rounded-lg px-4 py-3 pl-11 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
-                            required
-                            onChange={handleInputChange}
-                        />
-                        <svg className="absolute left-3.5 top-3.5 text-slate-500 group-focus-within:text-indigo-400 transition-colors" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
-                            <line x1="1" y1="10" x2="23" y2="10"></line>
-                        </svg>
+            {/* Payment Body */}
+            <div className="p-8 space-y-8">
+                <div className="space-y-4">
+                    <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
+                        <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-400">
+                            <CheckCircle2 size={20} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-slate-200">Secure Stripe Integration</p>
+                            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">PCI-DSS Compliant Encryption</p>
+                        </div>
                     </div>
-                </div>
 
-                {/* Expiry & CVC */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                        <label className="text-xs font-semibold text-slate-400 ml-1">Expiry Date</label>
-                        <input
-                            type="text"
-                            name="expiry"
-                            placeholder="MM / YY"
-                            className="w-full bg-slate-950/50 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
-                            required
-                            onChange={handleInputChange}
-                        />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-xs font-semibold text-slate-400 ml-1">CVC</label>
-                        <div className="relative group">
-                            <input
-                                type="text"
-                                name="cvc"
-                                placeholder="123"
-                                className="w-full bg-slate-950/50 border border-slate-700 rounded-lg px-4 py-3 pr-10 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
-                                required
-                                onChange={handleInputChange}
-                            />
-                            <svg className="absolute right-3 top-3.5 text-slate-500" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                            </svg>
+                    <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
+                        <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-400">
+                            <Clock size={20} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-slate-200">Instant Activation</p>
+                            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Live tracking within 24 hours</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Cardholder Name */}
-                <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-400 ml-1">Cardholder Name</label>
-                    <input
-                        type="text"
-                        name="name"
-                        placeholder="Full Name on Card"
-                        className="w-full bg-slate-950/50 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
-                        required
-                        onChange={handleInputChange}
-                    />
-                </div>
+                {/* Info Text */}
+                <p className="text-[10px] text-slate-500 leading-relaxed text-center font-medium uppercase tracking-widest px-4">
+                    You will be redirected to Stripe's secure hosted payment page to finalize your payment and setup your billing method.
+                </p>
 
                 {/* Action Button */}
                 <button
-                    type="submit"
+                    onClick={handleStripeCheckout}
                     disabled={isProcessing}
                     className={`
-            w-full flex items-center justify-center py-4 rounded-xl font-bold text-white shadow-lg 
-            transition-all duration-200 mt-2
-            ${isProcessing
-                            ? 'bg-slate-700 cursor-not-allowed'
-                            : 'bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] shadow-indigo-500/20'
+                        w-full flex items-center justify-center gap-3 py-5 rounded-2xl font-black text-white shadow-2xl 
+                        transition-all duration-300 italic group
+                        ${isProcessing
+                            ? 'bg-slate-800 cursor-not-allowed opacity-50'
+                            : 'premium-btn hover:scale-[1.02] active:scale-95 shadow-primary/20'
                         }
-          `}
+                    `}
                 >
                     {isProcessing ? (
-                        <span className="flex items-center gap-2">
-                            <svg className="animate-spin h-5 w-5 text-indigo-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Processing...
-                        </span>
+                        <div className="flex items-center gap-3">
+                            <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                            <span>Redirecting...</span>
+                        </div>
                     ) : (
-                        <span className="flex items-center gap-2">
-                            Pay {currency}{amount}
-                        </span>
+                        <>
+                            <span>Proceed to Checkout</span>
+                            <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                        </>
                     )}
                 </button>
 
-                {/* Trust Footer */}
-                <div className="text-center space-y-3 pt-2">
-                    <div className="flex items-center justify-center gap-2 text-xs font-medium text-emerald-400 bg-emerald-400/10 py-1.5 px-3 rounded-full inline-flex mx-auto">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                        </svg>
-                        SSL Secure Payment
-                    </div>
-
-                    <p className="text-xs text-slate-500 leading-relaxed max-w-[90%] mx-auto">
-                        Instant receipt and downloadable tax invoice will be provided immediately after payment.
-                    </p>
-                </div>
-
-            </form>
+                {/* Back Button */}
+                <button
+                    onClick={onCancel}
+                    className="w-full text-center text-xs font-black text-slate-600 uppercase tracking-widest hover:text-slate-400 transition-colors py-2"
+                >
+                    Keep Editing Campaign
+                </button>
+            </div>
         </div>
     );
 };
 
-/**
- * PaymentModal Container
- * Wrapper to display the Checkout in a modal overlay
- */
-export const PaymentModal = ({ isOpen, onClose, amount }) => {
+export const PaymentModal = ({ isOpen, onClose, amount, currency, campaignId }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
+                className="absolute inset-0 bg-slate-950/90 backdrop-blur-md transition-opacity duration-500"
                 onClick={onClose}
             />
 
             {/* Modal Content */}
-            <div className="relative z-10 w-full max-w-md animate-in fade-in zoom-in-95 duration-200">
+            <div className="relative z-10 w-full max-w-md animate-in fade-in zoom-in-95 duration-300">
                 <PaymentCheckout
                     amount={amount}
+                    currency={currency}
+                    campaignId={campaignId}
                     onCancel={onClose}
-                    onSuccess={() => {
-                        alert('Payment Successful! (Mock)');
-                        onClose();
-                    }}
                 />
-
-                {/* Close Button */}
-                <button
-                    onClick={onClose}
-                    className="absolute -top-12 right-0 text-slate-400 hover:text-white transition-colors p-2"
-                >
-                    Close
-                </button>
             </div>
         </div>
     );

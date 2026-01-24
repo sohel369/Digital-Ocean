@@ -32,6 +32,8 @@ const MailIcon = ({ className }) => (
 export const AdPreview = ({ formData = {} }) => {
     const { t } = useApp();
     const [activeTab, setActiveTab] = useState('desktop');
+    const containerRef = React.useRef(null);
+    const [scale, setScale] = useState(1);
 
     const {
         headline = '',
@@ -41,6 +43,63 @@ export const AdPreview = ({ formData = {} }) => {
         format = ''
     } = formData;
 
+    // Helper for visual classes based on format and device
+    const getFormatStyles = () => {
+        const fmt = (format || '').toLowerCase();
+
+        // 1. Precise Format Matching
+        if (fmt.includes('skyscraper')) {
+            return { w: 160, h: 600, label: '160 x 600px', layout: 'flex-col', imgH: 'h-1/3', text: 'p-4 text-center' };
+        }
+        if (fmt.includes('leaderboard') && !fmt.includes('mobile')) {
+            return { w: 728, h: 90, label: '728 x 90px', layout: 'flex-row', imgW: 'w-1/4', text: 'p-2 flex-row justify-between items-center' };
+        }
+        if (fmt.includes('mobile_leaderboard') || (fmt.includes('mobile') && fmt.includes('leaderboard'))) {
+            return { w: 320, h: 50, label: '320 x 50px', layout: 'flex-row', imgW: 'w-[80px]', text: 'pl-3 pr-2 flex-row items-center justify-between' };
+        }
+        if (fmt.includes('medium_rectangle') || fmt.includes('medium rectangle')) {
+            return { w: 300, h: 250, label: '300 x 250px', layout: 'flex-col', imgH: 'h-1/2', text: 'p-4' };
+        }
+        if (fmt.includes('email_newsletter') || fmt.includes('email newsletter')) {
+            return { w: 600, h: 200, label: '600 x 200px', layout: 'flex-row', imgW: 'w-1/3', text: 'p-4' };
+        }
+
+        // 2. Default Device Views (If no specific format matches)
+        if (activeTab === 'mobile') return { w: 320, h: 480, label: 'Mobile Full', layout: 'flex-col', imgH: 'h-[200px]', text: 'p-6' };
+        if (activeTab === 'email') return { w: 600, h: 400, label: 'Email Layout', layout: 'flex-col', imgH: 'h-[250px]', text: 'p-8' };
+        return { w: 640, h: 360, label: 'Standard View', layout: 'flex-row', imgW: 'w-1/2', text: 'p-8' };
+    };
+
+    const styles = getFormatStyles();
+
+    // Auto-scaling logic to fit any format into the preview container
+    React.useEffect(() => {
+        const calculateScale = () => {
+            if (!containerRef.current) return;
+            const containerWidth = containerRef.current.offsetWidth - 64; // Horizontal padding
+            const containerHeight = containerRef.current.offsetHeight - 64; // Vertical padding
+
+            const scaleX = containerWidth / styles.w;
+            const scaleY = containerHeight / styles.h;
+
+            // Use the smaller scale but cap at 1 to prevent blurring small ads
+            const finalScale = Math.min(scaleX, scaleY, 1);
+            setScale(finalScale);
+        };
+
+        calculateScale();
+        window.addEventListener('resize', calculateScale);
+
+        // Also observe the container itself for size changes
+        const observer = new ResizeObserver(calculateScale);
+        if (containerRef.current) observer.observe(containerRef.current);
+
+        return () => {
+            window.removeEventListener('resize', calculateScale);
+            observer.disconnect();
+        };
+    }, [styles.w, styles.h, activeTab]);
+
     // Tab Definitions
     const tabs = [
         { id: 'desktop', label: t('campaign.desktop') || 'Desktop', icon: <MonitorIcon className="w-4 h-4" /> },
@@ -48,40 +107,15 @@ export const AdPreview = ({ formData = {} }) => {
         { id: 'email', label: t('campaign.email') || 'Email Newsletter', icon: <MailIcon className="w-4 h-4" /> }
     ];
 
-    // Helper for visual classes based on format and device
-    const getFormatStyles = () => {
-        const fmt = (format || '').toLowerCase();
-
-        if (fmt === 'skyscraper') {
-            return { w: 'w-[160px]', h: 'h-[600px]', layout: 'flex-col', imgH: 'h-1/3', text: 'p-4 text-center' };
-        }
-        if (fmt === 'leaderboard') {
-            return { w: 'w-[728px]', h: 'h-[90px]', layout: 'flex-row', imgW: 'w-1/4', text: 'p-2 flex-row justify-between items-center' };
-        }
-        if (fmt === 'mobile_leaderboard') {
-            return { w: 'w-[320px]', h: 'h-[50px]', layout: 'flex-row', imgW: 'w-[80px]', text: 'pl-3 pr-2 flex-row items-center justify-between' };
-        }
-        if (fmt === 'medium_rectangle') {
-            return { w: 'w-[300px]', h: 'h-[250px]', layout: 'flex-col', imgH: 'h-1/2', text: 'p-4' };
-        }
-        if (fmt === 'email_newsletter') {
-            return { w: 'w-[600px]', h: 'h-[200px]', layout: 'flex-row', imgW: 'w-1/3', text: 'p-6' };
-        }
-
-        // Defaults based on tab
-        if (activeTab === 'mobile') return { w: 'w-[375px]', h: 'min-h-[600px]', layout: 'flex-col', imgH: 'h-[250px]', text: 'p-8' };
-        if (activeTab === 'email') return { w: 'w-[600px]', h: 'min-h-[500px]', layout: 'flex-col', imgH: 'h-[300px]', text: 'p-10' };
-        return { w: 'w-full max-w-[800px]', h: 'min-h-[400px]', layout: 'flex-row', imgW: 'w-1/2', text: 'p-12' };
-    };
-
-    const styles = getFormatStyles();
-
     return (
         <div className="w-full glass-panel rounded-2xl overflow-hidden flex flex-col h-full min-h-[500px] md:min-h-[600px]">
 
             {/* Header / Tabs */}
             <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-700/50 bg-slate-900/50 gap-4 flex-wrap">
-                <h3 className="font-bold text-slate-200 text-sm sm:text-base border-l-2 border-primary pl-3 whitespace-nowrap">{t('campaign.live_preview')}</h3>
+                <div className="flex items-center gap-3">
+                    <h3 className="font-bold text-slate-200 text-sm sm:text-base border-l-2 border-primary pl-3 whitespace-nowrap">{t('campaign.live_preview')}</h3>
+                    <span className="hidden sm:inline-block px-2 py-0.5 bg-slate-800 rounded text-[10px] font-black text-primary border border-primary/20 tracking-tighter uppercase italic">{styles.label}</span>
+                </div>
 
                 <div className="flex p-0.5 sm:p-1 bg-slate-800 rounded-xl border border-slate-700/50">
                     {tabs.map((tab) => (
@@ -104,62 +138,77 @@ export const AdPreview = ({ formData = {} }) => {
             </div>
 
             {/* Preview Canvas */}
-            <div className="flex-1 bg-slate-950 relative overflow-y-auto overflow-x-hidden flex flex-col items-center py-8">
+            <div ref={containerRef} className="flex-1 bg-slate-950 relative overflow-hidden flex flex-col items-center justify-center p-8">
+
+                {/* Dimensions Overlay (Mobile friendly) */}
+                <div className="absolute top-4 right-4 text-[9px] font-bold text-slate-600 uppercase tracking-widest z-10 sm:hidden">
+                    {styles.label}
+                </div>
 
                 {/* Background Grid Pattern */}
                 <div className="absolute inset-0 opacity-10 pointer-events-none"
                     style={{ backgroundImage: 'radial-gradient(#1E40AF 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
                 </div>
 
-                {/* Content Container */}
-                <div className={`
-          relative bg-white text-slate-900 shadow-2xl transition-all duration-500 ease-in-out origin-top border border-slate-200 overflow-hidden mx-auto
-          ${styles.w} ${styles.h} ${activeTab === 'email' ? 'border-t-4 border-indigo-500 rounded-none' : 'rounded-lg'}
-        `} style={{ transform: 'scale(var(--preview-scale, 1))', transformOrigin: 'top center' }}>
+                {/* Content Container with Dynamic Scaling */}
+                <div
+                    className={`relative bg-white text-slate-900 shadow-2xl transition-all duration-300 ease-out origin-center border border-slate-200 overflow-hidden ${activeTab === 'email' ? 'border-t-4 border-indigo-500 rounded-none' : 'rounded-lg'}`}
+                    style={{
+                        width: `${styles.w}px`,
+                        height: `${styles.h}px`,
+                        transform: `scale(${scale})`,
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                    }}
+                >
 
-                    {activeTab === 'email' && (
-                        <div className="p-8 pb-4 text-center border-b border-slate-100 mb-4 bg-slate-50">
-                            <div className="text-xs text-slate-500 uppercase tracking-widest font-semibold mb-2">{t('preview.newsletter_title')}</div>
-                            <div className="text-2xl font-serif text-slate-900">{t('preview.newsletter_subtitle')}</div>
+                    {activeTab === 'email' && styles.h > 100 && (
+                        <div className="p-4 pb-2 text-center border-b border-slate-100 bg-slate-50">
+                            <div className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">{t('preview.newsletter_title')}</div>
                         </div>
                     )}
 
                     <div className={`flex ${styles.layout} h-full group`}>
                         {/* Image Area */}
-                        <div className={`relative overflow-hidden bg-slate-100 ${styles.imgW || 'w-full'} ${styles.imgH || 'h-full'}`}>
+                        <div className={`relative overflow-hidden bg-slate-100 ${styles.imgW ? `${styles.imgW}` : 'w-full'} ${styles.imgH ? `${styles.imgH}` : 'h-full'}`}>
                             <img src={image} alt="Ad" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                            {activeTab !== 'email' && (
-                                <div className="absolute top-2 left-2 bg-black/40 backdrop-blur-md text-white text-[8px] sm:text-[10px] font-bold px-2 py-1 rounded uppercase">
+                            {styles.h > 50 && (
+                                <div className="absolute top-2 left-2 bg-black/40 backdrop-blur-md text-white text-[8px] font-bold px-2 py-0.5 rounded uppercase">
                                     {t('preview.sponsored')}
                                 </div>
                             )}
                         </div>
 
                         {/* Text Area */}
-                        <div className={`flex flex-col ${styles.text}`}>
-                            {activeTab !== 'email' && (
-                                <div className="text-primary text-[10px] font-bold uppercase tracking-widest mb-1">{t('preview.recommended')}</div>
+                        <div className={`flex flex-col flex-1 min-w-0 ${styles.text}`}>
+                            {styles.h > 80 && (
+                                <div className="text-primary text-[8px] font-bold uppercase tracking-widest mb-1">{t('preview.recommended')}</div>
                             )}
                             <h2 className={`font-bold text-slate-900 leading-tight ${activeTab === 'email' ? 'font-serif' : ''} 
-                                ${styles.h === 'h-[50px]' ? 'text-xs mb-0 truncate' : styles.h === 'h-[90px]' ? 'text-sm mb-0' : 'text-xl sm:text-2xl mb-2'}`}>
+                                ${styles.h <= 50 ? 'text-[10px] mb-0 truncate' : styles.h <= 90 ? 'text-xs mb-0' : 'text-xl mb-2'}`}>
                                 {headline || t('campaign.headline_placeholder')}
                             </h2>
-                            <p className={`text-slate-600 text-sm leading-relaxed mb-4 
-                                ${styles.h === 'h-[50px]' || styles.h === 'h-[90px]' ? 'hidden' : 'block'} 
-                                ${styles.h === 'h-[600px]' ? 'line-clamp-6' : 'line-clamp-3'}`}>
+                            <p className={`text-slate-600 text-[11px] leading-snug mb-3 
+                                ${styles.h <= 100 ? 'hidden' : 'block line-clamp-2'}`}>
                                 {description || t('campaign.description_placeholder')}
                             </p>
-                            <button className={`font-bold transition-all 
-                                ${activeTab === 'email' ? 'bg-indigo-600 text-white py-3 px-6' : 'bg-slate-950 text-white hover:bg-slate-800'}
-                                ${styles.h === 'h-[50px]' ? 'py-1.5 px-3 text-[10px] ml-2' : styles.h === 'h-[90px]' ? 'py-1.5 px-4 text-xs ml-4' : 'py-3 px-6 rounded-xl self-start'}`}>
+                            <button className={`font-black uppercase tracking-tighter whitespace-nowrap transition-all 
+                                ${activeTab === 'email' ? 'bg-indigo-600 text-white' : 'bg-slate-950 text-white hover:bg-slate-800'}
+                                ${styles.h <= 50 ? 'py-1 px-2 text-[8px] ml-auto self-center' : styles.h <= 90 ? 'py-1.5 px-3 text-[10px] ml-auto self-center' : 'py-2 px-4 rounded-lg self-start text-xs'}`}>
                                 {t(`campaign.${cta}`) || cta}
                             </button>
                         </div>
                     </div>
                 </div>
 
+                {/* Scale Reset Indicator */}
+                {scale < 1 && (
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-3 py-1 bg-slate-900/80 backdrop-blur rounded-full border border-white/5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        Preview scaled to {Math.round(scale * 100)}%
+                    </div>
+                )}
+
                 {activeTab === 'email' && (
-                    <div className="mt-8 text-xs text-slate-500 text-center max-w-[600px] px-4">
+                    <div className="mt-8 text-[10px] text-slate-500 text-center max-w-[600px] px-4 opacity-50 uppercase tracking-widest font-black">
                         <p>{t('preview.newsletter_tip')}</p>
                     </div>
                 )}

@@ -19,6 +19,7 @@ export const SUPPORTED_COUNTRIES = [
     { code: 'TH', name: 'Thailand', flag: '🇹🇭', currency: 'THB', language: 'th', timezone: 'Asia/Bangkok', enabled: true },
     { code: 'VN', name: 'Vietnam', flag: '🇻🇳', currency: 'VND', language: 'vi', timezone: 'Asia/Ho_Chi_Minh', enabled: true },
     { code: 'PH', name: 'Philippines', flag: '🇵🇭', currency: 'PHP', language: 'fil', timezone: 'Asia/Manila', enabled: true },
+    { code: 'BD', name: 'Bangladesh', flag: '🇧🇩', currency: 'BDT', language: 'en', timezone: 'Asia/Dhaka', enabled: true },
 ];
 
 export const SUPPORTED_CURRENCIES = [
@@ -34,6 +35,7 @@ export const SUPPORTED_CURRENCIES = [
     { code: 'THB', symbol: '฿', name: 'Thai Baht', decimals: 2, enabled: true },
     { code: 'VND', symbol: '₫', name: 'Vietnamese Dong', decimals: 0, enabled: true },
     { code: 'PHP', symbol: '₱', name: 'Philippine Peso', decimals: 2, enabled: true },
+    { code: 'BDT', symbol: '৳', name: 'Bangladeshi Taka', decimals: 2, enabled: true },
 ];
 
 export const SUPPORTED_LANGUAGES = [
@@ -65,6 +67,7 @@ export const EXCHANGE_RATES = {
     THB: 35.80,
     VND: 24500,
     PHP: 56.20,
+    BDT: 110.00,
 };
 
 /**

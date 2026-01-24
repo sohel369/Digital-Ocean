@@ -66,9 +66,9 @@ const Sidebar = () => {
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white shadow-[0_0_20px_rgba(59,130,246,0.5)]">
                             <span className="text-xl italic">R</span>
                         </div>
-                        <div className="flex flex-col -space-y-1">
-                            <span>RULE 7</span>
-                            <span className="text-xs font-bold text-primary tracking-widest opacity-80">MEDIA</span>
+                        <div className="flex flex-col">
+                            <span className="text-xl font-bold tracking-tighter leading-none mb-0.5 text-white">RULE 7</span>
+                            <span className="text-[10px] font-black text-blue-500 tracking-[0.2em] uppercase">MEDIA</span>
                         </div>
                     </div>
                     {/* Close Button (Mobile) */}
@@ -80,12 +80,10 @@ const Sidebar = () => {
                     </button>
                 </div>
 
-                {/* Sandbox Mode Indicator */}
-                {(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (
-                    <div className="mx-6 px-4 py-1.5 bg-amber-500/20 border border-amber-500/30 rounded-lg text-amber-500 text-[10px] font-bold uppercase tracking-wider text-center mb-2">
-                        TEST MODE (Sandbox)
-                    </div>
-                )}
+                {/* Live Mode Indicator */}
+                <div className="mx-6 px-4 py-1.5 bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-emerald-500 text-[10px] font-bold uppercase tracking-wider text-center mb-2 animate-pulse">
+                    LIVE MODE (Production)
+                </div>
 
                 {/* Navigation Items */}
                 <nav className="flex-1 p-6 space-y-2 overflow-y-auto overflow-x-hidden custom-scrollbar">

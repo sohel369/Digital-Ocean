@@ -18,43 +18,51 @@ const Dropdown = ({ label, icon, options, value, onChange, align = 'right', clas
     return (
         <div className={`relative ${className}`} ref={dropdownRef}>
             <button
+                type="button"
                 onClick={() => setIsOpen(!isOpen)}
                 className={`
-          flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition-all duration-200 w-full justify-between
+          flex items-center gap-3 px-5 py-4 rounded-2xl border text-sm transition-all duration-300 w-full justify-between outline-none
           ${isOpen
-                        ? 'bg-primary/20 border-primary/50 text-primary-light'
-                        : 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:text-slate-100 hover:bg-slate-800'
+                        ? 'bg-primary/10 border-primary/40 text-primary-light shadow-[0_0_20px_rgba(59,130,246,0.15)]'
+                        : 'bg-[#111622] border-slate-800 text-slate-300 hover:border-slate-700 hover:bg-[#151b2b]'
                     }
         `}
             >
-                <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-                    {icon}
-                    <span className="text-xs font-semibold truncate whitespace-nowrap">{options.find(o => o.code === value || o.value === value)?.name || options.find(o => o.code === value)?.code || value}</span>
+                <div className="flex items-center gap-3 min-w-0 overflow-hidden">
+                    {icon && <span className="shrink-0">{icon}</span>}
+                    <span className="text-sm font-bold truncate whitespace-nowrap tracking-tight">
+                        {options.find(o => o.code === value || o.value === value)?.name ||
+                            options.find(o => o.code === value || o.value === value)?.label ||
+                            value || label || 'Select Option'}
+                    </span>
                 </div>
-                <ChevronDown className={`w-3 h-3 transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 transition-transform duration-300 shrink-0 ${isOpen ? 'rotate-180 text-primary' : 'text-slate-500'}`} />
             </button>
 
             {isOpen && (
-                <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} ${align === 'top' ? 'bottom-full mb-2' : 'mt-2'} ${menuWidth} bg-[#1e293b] border border-slate-700 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.5)] z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[300px] overflow-y-auto`}>
-                    <div className="py-1">
+                <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} ${align === 'top' ? 'bottom-full mb-3' : 'mt-3'} ${menuWidth} bg-[#0f172a] border border-slate-800/80 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl max-h-[350px] overflow-y-auto custom-scrollbar`}>
+                    <div className="p-2">
                         {options.map((option) => (
                             <button
                                 key={option.code || option.value}
+                                type="button"
                                 onClick={() => {
                                     onChange(option.code || option.value);
                                     setIsOpen(false);
                                 }}
                                 className={`
-                  w-full text-left px-4 py-2.5 text-sm transition-colors flex justify-between items-center
+                  w-full text-left px-4 py-3.5 text-sm transition-all duration-200 flex justify-between items-center rounded-xl mb-1 last:mb-0
                   ${(option.code || option.value) === value
-                                        ? 'bg-primary/20 text-primary-light font-medium'
-                                        : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                                        ? 'bg-primary/20 text-primary-light font-bold'
+                                        : 'text-slate-400 hover:bg-slate-800/80 hover:text-white font-bold'
                                     }
                 `}
                             >
-                                <span className="truncate">{option.name || option.label}</span>
-                                {option.symbol && <span className="text-xs text-slate-400 font-mono ml-2">{option.symbol}</span>}
-                                {option.currency && <span className="text-xs text-slate-400 font-mono ml-2">{option.currency}</span>}
+                                <span className="truncate tracking-tight">{option.name || option.label}</span>
+                                <div className="flex items-center gap-2">
+                                    {option.symbol && <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400 font-mono">{option.symbol}</span>}
+                                    {option.currency && <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400 font-mono">{option.currency}</span>}
+                                </div>
                             </button>
                         ))}
                     </div>

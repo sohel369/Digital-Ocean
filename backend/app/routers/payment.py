@@ -1,11 +1,11 @@
-"""
-Payment integration router using Stripe.
-Handles campaign payment processing and webhook events.
-"""
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Header
 from sqlalchemy.orm import Session
 from typing import Optional, List
 import stripe
+import logging
+from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 from ..database import get_db
 from .. import models, schemas, auth
@@ -14,44 +14,48 @@ from ..pricing import PricingEngine, get_pricing_engine
 import math
 
 # Initialize Stripe
+stripe.api_version = "2023-10-16"
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 def is_stripe_configured():
-    return bool(settings.STRIPE_SECRET_KEY and not settings.STRIPE_SECRET_KEY.startswith("dummy"))
-
+    return bool(settings.STRIPE_SECRET_KEY and not settings.STRIPE_SECRET_KEY.startswith("dummy") and settings.STRIPE_SECRET_KEY != "")
 
 router = APIRouter(prefix="/payment", tags=["Payment"])
 
+class CheckoutSessionRequest(BaseModel):
+    campaign_id: int
+    success_url: str
+    cancel_url: str
+    currency: str = "usd"
 
 @router.post("/create-checkout-session")
 async def create_checkout_session(
-    campaign_id: int,
-    success_url: str,
-    cancel_url: str,
-    currency: str = "usd",
+    request_data: CheckoutSessionRequest,
     current_user: models.User = Depends(auth.get_current_active_user),
     db: Session = Depends(get_db),
     pricing_engine: PricingEngine = Depends(get_pricing_engine)
 ):
     """
     Create a Stripe Checkout session for campaign payment.
-    Supports multi-currency.
     """
+    campaign_id = request_data.campaign_id
+    success_url = request_data.success_url
+    cancel_url = request_data.cancel_url
+    currency = request_data.currency
+
+    logger.info(f"💳 [SESSION] Creating for Campaign {campaign_id} | User: {current_user.email} | Currency: {currency}")
+
     # Get campaign
     campaign = db.query(models.Campaign).filter(models.Campaign.id == campaign_id).first()
     
     if not campaign:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Campaign not found"
-        )
+        logger.error(f"❌ [SESSION] Campaign {campaign_id} not found")
+        raise HTTPException(status_code=404, detail="Campaign not found")
     
     # Check ownership
     if current_user.role != models.UserRole.ADMIN and campaign.advertiser_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to pay for this campaign"
-        )
+        logger.error(f"❌ [SESSION] Unauthorized access for user {current_user.id} on campaign {campaign_id}")
+        raise HTTPException(status_code=403, detail="Not authorized to pay for this campaign")
     
     # Check if campaign already has a successful payment
     existing_payment = db.query(models.PaymentTransaction).filter(
@@ -60,290 +64,138 @@ async def create_checkout_session(
     ).first()
     
     if existing_payment:
-        # If already paid, we shouldn't create a new session, but for testing we might want to allow it? 
-        # Better to block.
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Campaign has already been paid for"
-        )
+        logger.warning(f"⚠️ [SESSION] Campaign {campaign_id} already paid")
+        raise HTTPException(status_code=400, detail="Campaign has already been paid for")
     
-    # Currency Handling: Stripe expects smallest currency unit
-    # Zero-decimal currencies: VND, JPY, KRW, etc.
-    zero_decimal_currencies = ['vnd', 'jpy', 'krw', 'bif', 'clp', 'djf', 'gnf', 'kmf', 'mga', 'pyg', 'rwf', 'ugx', 'vuv', 'xaf', 'xof', 'xpf']
+    # Smallest unit calculation
     target_currency = currency.lower()
-    
+    zero_decimal_currencies = ['vnd', 'jpy', 'krw', 'bif', 'clp', 'djf', 'gnf', 'kmf', 'mga', 'pyg', 'rwf', 'ugx', 'vuv', 'xaf', 'xof', 'xpf']
     multiplier = 1 if target_currency in zero_decimal_currencies else 100
     
-    # Calculate breakdown
-    duration_days = (campaign.end_date - campaign.start_date).days
-    pricing_breakdown = pricing_engine.calculate_price(
-        industry_type=campaign.industry_type,
-        advert_type="display",
-        coverage_type=campaign.coverage_type,
-        duration_days=duration_days,
-        target_postcode=campaign.target_postcode,
-        target_state=campaign.target_state,
-        target_country=campaign.target_country
-    )
+    # Pricing verify
+    duration_days = max((campaign.end_date - campaign.start_date).days, 1)
+    # Use campaign.calculated_price if available, else recalculate
+    base_price = campaign.calculated_price or campaign.budget
     
-    # Verify totals match (sanity check)
-    # Note: campaign.calculated_price IS the source of truth, but we use breakdown for description
+    # Exchange rates
+    exchange_rates = { 
+        'usd': 1.0, 
+        'aud': 1.5, 
+        'cad': 1.35, 
+        'eur': 0.92, 
+        'gbp': 0.8, 
+        'bdt': 120.0, 
+        'thb': 35.0 
+    }
+    base_currency = getattr(settings, 'BASE_CURRENCY', 'usd').lower()
+    conversion_rate = exchange_rates.get(target_currency, 1.0) / exchange_rates.get(base_currency, 1.0)
     
-    months = pricing_breakdown.breakdown['billed_months']
-    monthly_avg = campaign.calculated_price / months if months > 0 else campaign.calculated_price
-    
-    amount_smallest_unit = int(campaign.calculated_price * multiplier)
-    
-    if amount_smallest_unit <= 0:
-        amount_smallest_unit = 100 if multiplier == 100 else 1
+    amount_smallest_unit = int(base_price * conversion_rate * multiplier)
+    if amount_smallest_unit < 50 and multiplier == 100: # Stripe minimum $0.50
+        amount_smallest_unit = 50
+    elif amount_smallest_unit <= 0:
+        amount_smallest_unit = 1
 
     try:
-        # Check for Sandbox/Live Configuration
-        # INJECTION POINT: Set STRIPE_SECRET_KEY in .env start with sk_test_ for Sandbox
         if not is_stripe_configured():
-            # Return mock response
+            logger.warning("⚠️ STRIPE: Not configured, returning mock session")
             import uuid
-            mock_session_id = f"cs_test_{str(uuid.uuid4())}"
+            mock_id = f"cs_test_{str(uuid.uuid4())}"
             return {
-                "checkout_url": f"{success_url}?session_id={mock_session_id}&mock=true",
-                "session_id": mock_session_id
+                "checkout_url": f"{success_url}{'&' if '?' in success_url else '?'}session_id={mock_id}&mock=true",
+                "session_id": mock_id
             }
 
         # Create Stripe Checkout Session
         checkout_session = stripe.checkout.Session.create(
+            # Use explicit payment methods to avoid 'unknown parameter' errors
             payment_method_types=['card'],
-            line_items=[
-                {
-                    'price_data': {
-                        'currency': target_currency,
-                        'product_data': {
-                            'name': f'Campaign: {campaign.name}',
-                            'description': (
-                                f"{months} Month{'s' if months != 1 else ''} × {target_currency.upper()} {monthly_avg:,.2f}/mo "
-                                f"({campaign.coverage_area})"
-                            ),
-                        },
-                        'unit_amount': amount_smallest_unit, # Charging Total Amount as 1 unit to avoid rounding issues
+            line_items=[{
+                'price_data': {
+                    'currency': target_currency,
+                    'product_data': {
+                        'name': f'Campaign: {campaign.name}',
+                        'description': f"Premium reach for {campaign.industry_type} in {campaign.coverage_area}",
                     },
-                    'quantity': 1,
-                }
-            ],
+                    'unit_amount': amount_smallest_unit,
+                },
+                'quantity': 1,
+            }],
             mode='payment',
-            success_url=success_url + '?session_id={CHECKOUT_SESSION_ID}',
+            success_url=success_url + (("&" if "?" in success_url else "?") + "session_id={CHECKOUT_SESSION_ID}"),
             cancel_url=cancel_url,
-            client_reference_id=str(campaign_id),
             customer_email=current_user.email,
+            client_reference_id=str(campaign_id),
             metadata={
                 'campaign_id': campaign_id,
                 'user_id': current_user.id,
-                'campaign_name': campaign.name,
-                'currency': target_currency,
-                'environment': 'sandbox' if 'test' in settings.STRIPE_SECRET_KEY else 'production'
+                'environment': 'test' if 'sk_test' in settings.STRIPE_SECRET_KEY else 'production'
             }
         )
+
+        logger.info(f"✅ [SESSION] Stripe session created: {checkout_session.id}")
         
-        # Create pending payment transaction
-        payment_transaction = models.PaymentTransaction(
+        # Log transaction
+        tx = models.PaymentTransaction(
             campaign_id=campaign_id,
             user_id=current_user.id,
-            stripe_payment_intent_id=checkout_session.payment_intent or checkout_session.id,
-            amount=campaign.calculated_price,
+            stripe_payment_intent_id=checkout_session.id,
+            amount=base_price,
             currency=target_currency.upper(),
             status='pending',
             payment_method='stripe_checkout'
         )
-        
-        db.add(payment_transaction)
+        db.add(tx)
         db.commit()
         
-        return {
-            "checkout_url": checkout_session.url,
-            "session_id": checkout_session.id
-        }
+        return { "checkout_url": checkout_session.url, "session_id": checkout_session.id }
     
     except stripe.error.StripeError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Stripe error: {str(e)}"
-        )
-
+        logger.error(f"❌ [STRIPE] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Stripe Gateway Error: {str(e)}")
+    except Exception as e:
+        logger.error(f"🔥 [CRASH] Unexpected error in payment: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error during payment initialization")
 
 @router.get("/session/{session_id}")
-async def get_checkout_session(
-    session_id: str,
-    current_user: models.User = Depends(auth.get_current_active_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Retrieve Stripe Checkout session details.
-    
-    Used to verify payment status after redirect.
-    """
+async def get_checkout_session(session_id: str, current_user: models.User = Depends(auth.get_current_active_user), db: Session = Depends(get_db)):
     try:
         if session_id.startswith("cs_test_") and not is_stripe_configured():
-             # Return mock session
-            return {
-                "id": session_id,
-                "payment_status": "paid",
-                "amount_total": 0,
-                "currency": "usd",
-                "customer_email": current_user.email,
-                "metadata": {}
-            }
-
+            return { "id": session_id, "payment_status": "paid", "amount_total": 0, "currency": "usd", "customer_email": current_user.email, "metadata": {} }
         session = stripe.checkout.Session.retrieve(session_id)
-        
-        return {
-            "id": session.id,
-            "payment_status": session.payment_status,
-            "amount_total": session.amount_total / 100 if session.amount_total else 0,
-            "currency": session.currency,
-            "customer_email": session.customer_email,
-            "metadata": session.metadata
-        }
-    
+        return { "id": session.id, "payment_status": session.payment_status, "amount_total": session.amount_total / 100 if session.amount_total else 0, "currency": session.currency, "customer_email": session.customer_email, "metadata": session.metadata }
     except stripe.error.StripeError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Stripe error: {str(e)}"
-        )
-
+        raise HTTPException(status_code=500, detail=f"Stripe error: {str(e)}")
 
 @router.post("/webhook")
-async def stripe_webhook(
-    request: Request,
-    stripe_signature: str = Header(None, alias="stripe-signature"),
-    db: Session = Depends(get_db)
-):
-    """
-    Stripe webhook endpoint for payment events.
-    
-    Handles:
-    - checkout.session.completed
-    - payment_intent.succeeded
-    - payment_intent.failed
-    
-    This endpoint is called by Stripe when payment events occur.
-    Configure webhook URL in Stripe Dashboard.
-    """
+async def stripe_webhook(request: Request, stripe_signature: str = Header(None, alias="stripe-signature"), db: Session = Depends(get_db)):
     payload = await request.body()
-    
     try:
-        event = stripe.Webhook.construct_event(
-            payload, stripe_signature, settings.STRIPE_WEBHOOK_SECRET
-        )
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload")
-    except stripe.error.SignatureVerificationError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature")
+        event = stripe.Webhook.construct_event(payload, stripe_signature, settings.STRIPE_WEBHOOK_SECRET)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid webhook payload or signature")
     
-    # Handle different event types
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
-        
-        # Get campaign ID from metadata
         campaign_id = int(session['metadata']['campaign_id'])
-        user_id = int(session['metadata']['user_id'])
-        
-        # Update payment transaction
-        payment = db.query(models.PaymentTransaction).filter(
-            models.PaymentTransaction.campaign_id == campaign_id,
-            models.PaymentTransaction.user_id == user_id,
-            models.PaymentTransaction.status == 'pending'
-        ).first()
-        
+        payment = db.query(models.PaymentTransaction).filter(models.PaymentTransaction.campaign_id == campaign_id, models.PaymentTransaction.status == 'pending').first()
         if payment:
             payment.status = 'succeeded'
             payment.stripe_charge_id = session.get('payment_intent')
             payment.completed_at = db.func.now()
-            
-            # Update campaign status to ACTIVE (Paid & Active immediately)
             campaign = db.query(models.Campaign).filter(models.Campaign.id == campaign_id).first()
             if campaign:
-                # Set to PENDING for Admin Approval instead of ACTIVE
                 campaign.status = models.CampaignStatus.PENDING_REVIEW
-            
+                campaign.submitted_at = db.func.now()
             db.commit()
-    
-    elif event['type'] == 'payment_intent.succeeded':
-        payment_intent = event['data']['object']
-        
-        # Update payment record if exists
-        payment = db.query(models.PaymentTransaction).filter(
-            models.PaymentTransaction.stripe_payment_intent_id == payment_intent['id']
-        ).first()
-        
-        if payment:
-            payment.status = 'succeeded'
-            payment.receipt_url = payment_intent.get('charges', {}).get('data', [{}])[0].get('receipt_url')
-            payment.completed_at = db.func.now()
-            db.commit()
-    
-    elif event['type'] == 'payment_intent.payment_failed':
-        payment_intent = event['data']['object']
-        
-        payment = db.query(models.PaymentTransaction).filter(
-            models.PaymentTransaction.stripe_payment_intent_id == payment_intent['id']
-        ).first()
-        
-        if payment:
-            payment.status = 'failed'
-            db.commit()
-    
     return {"status": "success"}
 
+@router.get("/transactions")
+async def get_user_transactions(current_user: models.User = Depends(auth.get_current_active_user), db: Session = Depends(get_db)):
+    transactions = db.query(models.PaymentTransaction).filter(models.PaymentTransaction.user_id == current_user.id).order_by(models.PaymentTransaction.created_at.desc()).all()
+    return [{ "id": t.id, "campaign_id": t.campaign_id, "amount": t.amount, "currency": t.currency, "status": t.status, "payment_method": t.payment_method, "created_at": t.created_at, "completed_at": t.completed_at } for t in transactions]
 
-@router.get("/transactions", response_model=List[dict])
-async def get_user_transactions(
-    current_user: models.User = Depends(auth.get_current_active_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Get payment transactions for the current user.
-    """
-    transactions = db.query(models.PaymentTransaction).filter(
-        models.PaymentTransaction.user_id == current_user.id
-    ).order_by(models.PaymentTransaction.created_at.desc()).all()
-    
-    return [
-        {
-            "id": t.id,
-            "campaign_id": t.campaign_id,
-            "amount": t.amount,
-            "currency": t.currency,
-            "status": t.status,
-            "payment_method": t.payment_method,
-            "created_at": t.created_at,
-            "completed_at": t.completed_at
-        }
-        for t in transactions
-    ]
-
-
-@router.get("/admin/transactions", response_model=List[dict])
-async def get_all_transactions(
-    current_user: models.User = Depends(auth.get_current_admin_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Get all payment transactions (Admin only).
-    """
-    transactions = db.query(models.PaymentTransaction).order_by(
-        models.PaymentTransaction.created_at.desc()
-    ).all()
-    
-    return [
-        {
-            "id": t.id,
-            "campaign_id": t.campaign_id,
-            "user_id": t.user_id,
-            "amount": t.amount,
-            "currency": t.currency,
-            "status": t.status,
-            "payment_method": t.payment_method,
-            "stripe_payment_intent_id": t.stripe_payment_intent_id,
-            "created_at": t.created_at,
-            "completed_at": t.completed_at
-        }
-        for t in transactions
-    ]
+@router.get("/admin/transactions")
+async def get_all_transactions(current_user: models.User = Depends(auth.get_current_admin_user), db: Session = Depends(get_db)):
+    transactions = db.query(models.PaymentTransaction).order_by(models.PaymentTransaction.created_at.desc()).all()
+    return [{ "id": t.id, "campaign_id": t.campaign_id, "user_id": t.user_id, "amount": t.amount, "currency": t.currency, "status": t.status, "payment_method": t.payment_method, "stripe_payment_intent_id": t.stripe_payment_intent_id, "created_at": t.created_at, "completed_at": t.completed_at } for t in transactions]

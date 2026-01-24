@@ -524,11 +524,37 @@ async def startup_event():
                     count = 0
                     
                 if count == 0:
-                    logger.info("📦 Seeding default GeoData...")
+                    logger.info("📦 Seeding default GeoData (US & UK)...")
+                    # US Data
                     ca_geo = models.GeoData(state_name="California", country_code="US", state_code="CA", land_area_sq_km=423970, population=39538223, density_multiplier=1.5)
                     db.add(ca_geo)
+                    
+                    # UK Data (Major Regions)
+                    uk_regions = [
+                        ("London", "GB", "LDN", 1572, 8982000, 2.5),
+                        ("South East", "GB", "SE", 19095, 9180000, 1.2),
+                        ("North West", "GB", "NW", 14165, 7341000, 1.1),
+                        ("East of England", "GB", "EE", 19120, 6235000, 1.0),
+                        ("South West", "GB", "SW", 23829, 5624000, 0.9),
+                        ("West Midlands", "GB", "WM", 13000, 5935000, 1.1),
+                        ("Scotland", "GB", "SCT", 77910, 5463000, 0.8),
+                        ("Wales", "GB", "WLS", 20735, 3153000, 0.7),
+                        ("East Midlands", "GB", "EM", 15627, 4836000, 0.9),
+                        ("Yorkshire", "GB", "YKH", 11903, 5500000, 1.0)
+                    ]
+                    
+                    for name, country, code, area, pop, dens in uk_regions:
+                        db.add(models.GeoData(
+                            state_name=name, 
+                            country_code=country, 
+                            state_code=code, 
+                            land_area_sq_km=area, 
+                            population=pop, 
+                            density_multiplier=dens
+                        ))
+                        
                     db.commit()
-                    logger.info("✅ Default GeoData seeded")
+                    logger.info("✅ Default US & UK GeoData seeded")
                     
             except Exception as e:
                 logger.error(f"❌ Error during auto-seeding pricing/geo: {e}")

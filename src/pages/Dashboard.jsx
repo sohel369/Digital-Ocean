@@ -62,7 +62,7 @@ const StatCard = ({ title, value, subtext, icon: Icon, trend, colorClass }) => (
 );
 
 const Dashboard = () => {
-    const { stats, campaigns, notifications, user, formatCurrency, t, submitCampaignForReview } = useApp();
+    const { stats, campaigns, notifications, user, formatCurrency, t, initiatePayment, currency } = useApp();
     const [searchParams] = React.useState(new URLSearchParams(window.location.search));
 
     React.useEffect(() => {
@@ -132,31 +132,45 @@ const Dashboard = () => {
                 )}
             </div>
 
-            {/* Header / Search */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white tracking-tighter uppercase italic">
-                        {t('dashboard.title')} <span className="text-primary">{t('dashboard.subtitle')}</span>
+            {/* Header / Search Controls */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 w-full">
+                <div className="space-y-1">
+                    <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase italic leading-none">
+                        {t('dashboard.title')} <span className="text-primary drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]">{t('dashboard.subtitle')}</span>
                     </h1>
-                    <p className="text-slate-400 font-medium mt-1 text-sm sm:text-base">
+                    <p className="text-slate-500 font-bold text-xs md:text-sm uppercase tracking-widest opacity-80 pl-1">
                         {t('dashboard.monitoring', { count: activeCampaignsCount })}
                     </p>
                 </div>
-                <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 custom-scrollbar">
-                    <div className="relative group shrink-0 w-48 sm:w-64">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-hover:text-primary transition-colors" size={18} />
-                        <input
-                            type="text"
-                            placeholder={t('common.search')}
-                            className="bg-slate-900/50 border border-slate-800 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-primary/50 transition-all w-full"
-                        />
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 lg:ml-auto w-full lg:w-auto">
+                    {/* Search Field */}
+                    <div className="relative group w-full sm:w-64 h-[52px]">
+                        <div className="absolute inset-0 bg-blue-500/5 rounded-2xl blur-lg group-focus-within:bg-blue-500/10 transition-all duration-500"></div>
+                        <div className="relative flex items-center h-full">
+                            <Search className="absolute left-4 text-slate-500 group-hover:text-blue-400 group-focus-within:text-blue-400 transition-colors" size={18} />
+                            <input
+                                type="text"
+                                placeholder={t('common.search')}
+                                className="w-full h-full bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-2xl pl-12 pr-4 text-sm text-slate-100 outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/20 transition-all placeholder:text-slate-600 font-bold"
+                            />
+                        </div>
                     </div>
-                    <button className="p-2.5 bg-slate-900/50 border border-slate-800 rounded-2xl text-slate-400 hover:text-white transition-colors shrink-0">
-                        <Filter size={20} />
-                    </button>
-                    <Link to="/campaigns/new" className="premium-btn px-6 py-2.5 rounded-2xl text-xs sm:text-sm italic font-black shrink-0 flex items-center gap-2">
-                        <Plus size={18} /> {t('sidebar.new_campaign').toUpperCase()}
-                    </Link>
+
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                        {/* Filter Action */}
+                        <button className="h-[52px] w-[52px] flex items-center justify-center bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all shrink-0">
+                            <Filter size={20} />
+                        </button>
+
+                        {/* New Campaign CTA */}
+                        <Link to="/campaigns/new" className="premium-btn flex-1 sm:w-56 h-[52px] rounded-2xl text-[10px] sm:text-xs md:text-sm italic font-black flex items-center justify-center gap-2.5 shadow-[0_10px_25px_-5px_rgba(37,99,235,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0">
+                            <div className="bg-white/20 p-1 rounded-lg">
+                                <Plus size={16} strokeWidth={3} />
+                            </div>
+                            <span className="tracking-tight uppercase whitespace-nowrap">{t('sidebar.new_campaign')}</span>
+                        </Link>
+                    </div>
                 </div>
             </div>
 
@@ -262,10 +276,18 @@ const Dashboard = () => {
                                                             REJECTED
                                                         </span>
                                                     ) : (
-                                                        <span className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 text-slate-500 border border-slate-700/50 rounded-full text-[9px] font-black uppercase tracking-widest italic">
-                                                            <Clock size={10} className="shrink-0" />
-                                                            DRAFT
-                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 text-slate-500 border border-slate-700/50 rounded-full text-[9px] font-black uppercase tracking-widest italic">
+                                                                <Clock size={10} className="shrink-0" />
+                                                                DRAFT
+                                                            </span>
+                                                            <button
+                                                                onClick={() => initiatePayment(camp.id, currency)}
+                                                                className="px-3 py-1 bg-primary text-white rounded-full text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-transform"
+                                                            >
+                                                                Pay Now
+                                                            </button>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </td>

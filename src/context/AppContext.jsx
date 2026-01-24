@@ -42,7 +42,26 @@ export const AppProvider = ({ children }) => {
         }
     });
 
+    const [geoSettings, setGeoSettings] = useState(() => {
+        const stored = localStorage.getItem('geo_settings');
+        try {
+            return stored ? JSON.parse(stored) : {
+                radius: 30,
+                lat: 40.7128,
+                lng: -74.0060,
+                postcode: '',
+                addressLabel: 'New York, US',
+                coverageArea: 'radius',
+                targetState: '',
+                lastUpdated: null
+            };
+        } catch (e) {
+            return { radius: 30, lat: 40.7128, lng: -74.0060, postcode: '', addressLabel: 'New York, US', coverageArea: 'radius', targetState: '', lastUpdated: null };
+        }
+    });
+
     const [authLoading, setAuthLoading] = useState(true);
+    const [isGeoLoading, setIsGeoLoading] = useState(false);
     const [detectedCountry, setDetectedCountry] = useState(null);
 
     // Base URL configuration for API calls
@@ -144,10 +163,20 @@ export const AppProvider = ({ children }) => {
         return { 'Authorization': `Bearer ${token}` };
     };
 
-    // Helper to load regions (states) dynamically for the selected country
-    // AND load the specific pricing configuration for that country (Currency Overrides)
+    // Track which countries have already been synchronized to avoid redundant API calls
+    const [syncedCountries, setSyncedCountries] = React.useState(new Set());
+
     const loadRegionsForCountry = async (countryCode, currentPricing = null) => {
+        if (!countryCode) return;
+
+        // Performance: If we already synced this country in this session, return early
+        if (syncedCountries.has(countryCode) && !currentPricing) {
+            console.log(`⚡ Using cached regions/pricing for ${countryCode}`);
+            return;
+        }
+
         try {
+            setIsGeoLoading(true);
             console.log(`🌍 Fetching regions and pricing for ${countryCode}...`);
 
             // Parallel fetch: Regions (Geo) + Config (Pricing)
@@ -175,43 +204,72 @@ export const AppProvider = ({ children }) => {
                         displayName: formatIndustryName(i.name),
                         name: i.name
                     })),
-                    adTypes: (rawPricing.ad_types || []).map(a => ({ name: a.name, baseRate: a.base_rate })),
+                    adTypes: (rawPricing.ad_types || [])
+                        .reduce((acc, current) => {
+                            const x = acc.find(item => item.name === current.name);
+                            if (!x && current.name.toLowerCase() !== 'display') {
+                                return acc.concat([{ name: current.name, baseRate: current.base_rate }]);
+                            }
+                            return acc;
+                        }, []),
                     discounts: rawPricing.discounts || { state: 0.15, national: 0.30 },
-                    // CRITICAL: Backend now tells us if these rates are USD or Specific (e.g. THB)
                     currency: rawPricing.currency || 'USD'
                 };
             }
 
             setPricingData(prev => {
-                const base = currentPricing || pricingUpdates || prev;
+                const base = currentPricing || prev;
                 const existingStates = base.states || [];
 
-                // Merge Regions
-                let mergedStates = existingStates;
+                // industries and adTypes should NOT be overwritten if the new pricingUpdates is partial or empty
+                const mergedIndustries = (pricingUpdates?.industries?.length > 0)
+                    ? pricingUpdates.industries
+                    : base.industries;
+
+                const mergedAdTypes = (pricingUpdates?.adTypes?.length > 0)
+                    ? pricingUpdates.adTypes
+                    : base.adTypes;
+
+                // Merge Regions Additively - don't lose old ones
+                let updatedStates = [...existingStates];
                 if (regionUpdates.length > 0) {
-                    mergedStates = regionUpdates.map(r => {
-                        const existing = existingStates.find(s => s.name === r.name || s.stateCode === r.code);
-                        return {
+                    regionUpdates.forEach(r => {
+                        const existingIdx = updatedStates.findIndex(s => s.name === r.name || s.stateCode === r.code);
+                        const newState = {
                             name: r.name,
                             stateCode: r.code,
                             countryCode: r.country_code,
-                            landMass: existing?.landMass || existing?.land_area || 50000,
-                            densityMultiplier: existing?.densityMultiplier || existing?.density_multiplier || 1.0,
-                            population: existing?.population || 1000000
+                            landMass: updatedStates[existingIdx]?.landMass || r.land_area || 50000,
+                            densityMultiplier: updatedStates[existingIdx]?.densityMultiplier || r.density_multiplier || 1.0,
+                            population: updatedStates[existingIdx]?.population || r.population || 1000000
                         };
+
+                        if (existingIdx >= 0) {
+                            updatedStates[existingIdx] = newState;
+                        } else {
+                            updatedStates.push(newState);
+                        }
                     });
                 }
 
-                // If we got fresh pricing, return that with merged states.
-                // Otherwise update states on previous pricing.
-                if (pricingUpdates) {
-                    return { ...pricingUpdates, states: mergedStates };
-                }
-                return { ...base, states: mergedStates };
+                // Update synced set
+                setSyncedCountries(prevSet => new Set(prevSet).add(countryCode));
+
+                return {
+                    ...base,
+                    ...pricingUpdates,
+                    industries: mergedIndustries,
+                    adTypes: mergedAdTypes,
+                    states: updatedStates,
+                    discounts: pricingUpdates?.discounts || base.discounts,
+                    currency: pricingUpdates?.currency || base.currency
+                };
             });
 
         } catch (e) {
             console.error("❌ Failed to load regions/pricing:", e);
+        } finally {
+            setIsGeoLoading(false);
         }
     };
 
@@ -390,6 +448,14 @@ export const AppProvider = ({ children }) => {
         }
     };
 
+    // Sync active country with user profile when user state changes
+    useEffect(() => {
+        if (user?.country) {
+            console.log('🔄 Syncing country from user profile:', user.country);
+            handleCountryChange(user.country);
+        }
+    }, [user?.id]); // Only sync when the user identity changes
+
     // Fetch initial data from API and persist authentication
     useEffect(() => {
         const initializeAuth = async () => {
@@ -513,73 +579,95 @@ export const AppProvider = ({ children }) => {
     const login = async (email, password) => {
         const cleanEmail = (email || '').trim();
         const cleanPassword = (password || '').trim();
+        const isDefaultAdmin = cleanEmail.toLowerCase() === 'admin@adplatform.com' || cleanEmail.toLowerCase() === 'admin';
 
-        // 1. Handle Admin Shortcut
-        if (cleanEmail.toUpperCase() === 'ADMIN' && cleanPassword.toUpperCase() === 'ADMIN123') {
-            return await login('admin@adplatform.com', 'admin123');
-        }
+        // Helper for Native Backend Login (used for fallback or admin accounts)
+        const tryNativeLogin = async (e, p) => {
+            try {
+                const loginPayload = {
+                    email: e.includes('@') ? e : 'admin@adplatform.com',
+                    password: p
+                };
 
-        // 2. Try Native Backend Login
-        try {
-            const response = await fetch(`${API_BASE_URL}/auth/login/json`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: cleanEmail, password: cleanPassword })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                localStorage.setItem('access_token', data.access_token);
-                if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
-
-                // Fetch profile
-                const meRes = await fetch(`${API_BASE_URL}/auth/me`, {
-                    headers: { 'Authorization': `Bearer ${data.access_token}` }
+                const response = await fetch(`${API_BASE_URL}/auth/login/json`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(loginPayload)
                 });
 
-                let userObj;
-                if (meRes.ok) {
-                    const userData = await meRes.json();
-                    userObj = {
-                        id: userData.id,
-                        username: userData.name || userData.username,
-                        email: userData.email,
-                        role: userData.role,
-                        avatar: userData.profile_picture
-                    };
-                } else {
-                    userObj = { email: cleanEmail, role: 'advertiser' };
-                }
+                if (response.ok) {
+                    const tokenData = await response.json();
+                    if (tokenData.access_token) {
+                        localStorage.setItem('access_token', tokenData.access_token);
+                        localStorage.setItem('refresh_token', tokenData.refresh_token || '');
 
-                setUser(userObj);
-                localStorage.setItem('user', JSON.stringify(userObj));
-                await fetchData();
-                return { success: true, user: userObj };
+                        // Fetch user profile using the new token
+                        const userRes = await fetch(`${API_BASE_URL}/auth/me`, {
+                            headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
+                        });
+
+                        if (userRes.ok) {
+                            const userData = await userRes.json();
+                            const mappedUser = {
+                                id: userData.id,
+                                username: userData.name,
+                                email: userData.email,
+                                role: userData.role,
+                                avatar: userData.profile_picture,
+                                country: userData.country,
+                                industry: userData.industry
+                            };
+
+                            setUser(mappedUser);
+                            localStorage.setItem('user', JSON.stringify(mappedUser));
+                            await fetchData();
+                            return { success: true, user: mappedUser };
+                        }
+                    }
+                }
+                const errorData = await response.json().catch(() => ({}));
+                return { success: false, message: errorData.detail || "Native authentication failed" };
+            } catch (err) {
+                console.error("Native Login Exception:", err);
+                return { success: false, message: "Backend server unreachable" };
             }
-        } catch (error) {
-            console.warn("Native login failed:", error.message);
+        };
+
+        // If it's the default admin, try backend FIRST for speed and Reliability
+        if (isDefaultAdmin) {
+            console.log("🛠️ Admin account detected, using Native Backend Login...");
+            const nativeResult = await tryNativeLogin(cleanEmail, cleanPassword);
+            if (nativeResult.success) return nativeResult;
+
+            // If native failed, continue to Firebase (maybe they have a Firebase account too)
+            console.warn("Native admin login failed, attempting Firebase fallback...");
         }
 
-        // 3. Fallback to Firebase
         try {
-            const fbUser = await loginWithEmail(email, password);
+            // Strictly use Firebase for authentication
+            const fbUser = await loginWithEmail(cleanEmail, cleanPassword);
             const result = await firebaseSync(fbUser);
+
             if (result.success) {
                 setUser(result.user);
                 localStorage.setItem('user', JSON.stringify(result.user));
                 await fetchData();
                 return { success: true, user: result.user };
             }
+            return result;
         } catch (error) {
-            // Last resort: Emergency Local Bypass for admin
-            if (cleanEmail === 'admin@adplatform.com' && cleanPassword === 'admin123') {
-                const adminUser = { username: 'Administrator', email: email, role: 'admin' };
-                setUser(adminUser);
-                localStorage.setItem('user', JSON.stringify(adminUser));
-                localStorage.setItem('access_token', 'mock_admin_token');
-                return { success: true, user: adminUser };
-            }
-            return { success: false, message: error.message };
+            console.error("Firebase Login Error:", error);
+
+            // If Firebase fails (e.g. user not found), try Native Backend as a LAST RESORT
+            // This captures admins who didn't trigger the isDefaultAdmin check or local test accounts
+            console.log("🔄 Firebase failed, trying Native Backend Fallback...");
+            const fallbackResult = await tryNativeLogin(cleanEmail, cleanPassword);
+            if (fallbackResult.success) return fallbackResult;
+
+            return {
+                success: false,
+                message: error.message?.replace('Firebase: ', '') || "Authentication failed"
+            };
         }
     };
 
@@ -594,73 +682,11 @@ export const AppProvider = ({ children }) => {
     };
 
     const signup = async (username, email, password, extraData = {}) => {
-        // 1. Primary: Native Backend Signup
         try {
-            const response = await fetch(`${API_BASE_URL}/auth/signup`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: username,
-                    email: email,
-                    password: password,
-                    role: 'advertiser',
-                    industry: extraData.industry,
-                    country: extraData.country
-                })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                localStorage.setItem('access_token', data.access_token);
-                if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
-
-                const meRes = await fetch(`${API_BASE_URL}/auth/me`, {
-                    headers: { 'Authorization': `Bearer ${data.access_token}` }
-                });
-                if (meRes.ok) {
-                    const userData = await meRes.json();
-                    const userObj = {
-                        id: userData.id,
-                        username: userData.name,
-                        email: userData.email,
-                        role: userData.role,
-                        avatar: userData.profile_picture
-                    };
-                    setUser(userObj);
-                    localStorage.setItem('user', JSON.stringify(userObj));
-                    await fetchData();
-                    return { success: true, user: userObj };
-                }
-            } else if (response.status === 400 || response.status === 422) {
-                const errData = await response.json();
-                let errMsg = "Signup failed. Please check your data.";
-
-                // Handle different error response formats
-                if (errData.error && typeof errData.error === 'string') {
-                    errMsg = errData.error;
-                } else if (errData.detail && typeof errData.detail === 'string') {
-                    errMsg = errData.detail;
-                } else if (Array.isArray(errData.detail)) {
-                    errMsg = errData.detail[0]?.msg || errMsg;
-                } else if (errData.details && Array.isArray(errData.details)) {
-                    // Custom validation error format from main.py
-                    errMsg = errData.details[0]?.msg || errMsg;
-                    if (errData.details[0]?.loc) {
-                        const field = errData.details[0].loc[errData.details[0].loc.length - 1];
-                        errMsg = `${field}: ${errMsg}`;
-                    }
-                }
-
-                return { success: false, message: errMsg };
-            }
-        } catch (err) {
-            console.warn("Native backend signup failed, trying Firebase fallback...", err);
-        }
-
-        // 2. Fallback: Firebase Signup
-        try {
+            // Strictly use Firebase for registration
             const fbUser = await registerWithEmail(email, password, username);
             const result = await firebaseSync(fbUser, extraData);
+
             if (result.success) {
                 setUser(result.user);
                 localStorage.setItem('user', JSON.stringify(result.user));
@@ -668,7 +694,7 @@ export const AppProvider = ({ children }) => {
             }
             return result;
         } catch (error) {
-            console.error("Signup Error:", error);
+            console.error("Firebase Signup Error:", error);
             const msg = error.code === 'auth/admin-restricted-operation'
                 ? "New account signup is temporarily restricted. Please contact support."
                 : (error.message?.replace('Firebase: ', '') || "Registration failed");
@@ -756,7 +782,11 @@ export const AppProvider = ({ children }) => {
     };
 
     // Country × Language × Currency Sync Logic
-    const handleCountryChange = async (countryCode) => {
+    const handleCountryChange = async (target) => {
+        // Resolve code if name was passed
+        const found = SUPPORTED_COUNTRIES.find(c => c.code === target || c.name === target);
+        const countryCode = found ? found.code : target;
+
         setCountry(countryCode);
 
         // Load regions for the new country immediately
@@ -1009,34 +1039,64 @@ export const AppProvider = ({ children }) => {
 
     };
 
-    // Payment Handler
     const initiatePayment = async (campaignId, targetCurrency) => {
         try {
             toast.loading("Initializing secure checkout...");
 
-            const res = await fetch(`${API_BASE_URL}/payment/create-checkout-session?campaign_id=${campaignId}&success_url=${encodeURIComponent(window.location.origin + '/dashboard?payment=success')}&cancel_url=${encodeURIComponent(window.location.origin + '/create-campaign?payment=cancelled')}&currency=${targetCurrency || currency}`, {
+            const requestBody = {
+                campaign_id: Number(campaignId),
+                success_url: `${window.location.origin}/dashboard?payment=success`,
+                cancel_url: `${window.location.origin}/create-campaign?payment=cancelled`,
+                currency: targetCurrency || currency
+            };
+
+            const res = await fetch(`${API_BASE_URL}/payment/create-checkout-session`, {
                 method: 'POST',
                 headers: {
                     ...getAuthHeaders(),
                     'Content-Type': 'application/json'
-                }
+                },
+                credentials: 'include',
+                body: JSON.stringify(requestBody)
             });
 
+            setTimeout(() => toast.dismiss(), 500);
+
             if (!res.ok) {
-                const error = await res.json();
-                throw new Error(error.detail || 'Payment initialization failed');
+                const errorData = await res.json().catch(() => ({}));
+                console.group("💳 Payment Initialization Error");
+                console.error("Status:", res.status);
+                console.error("Details:", errorData);
+                console.groupEnd();
+
+                // Extract descriptive error
+                const backendError = errorData.detail || errorData.error;
+
+                if (res.status === 422 && errorData.error && Array.isArray(errorData.details)) {
+                    const msg = errorData.details.map(d => `${d.loc[d.loc.length - 1]}: ${d.msg}`).join(', ');
+                    throw new Error(`Data Validation Error: ${msg}`);
+                }
+
+                throw new Error(backendError || 'Secure checkout could not be initiated. Please verify your Stripe account settings.');
             }
 
             const data = await res.json();
             if (data.checkout_url) {
                 window.location.href = data.checkout_url;
             } else {
-                toast.error('Invalid payment configuration received.');
+                throw new Error("No secure checkout link received from server.");
             }
         } catch (error) {
+            toast.dismiss();
             console.error("Payment Error:", error);
             toast.error(`Payment Failed: ${error.message}`);
         }
+    };
+    const saveGeoSettings = (newSettings) => {
+        const settingsWithTime = { ...newSettings, lastUpdated: new Date().toISOString() };
+        setGeoSettings(settingsWithTime);
+        localStorage.setItem('geo_settings', JSON.stringify(settingsWithTime));
+        toast.success(t('geo.settings_saved'));
     };
 
     return (
@@ -1083,6 +1143,8 @@ export const AppProvider = ({ children }) => {
             ],
             formatIndustryName,
             handleCountryChange,
+            geoSettings,
+            saveGeoSettings,
 
             markAllRead,
             logout,
@@ -1090,6 +1152,8 @@ export const AppProvider = ({ children }) => {
             signup,
             googleAuth,
             authLoading,
+            isGeoLoading,
+            loadRegionsForCountry,
             API_BASE_URL,
             getAuthHeaders
         }}>

@@ -252,7 +252,7 @@ async def create_campaign_compat(
                 duration_days=duration_days,
                 target_postcode=data.get("postcode") or (location_val if coverage_type == models.CoverageType.RADIUS_30 else None),
                 target_state=data.get("state") or (location_val if coverage_type == models.CoverageType.STATE else None),
-                target_country="US"
+                target_country=user.country or "US"
             )
             calculated_price = pricing_result.total_price
             coverage_area_desc = pricing_result.breakdown.get("coverage_area_description", coverage_area_desc)
@@ -292,7 +292,7 @@ async def create_campaign_compat(
                 coverage_area=coverage_area_desc,
                 target_postcode=data.get("postcode") or (location_val if coverage_type == models.CoverageType.RADIUS_30 else None),
                 target_state=data.get("state") or (location_val if coverage_type == models.CoverageType.STATE else None),
-                target_country="US",
+                target_country=user.country or "US",
                 description=data.get("description", ""),
                 headline=data.get("headline") or data.get("adText", {}).get("headline"),
                 landing_page_url=data.get("landing_page_url") or data.get("landingPage") or data.get("url"),

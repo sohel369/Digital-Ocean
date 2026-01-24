@@ -4,7 +4,11 @@ import { Save, RefreshCcw, TrendingUp, Map, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 
 const AdminPricing = () => {
-    const { pricingData, savePricingConfig, CONSTANTS, t, formatIndustryName, currency, country } = useApp();
+    const {
+        pricingData, savePricingConfig, CONSTANTS, t,
+        formatIndustryName, currency, country,
+        isGeoLoading, loadRegionsForCountry
+    } = useApp();
     const [localPricing, setLocalPricing] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const currentCurrency = CONSTANTS.CURRENCIES.find(c => c.code === currency) || { symbol: '$' };
@@ -18,7 +22,6 @@ const AdminPricing = () => {
     }, [pricingData]);
 
     // Load country specific data when selectedCountry changes
-    const { loadRegionsForCountry } = useApp();
     React.useEffect(() => {
         if (selectedCountry !== country) {
             loadRegionsForCountry(selectedCountry);
@@ -27,7 +30,12 @@ const AdminPricing = () => {
 
     // Early return if data is not loaded yet
     if (!localPricing || !localPricing.industries || localPricing.industries.length === 0) {
-        return <div className="p-8 text-white">{t('common.loading')}</div>;
+        return (
+            <div className="min-h-[400px] flex flex-col items-center justify-center gap-4 text-slate-500 font-bold animate-pulse uppercase tracking-widest">
+                <RefreshCcw className="animate-spin text-primary" size={32} />
+                {t('common.loading')}
+            </div>
+        );
     }
 
     const filteredStates = localPricing.states?.filter(s => s.countryCode === selectedCountry) || [];
@@ -216,7 +224,14 @@ const AdminPricing = () => {
                     </select>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative min-h-[250px]">
+                    {isGeoLoading && (
+                        <div className="absolute inset-0 z-50 bg-slate-900/40 backdrop-blur-[2px] rounded-3xl flex flex-col items-center justify-center space-y-3">
+                            <RefreshCcw className="animate-spin text-primary" size={32} />
+                            <p className="text-[10px] text-primary font-black uppercase tracking-widest italic">Synchronizing Postcodes...</p>
+                        </div>
+                    )}
+
                     {filteredStates.map(state => (
                         <div key={state.name} className="p-5 bg-slate-900/30 rounded-2xl border border-white/5 space-y-4">
                             <div className="flex justify-between items-start">
@@ -226,7 +241,7 @@ const AdminPricing = () => {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">{t('admin.density_multi')}</label>
+                                    <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Density Multi</label>
                                     <input
                                         type="number" step="0.1" min="0.5" max="5.0"
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-white font-black text-sm outline-none focus:border-primary transition-colors"
@@ -240,7 +255,7 @@ const AdminPricing = () => {
                                 </div>
                                 <div>
                                     <div className="flex items-center justify-between mb-1">
-                                        <label className="text-[10px] text-slate-500 font-bold uppercase">{t('admin.population')}</label>
+                                        <label className="text-[10px] text-slate-500 font-bold uppercase">Population</label>
                                         <span className="text-[9px] bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded uppercase font-black tracking-wider">Demo Data</span>
                                     </div>
                                     <input
@@ -253,9 +268,25 @@ const AdminPricing = () => {
                             </div>
                         </div>
                     ))}
-                    {filteredStates.length === 0 && (
-                        <div className="col-span-full py-12 text-center text-slate-500">
-                            {t('common.no_data')}
+
+                    {!isGeoLoading && filteredStates.length === 0 && (
+                        <div className="col-span-full py-20 bg-slate-900/20 border border-white/5 rounded-[2.5rem] text-center space-y-6">
+                            <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mx-auto border border-primary/20">
+                                <Map size={40} className="text-primary opacity-50" />
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="text-xl font-black text-white italic uppercase tracking-tight">Geographic Data Missing</h3>
+                                <p className="text-slate-500 text-sm max-w-md mx-auto leading-relaxed font-medium">
+                                    We haven't populated the regional subdivisions for <span className="text-white">"{CONSTANTS.COUNTRIES.find(c => c.code === selectedCountry)?.name}"</span> yet.
+                                </p>
+                            </div>
+                            <div className="pt-4">
+                                <div className="inline-block px-8 py-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-amber-500">
+                                    <p className="text-xs font-black uppercase tracking-widest mb-1 italic">Action Required</p>
+                                    <p className="text-sm font-bold">Please supply the <span className="underline decoration-2">Countries & Subdivisions Spreadsheet</span></p>
+                                    <p className="text-[10px] opacity-70 mt-1 italic italic">Required for Land Area, Population, and Density Matrix synchronization.</p>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -268,33 +299,37 @@ const AdminPricing = () => {
                     <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">{t('admin.discounts')}</h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                            <label className="text-sm font-bold text-slate-300 uppercase tracking-wider">{t('admin.region_discount')}</label>
-                            <span className="text-2xl font-black text-primary">{(localPricing.discounts.state * 10).toFixed(1)}x</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-4">
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-end border-b border-white/5 pb-2">
+                            <div>
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Region Discount</label>
+                                <p className="text-[10px] text-slate-600 italic">State-wide targeting benefit</p>
+                            </div>
+                            <span className="text-3xl font-black text-primary italic">{((localPricing.discounts?.state || 0) * 100).toFixed(0)}%</span>
                         </div>
                         <input
                             type="range" min="0" max="0.5" step="0.01"
                             className="w-full accent-primary h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer"
-                            value={localPricing.discounts.state}
+                            value={localPricing.discounts?.state || 0}
                             onChange={(e) => handleDiscountChange('state', e.target.value)}
                         />
-                        <p className="text-xs text-slate-500 font-medium italic">{t('admin.region_discount_desc')}</p>
                     </div>
 
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                            <label className="text-sm font-bold text-slate-300 uppercase tracking-wider">{t('admin.country_discount')}</label>
-                            <span className="text-2xl font-black text-orange-400">{(localPricing.discounts.national * 10).toFixed(1)}x</span>
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-end border-b border-white/5 pb-2">
+                            <div>
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Country Discount</label>
+                                <p className="text-[10px] text-slate-600 italic">National market penetration benefit</p>
+                            </div>
+                            <span className="text-3xl font-black text-orange-400 italic">{((localPricing.discounts?.national || 0) * 100).toFixed(0)}%</span>
                         </div>
                         <input
                             type="range" min="0" max="0.8" step="0.01"
                             className="w-full accent-orange-400 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer"
-                            value={localPricing.discounts.national}
+                            value={localPricing.discounts?.national || 0}
                             onChange={(e) => handleDiscountChange('national', e.target.value)}
                         />
-                        <p className="text-xs text-slate-500 font-medium italic">{t('admin.country_discount_desc')}</p>
                     </div>
                 </div>
             </div>

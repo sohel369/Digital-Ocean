@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Terminal } from 'lucide-react';
+import Dropdown from '../components/Dropdown';
+import { Terminal, Briefcase, Globe } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-
-import { signInWithGoogle } from '../firebase';
+import { signInWithGoogle, getRedirectResult, auth } from '../firebase';
 import { SUPPORTED_INDUSTRIES } from '../config/industries';
 import { SUPPORTED_COUNTRIES } from '../config/i18nConfig';
 
@@ -19,11 +19,49 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
+    // Prepare options for Dropdown
+    const industryOptions = SUPPORTED_INDUSTRIES.map(ind => ({
+        value: ind,
+        name: ind
+    }));
+
+    const countryOptions = SUPPORTED_COUNTRIES.map(c => ({
+        value: c.name,
+        name: c.name
+    }));
+
     useEffect(() => {
         if (user) {
             navigate('/');
         }
     }, [user, navigate]);
+    // Handle Google sign-in redirect result (for Railway COOP issues)
+    useEffect(() => {
+        getRedirectResult(auth)
+            .then((result) => {
+                if (result?.user) {
+                    // User signed in via redirect
+                    googleAuth(result.user)
+                        .then((res) => {
+                            if (res.success && res.user) {
+                                toast.success(t('common.success'), {
+                                    description: `Welcome back, ${res.user.username || res.user.email || 'User'}`
+                                });
+                                navigate('/');
+                            } else {
+                                toast.error(t('common.error'), { description: res.message });
+                            }
+                        })
+                        .catch((e) => {
+                            console.error('Google Redirect Auth Error:', e);
+                            toast.error(t('common.error'));
+                        });
+                }
+            })
+            .catch((error) => {
+                console.error('Redirect result error:', error);
+            });
+    }, []);
 
     const handleGoogleSignIn = async () => {
         setLoading(true);
@@ -113,8 +151,6 @@ const Login = () => {
                 </div>
 
                 <div className="space-y-6">
-
-
                     <div className="relative flex items-center py-2">
                         <div className="flex-grow border-t border-slate-800/60"></div>
                         <span className="flex-shrink mx-4 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">{t('auth.or_divider')}</span>
@@ -131,7 +167,7 @@ const Login = () => {
                             type="text"
                             value={isLogin ? email : username}
                             onChange={(e) => isLogin ? setEmail(e.target.value) : setUsername(e.target.value)}
-                            className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-mono text-sm placeholder:text-slate-700"
+                            className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-bold text-sm placeholder:text-slate-700"
                             placeholder={isLogin ? "admin@adplatform.com" : "NEW_OPERATOR_01"}
                             required autoComplete="off"
                         />
@@ -145,7 +181,7 @@ const Login = () => {
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-mono text-sm placeholder:text-slate-700"
+                                    className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-bold text-sm placeholder:text-slate-700"
                                     placeholder="operator@adplatform.com"
                                     required
                                 />
@@ -153,31 +189,28 @@ const Login = () => {
 
                             <div className="space-y-1.5 animate-in slide-in-from-top-3">
                                 <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-600 ml-1">Industry</label>
-                                <select
-                                    className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-mono text-sm placeholder:text-slate-700 appearance-none"
+                                <Dropdown
+                                    options={industryOptions}
                                     value={industry}
-                                    onChange={(e) => setIndustry(e.target.value)}
-                                    required
-                                >
-                                    <option value="" disabled>Select Industry</option>
-                                    {SUPPORTED_INDUSTRIES.map(ind => (
-                                        <option key={ind} value={ind}>{ind}</option>
-                                    ))}
-                                </select>
+                                    onChange={setIndustry}
+                                    label="Select Industry"
+                                    icon={<Briefcase size={16} className="text-primary" />}
+                                    menuWidth="w-full"
+                                    align="left"
+                                />
                             </div>
 
                             <div className="space-y-1.5 animate-in slide-in-from-top-3">
                                 <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-600 ml-1">Country</label>
-                                <select
-                                    className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-mono text-sm placeholder:text-slate-700 appearance-none"
+                                <Dropdown
+                                    options={countryOptions}
                                     value={selectedCountry}
-                                    onChange={(e) => setSelectedCountry(e.target.value)}
-                                    required
-                                >
-                                    {SUPPORTED_COUNTRIES.map(c => (
-                                        <option key={c.code} value={c.name}>{c.name}</option>
-                                    ))}
-                                </select>
+                                    onChange={setSelectedCountry}
+                                    label="Select Country"
+                                    icon={<Globe size={16} className="text-secondary" />}
+                                    menuWidth="w-full"
+                                    align="left"
+                                />
                             </div>
                         </>
                     )}
@@ -188,7 +221,7 @@ const Login = () => {
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-mono text-sm placeholder:text-slate-700"
+                            className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-bold text-sm placeholder:text-slate-700"
                             placeholder="••••••••"
                             required
                         />
@@ -212,21 +245,7 @@ const Login = () => {
                     </button>
                 </div>
 
-                {isLogin && (
-                    <div className="mt-10 text-center">
-                        <p className="text-[10px] uppercase font-bold tracking-[0.3em] text-slate-700 mb-3">{t('auth.emergency') || 'Master Credentials'}</p>
-                        <div className="flex flex-col items-center justify-center gap-1">
-                            <div className="flex items-center gap-2">
-                                <span className="text-[9px] text-blue-500/60 font-bold uppercase">Email:</span>
-                                <span className="text-[9px] text-slate-300 font-mono">admin@adplatform.com</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[9px] text-blue-500/60 font-bold uppercase">Pass:</span>
-                                <span className="text-[9px] text-slate-300 font-mono">admin123</span>
-                            </div>
-                        </div>
-                    </div>
-                )}
+
             </div>
         </div>
     );

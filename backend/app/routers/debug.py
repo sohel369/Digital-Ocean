@@ -32,7 +32,8 @@ async def env_debug():
         "JWT_SECRET_LENGTH": len(settings.SECRET_KEY),
         "ACCESS_TOKEN_EXPIRE": settings.ACCESS_TOKEN_EXPIRE_MINUTES,
         "DATABASE_URL_CONFIGURED": bool(settings.DATABASE_URL),
-        "CORS_ORIGINS": settings.CORS_ORIGINS
+        "CORS_ORIGINS": settings.CORS_ORIGINS,
+        "STRIPE_CONFIGURED": bool(settings.STRIPE_SECRET_KEY and len(settings.STRIPE_SECRET_KEY) > 10)
     }
 
 @router.get("/db")

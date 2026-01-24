@@ -79,7 +79,21 @@ const CampaignCreation = () => {
     const handleInputChange = (e) => {
         if (isReadOnly) return;
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+
+        setFormData(prev => {
+            const newData = { ...prev, [name]: value };
+
+            // Auto-calculate end date if start date changes
+            if (name === 'startDate' && value) {
+                const start = new Date(value);
+                const months = parseInt(prev.duration || '3'); // Use current duration
+                const end = new Date(start);
+                end.setMonth(end.getMonth() + months);
+                newData.endDate = end.toISOString().split('T')[0];
+            }
+
+            return newData;
+        });
     };
 
     const handleFileDrop = (e) => {

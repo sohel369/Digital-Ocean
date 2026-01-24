@@ -154,6 +154,25 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 # ==================== Routes ====================
 
+@app.get("/test-email")
+async def test_email_setup(email: str = "sohel0130844@gmail.com"):
+    """Check SMTP settings and send a real test email."""
+    from .utils.email import send_email
+    success = send_email(
+        to_email=email,
+        subject="Backend Connection Test",
+        html_content="<h1>SMTP is Working!</h1><p>If you see this, your Gmail settings are correct.</p>"
+    )
+    if success:
+        return {"status": "success", "message": f"Test email sent to {email}. Check your inbox/spam."}
+    else:
+        return {
+            "status": "error", 
+            "message": "Failed to send. Check Railway logs for the exact SMTP error.",
+            "hint": "Check if SMTP_PASSWORD is an 16-character App Password without spaces."
+        }
+
+
 @app.get("/", tags=["Root"])
 async def root():
     """

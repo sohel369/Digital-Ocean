@@ -68,7 +68,7 @@ const Sidebar = () => {
                         </div>
                         <div className="flex flex-col">
                             <span className="text-xl font-bold tracking-tighter leading-none mb-0.5 text-white">RULE 7</span>
-                            <span className="text-[10px] font-black text-blue-500 tracking-[0.2em] uppercase">MEDIA</span>
+                            <span className="text-[10px] font-black text-blue-400 tracking-[0.2em] uppercase">MEDIA</span>
                         </div>
                     </div>
                     {/* Close Button (Mobile) */}

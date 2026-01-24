@@ -96,6 +96,30 @@ const CampaignCreation = () => {
         });
     };
 
+    // Auto-calculate budget whenever influencing factors change
+    React.useEffect(() => {
+        const formatData = pricingData.adTypes.find(a => a.name.toLowerCase() === formData.format.replace('_', ' ').toLowerCase()) || { baseRate: 79 };
+        const industryData = pricingData.industries.find(i => i.name.toLowerCase() === (formData.industry || '').toLowerCase()) || { multiplier: 1.0 };
+        const monthlyRate = formatData.baseRate * (industryData.multiplier || 1.0) * (formData.coverageArea === 'national' ? 5 : (formData.coverageArea === 'state' ? 2.5 : 1.0));
+
+        const durationMonths = parseInt(formData.duration || '3');
+        let discount = 1.0;
+        // Discount logic for total term (if applicable) - currently same as monthly
+        // But for Total Term, it is Monthly * Duration
+        // Use the same discount logic as Monthly Amount if that's how it works, 
+        // OR if the discount applies to the rate.
+        if (durationMonths >= 12) discount = 0.50;
+        else if (durationMonths >= 6) discount = 0.75;
+
+        const totalCost = monthlyRate * discount * durationMonths;
+
+        // Update budget in state
+        setFormData(prev => ({
+            ...prev,
+            budget: totalCost.toFixed(0)
+        }));
+    }, [formData.format, formData.industry, formData.coverageArea, formData.duration, pricingData]);
+
     const handleFileDrop = (e) => {
         if (isReadOnly) return;
         e.preventDefault();
@@ -281,9 +305,9 @@ const CampaignCreation = () => {
                             {/* Method Box */}
                             <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 space-y-4 hover:border-primary/30 transition-colors">
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Targeting Method</p>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Geo Targeting</p>
                                     <p className="text-xl font-black text-white italic uppercase tracking-tighter">
-                                        {geoSettings.coverageArea === 'radius' ? 'Custom Radius Targeting' : (geoSettings.coverageArea === 'state' ? 'Statewide Coverage' : 'National Campaign')}
+                                        {geoSettings.coverageArea === 'radius' ? 'Custom Radius' : (geoSettings.coverageArea === 'state' ? 'Statewide' : 'National')}
                                     </p>
                                 </div>
                                 <div className="space-y-1">
@@ -473,14 +497,12 @@ const CampaignCreation = () => {
                                 </span>
                             </div>
                             {/* Multiplier Hidden for Advertiser */}
-                            {false && (
-                                <div className="flex justify-between text-xs text-slate-400">
-                                    <span>{t('campaign.industry_multiplier')} ({formatIndustryName(formData.industry)})</span>
-                                    <span className="text-primary font-bold">
-                                        x{pricingData.industries.find(i => i.name === formData.industry)?.multiplier || 1.0}
-                                    </span>
-                                </div>
-                            )}
+                            <div className="flex justify-between text-xs text-slate-400">
+                                <span>{t('campaign.industry_multiplier')} ({formatIndustryName(formData.industry)})</span>
+                                <span className="text-primary font-bold">
+                                    x{pricingData.industries.find(i => i.name === formData.industry)?.multiplier || 1.0}
+                                </span>
+                            </div>
                         </div>
 
                         <div className="space-y-4">
@@ -517,9 +539,9 @@ const CampaignCreation = () => {
                                         <input
                                             type="text"
                                             name="budget"
-                                            className="w-full bg-slate-900/50 border border-slate-700/50 rounded-2xl pl-12 pr-5 py-4 text-2xl font-black text-white outline-none focus:ring-2 focus:ring-primary/50"
+                                            readOnly
+                                            className="w-full bg-slate-900/50 border border-slate-700/50 rounded-2xl pl-12 pr-5 py-4 text-2xl font-black text-white outline-none focus:ring-2 focus:ring-primary/50 opacity-80 cursor-not-allowed"
                                             value={formData.budget}
-                                            onChange={handleInputChange}
                                         />
                                     </div>
                                 </div>

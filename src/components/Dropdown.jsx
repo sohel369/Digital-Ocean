@@ -23,14 +23,14 @@ const Dropdown = ({ label, icon, options, value, onChange, align = 'right', clas
                 className={`
           flex items-center gap-3 px-5 py-4 rounded-2xl border text-sm transition-all duration-300 w-full justify-between outline-none
           ${isOpen
-                        ? 'bg-primary/10 border-primary/40 text-primary-light shadow-[0_0_20px_rgba(59,130,246,0.15)]'
-                        : 'bg-[#111622] border-slate-800 text-slate-300 hover:border-slate-700 hover:bg-[#151b2b]'
+                        ? 'bg-slate-900 border-primary text-white shadow-[0_0_20px_rgba(59,130,246,0.15)] ring-1 ring-primary/50'
+                        : 'bg-slate-900/50 border-white/10 text-slate-200 hover:border-slate-600 hover:bg-slate-900'
                     }
         `}
             >
-                <div className="flex items-center gap-3 min-w-0 overflow-hidden">
+                <div className="flex items-center gap-3 min-w-0">
                     {icon && <span className="shrink-0">{icon}</span>}
-                    <span className="text-sm font-bold truncate whitespace-nowrap tracking-tight">
+                    <span className="text-sm font-bold text-left leading-tight">
                         {options.find(o => o.code === value || o.value === value)?.name ||
                             options.find(o => o.code === value || o.value === value)?.label ||
                             value || label || 'Select Option'}
@@ -40,8 +40,8 @@ const Dropdown = ({ label, icon, options, value, onChange, align = 'right', clas
             </button>
 
             {isOpen && (
-                <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} ${align === 'top' ? 'bottom-full mb-3' : 'mt-3'} ${menuWidth} bg-[#0f172a] border border-slate-800/80 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl max-h-[350px] overflow-y-auto custom-scrollbar`}>
-                    <div className="p-2">
+                <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} ${align === 'top' ? 'bottom-full mb-3' : 'mt-3'} ${menuWidth} bg-[#0f172a] border border-slate-700/80 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl max-h-[350px] overflow-y-auto custom-scrollbar`}>
+                    <div className="p-2 space-y-1">
                         {options.map((option) => (
                             <button
                                 key={option.code || option.value}
@@ -51,19 +51,20 @@ const Dropdown = ({ label, icon, options, value, onChange, align = 'right', clas
                                     setIsOpen(false);
                                 }}
                                 className={`
-                  w-full text-left px-5 py-4 text-sm transition-all duration-200 flex justify-between items-center rounded-xl mb-1 last:mb-0
+                  w-full text-left px-4 py-3 text-sm transition-all duration-200 flex justify-between items-center rounded-xl border
                   ${(option.code || option.value) === value
-                                        ? 'bg-primary/20 text-white font-bold shadow-lg shadow-primary/10'
-                                        : 'text-slate-200 hover:bg-white/10 hover:text-white font-bold'
+                                        ? 'bg-primary/20 border-primary/30 text-white font-bold shadow-lg shadow-primary/5'
+                                        : 'bg-slate-900/40 border-white/5 text-slate-300 hover:bg-slate-800 hover:border-white/10 hover:text-white font-bold'
                                     }
                 `}
                             >
-                                <span className="truncate tracking-tight">{option.name || option.label}</span>
+                                <span className="leading-snug">{option.name || option.label}</span>
                                 <div className="flex items-center gap-2">
-                                    {option.symbol && <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400 font-mono">{option.symbol}</span>}
-                                    {option.currency && <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400 font-mono">{option.currency}</span>}
+                                    {option.symbol && <span className="text-[10px] bg-slate-950 border border-slate-800 px-1.5 py-0.5 rounded text-slate-400 font-mono font-bold">{option.symbol}</span>}
+                                    {option.currency && <span className="text-[10px] bg-slate-950 border border-slate-800 px-1.5 py-0.5 rounded text-slate-400 font-mono font-bold">{option.currency}</span>}
                                 </div>
                             </button>
+
                         ))}
                     </div>
                 </div>

@@ -229,10 +229,10 @@ const AdminPricing = () => {
                         {isCountryOpen && (
                             <>
                                 <div
-                                    className="fixed inset-0 z-40"
+                                    className="fixed inset-0 z-[55]"
                                     onClick={() => setIsCountryOpen(false)}
                                 ></div>
-                                <div className="absolute top-full right-0 left-0 mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100 max-h-[300px] overflow-y-auto custom-scrollbar ring-1 ring-white/5">
+                                <div className="absolute top-full right-0 left-0 mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-xl overflow-hidden z-[60] animate-in fade-in zoom-in-95 duration-100 max-h-[300px] overflow-y-auto custom-scrollbar ring-1 ring-white/5">
                                     {CONSTANTS.COUNTRIES.map(c => (
                                         <div
                                             key={c.code}
@@ -346,6 +346,10 @@ const AdminPricing = () => {
                             value={localPricing.discounts?.state || 0}
                             onChange={(e) => handleDiscountChange('state', e.target.value)}
                         />
+                        <div className="flex justify-between text-[10px] font-bold text-slate-600 uppercase">
+                            <span>0%</span>
+                            <span>50%</span>
+                        </div>
                     </div>
 
                     <div className="space-y-6">
@@ -362,6 +366,10 @@ const AdminPricing = () => {
                             value={localPricing.discounts?.national || 0}
                             onChange={(e) => handleDiscountChange('national', e.target.value)}
                         />
+                        <div className="flex justify-between text-[10px] font-bold text-slate-600 uppercase">
+                            <span>0%</span>
+                            <span>80%</span>
+                        </div>
                     </div>
                 </div>
             </div>

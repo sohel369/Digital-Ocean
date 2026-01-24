@@ -82,7 +82,14 @@ const Pricing = () => {
     // Handle Country/State reset separately
     React.useEffect(() => {
         const countryStates = (pricingData?.states || []).filter(s => s.countryCode === country);
-        if (countryStates.length > 0) setSelectedState(countryStates[0]);
+        if (countryStates.length > 0) {
+            // If current selected state is NOT in the new list, pick the first one
+            const isCurrentValid = countryStates.find(s => s.name === selectedState.name);
+            if (!isCurrentValid) setSelectedState(countryStates[0]);
+        } else {
+            // Clear selection if no states available for country
+            setSelectedState({ name: t('common.no_regions') || 'No Regions Available', landMass: 0, densityMultiplier: 1.0 });
+        }
     }, [pricingData, country]);
 
     const RADIUS_AREA = 2827;
@@ -175,11 +182,22 @@ const Pricing = () => {
                         )}
 
                         {coverageArea === 'state' && (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                                {pricingData.states.filter(s => s.countryCode === country).map(s => (
-                                    <button key={s.name} onClick={() => setSelectedState(s)} className={`px-4 py-3 rounded-xl text-xs font-black transition-all border ${selectedState.name === s.name ? 'bg-primary text-white border-primary shadow-lg' : 'bg-slate-800/40 text-slate-400 border-white/5'}`}>{s.name}</button>
-                                ))}
-                            </div>
+                            <>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                    {pricingData.states.filter(s => s.countryCode === country).map(s => (
+                                        <button key={s.name} onClick={() => setSelectedState(s)} className={`px-4 py-3 rounded-xl text-xs font-black transition-all border ${selectedState.name === s.name ? 'bg-primary text-white border-primary shadow-lg' : 'bg-slate-800/40 text-slate-400 border-white/5'}`}>{s.name}</button>
+                                    ))}
+                                </div>
+                                {(pricingData.discounts?.state > 0) && (
+                                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-3xl p-6 flex gap-5 items-center mt-6">
+                                        <Layout size={32} className="text-blue-400" />
+                                        <div>
+                                            <h4 className="font-black text-blue-400 text-base uppercase">{t('pricing.state_bulk_discount', { discount: (pricingData.discounts.state * 100).toFixed(0) })} - {t('pricing.bulk_savings') || 'Bulk Savings Applied'}</h4>
+                                            <p className="text-xs text-slate-400 font-medium">Regional coverage discount applied automatically.</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
 
                         {coverageArea === 'national' && (

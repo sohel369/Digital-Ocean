@@ -9,8 +9,9 @@ import { SUPPORTED_INDUSTRIES } from '../config/industries';
 import { SUPPORTED_COUNTRIES } from '../config/i18nConfig';
 
 const Login = () => {
-    const { login, signup, googleAuth, user, t } = useApp();
+    const { login, signup, googleAuth, resetPassword, user, t } = useApp();
     const [isLogin, setIsLogin] = useState(true);
+    const [isForgot, setIsForgot] = useState(false);
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -91,6 +92,27 @@ const Login = () => {
         setLoading(true);
 
         try {
+            if (isForgot) {
+                if (!email.includes('@')) {
+                    toast.error(t('common.error'), {
+                        description: t('auth.email_required_msg') || 'Please use your registered Email Address.'
+                    });
+                    setLoading(false);
+                    return;
+                }
+                const result = await resetPassword(email);
+                if (result.success) {
+                    toast.success("Reset Link Sent", {
+                        description: "Check your email for the password reset link."
+                    });
+                    setIsForgot(false);
+                } else {
+                    toast.error("Error", { description: result.message });
+                }
+                setLoading(false);
+                return;
+            }
+
             if (isLogin) {
                 if (!email.includes('@') && email.toUpperCase() !== 'ADMIN') {
                     toast.error(t('common.error'), {
@@ -173,14 +195,14 @@ const Login = () => {
                 <form onSubmit={handleSubmit} className="space-y-6 mt-6">
                     <div className="space-y-1.5 focus-within:transform focus-within:translate-x-1 transition-transform">
                         <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-600 ml-1">
-                            {isLogin ? t('auth.email_label') : t('auth.username_label')}
+                            {isLogin ? (isForgot ? t('auth.email_label') : t('auth.email_label')) : t('auth.username_label')}
                         </label>
                         <input
                             type="text"
-                            value={isLogin ? email : username}
+                            value={isLogin && isForgot ? email : (isLogin ? email : username)}
                             onChange={(e) => isLogin ? setEmail(e.target.value) : setUsername(e.target.value)}
                             className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-bold text-sm placeholder:text-slate-700"
-                            placeholder={isLogin ? "admin@adplatform.com" : "NEW_OPERATOR_01"}
+                            placeholder={isLogin ? (isForgot ? "Enter your registered email" : "admin@adplatform.com") : "NEW_OPERATOR_01"}
                             required autoComplete="off"
                         />
                     </div>
@@ -228,33 +250,46 @@ const Login = () => {
                         </>
                     )}
 
-                    <div className="space-y-1.5 focus-within:transform focus-within:translate-x-1 transition-transform">
-                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-600 ml-1">{t('auth.password_label')}</label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-bold text-sm placeholder:text-slate-700"
-                            placeholder="••••••••"
-                            required
-                        />
-                    </div>
+                    {!isForgot && (
+                        <div className="space-y-1.5 focus-within:transform focus-within:translate-x-1 transition-transform">
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-600 ml-1">{t('auth.password_label')}</label>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-bold text-sm placeholder:text-slate-700"
+                                placeholder="••••••••"
+                                required={!isForgot}
+                            />
+                        </div>
+                    )}
+
+                    {isLogin && !isForgot && (
+                        <div className="flex justify-end">
+                            <button type="button" onClick={() => setIsForgot(true)} className="text-[11px] font-bold text-slate-500 hover:text-blue-500 transition-colors uppercase tracking-wider">
+                                Forgot Password?
+                            </button>
+                        </div>
+                    )}
 
                     <button
                         type="submit"
                         disabled={loading}
                         className="w-full bg-[#2563eb] text-white font-bold py-4 rounded-2xl shadow-xl shadow-blue-600/20 hover:bg-blue-600 transition-all active:scale-[0.98] disabled:opacity-50 text-sm"
                     >
-                        {loading ? t('auth.processing') : (isLogin ? t('auth.login_btn') : t('auth.register_btn'))}
+                        {loading ? t('auth.processing') : (isForgot ? "Send Reset Link" : (isLogin ? t('auth.login_btn') : t('auth.register_btn')))}
                     </button>
                 </form>
 
                 <div className="mt-8">
                     <button
-                        onClick={() => setIsLogin(!isLogin)}
+                        onClick={() => {
+                            if (isForgot) setIsForgot(false);
+                            else setIsLogin(!isLogin);
+                        }}
                         className="w-full bg-[#111622] hover:bg-[#111622]/80 border border-slate-800/80 py-4 rounded-2xl text-xs font-semibold text-slate-400 transition-all"
                     >
-                        {isLogin ? t('auth.need_account') : t('auth.have_account')}
+                        {isForgot ? "Back to Login" : (isLogin ? t('auth.need_account') : t('auth.have_account'))}
                     </button>
                 </div>
 

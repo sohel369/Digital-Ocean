@@ -273,3 +273,45 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"OAuth authentication failed: {str(e)}"
         )
+
+
+@router.post("/forgot-password")
+async def forgot_password(request: schemas.ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """
+    Iniciate password reset process.
+    Sends an email with a reset link if user exists.
+    """
+    user = db.query(models.User).filter(models.User.email == request.email).first()
+    
+    # Security: Always return success even if user doesn't exist to prevent email enumeration
+    if user:
+        from ..utils.email import send_password_reset_email
+        token = auth.create_password_reset_token(user.email)
+        send_password_reset_email(user.email, token)
+        
+    return {"message": "If an account exists with this email, a reset link has been sent."}
+
+
+@router.post("/reset-password")
+async def reset_password(request: schemas.ResetPasswordRequest, db: Session = Depends(get_db)):
+    """
+    Reset password using a token.
+    """
+    email = auth.verify_password_reset_token(request.token)
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token"
+        )
+        
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+        
+    user.password_hash = auth.get_password_hash(request.new_password)
+    db.commit()
+    
+    return {"message": "Password reset successfully"}

@@ -59,6 +59,14 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
     
+    # SMTP Settings (Optional)
+    SMTP_HOST: str = os.environ.get("SMTP_HOST", "")
+    SMTP_PORT: int = int(os.environ.get("SMTP_PORT", "587"))
+    SMTP_USER: str = os.environ.get("SMTP_USER", "")
+    SMTP_PASSWORD: str = os.environ.get("SMTP_PASSWORD", "")
+    FROM_EMAIL: str = os.environ.get("FROM_EMAIL", "noreply@adplatform.com")
+    FRONTEND_URL: str = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+    
     class Config:
         env_file = ".env"
         case_sensitive = True

@@ -58,6 +58,17 @@ class UserLogin(BaseModel):
     password: str
 
 
+class ForgotPasswordRequest(BaseModel):
+    """Schema for requesting a password reset email."""
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    """Schema for resetting password with a token."""
+    token: str
+    new_password: str = Field(..., min_length=8, max_length=100)
+
+
 class Token(BaseModel):
     """Schema for JWT token response."""
     access_token: str

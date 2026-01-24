@@ -115,7 +115,7 @@ async def create_checkout_session(
                 "session_id": mock_id
             }
 
-        # Create Stripe Checkout Session
+        # Create Stripe Checkout Session (SUBSCRIPTION MODE for Auto-Renewal)
         checkout_session = stripe.checkout.Session.create(
             # Use explicit payment methods to avoid 'unknown parameter' errors
             payment_method_types=['card'],
@@ -124,13 +124,16 @@ async def create_checkout_session(
                     'currency': target_currency,
                     'product_data': {
                         'name': campaign.name,
-                        'description': f"Premium reach for {campaign.industry_type} in {campaign.coverage_area}",
+                        'description': f"Monthly subscription for {campaign.industry_type} in {campaign.coverage_area}",
                     },
                     'unit_amount': amount_smallest_unit,
+                    'recurring': {
+                        'interval': 'month',
+                    },
                 },
                 'quantity': 1,
             }],
-            mode='payment',
+            mode='subscription',  # Changed from 'payment' to 'subscription'
             success_url=success_url + (("&" if "?" in success_url else "?") + "session_id={CHECKOUT_SESSION_ID}"),
             cancel_url=cancel_url,
             customer_email=current_user.email,
@@ -138,7 +141,8 @@ async def create_checkout_session(
             metadata={
                 'campaign_id': campaign_id,
                 'user_id': current_user.id,
-                'environment': 'test' if 'sk_test' in settings.STRIPE_SECRET_KEY else 'production'
+                'environment': 'test' if 'sk_test' in settings.STRIPE_SECRET_KEY else 'production',
+                'type': 'monthly_subscription'
             }
         )
 

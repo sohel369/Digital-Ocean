@@ -9,7 +9,9 @@ import {
     onAuthStateChanged,
     signOut,
     signInWithRedirect,
-    getRedirectResult
+    getRedirectResult,
+    sendPasswordResetEmail,
+    sendEmailVerification
 } from "firebase/auth";
 
 const firebaseConfig = {
@@ -47,6 +49,13 @@ export const registerWithEmail = async (email, password, displayName) => {
         if (displayName) {
             await updateProfile(user, { displayName });
         }
+        // Send verification email
+        try {
+            await sendEmailVerification(user);
+            console.log("Verification email sent to:", email);
+        } catch (e) {
+            console.error("Failed to send verification email:", e);
+        }
         return user;
     } catch (error) {
         throw error;
@@ -62,4 +71,13 @@ export const loginWithEmail = async (email, password) => {
     }
 };
 
-export { onAuthStateChanged, signOut, signInWithPopup, signInWithRedirect, getRedirectResult };
+export const sendPasswordReset = async (email) => {
+    try {
+        await sendPasswordResetEmail(auth, email);
+        return { success: true };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+};
+
+export { onAuthStateChanged, signOut, signInWithPopup, signInWithRedirect, getRedirectResult, sendPasswordResetEmail, sendEmailVerification };

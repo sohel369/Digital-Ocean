@@ -1,0 +1,195 @@
+
+--- sohel0130844@gmail.com | Password Reset Request - AdPlatform ---
+
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px;">
+        <h2 style="color: #2563eb;">Password Reset</h2>
+        <p>You requested a password reset for your AdPlatform account.</p>
+        <p>Click the button below to set a new password. This link will expire in 1 hour.</p>
+        <div style="margin: 30px 0;">
+            <a href="http://localhost:5173/reset-password?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzb2hlbDAxMzA4NDRAZ21haWwuY29tIiwiZXhwIjoxNzY5Mjc3NTUzLCJ0eXBlIjoicGFzc3dvcmRfcmVzZXQifQ.5WWqBtfgmkESd8yq55OY_thd7UAOpflwOhBfv9JQPU8" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+        </div>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+        <p style="font-size: 12px; color: #64748b;">AdPlatform Premium Terminal Access</p>
+    </div>
+    
+
+--- sohel0130844@gmail.com | Password Reset Request - AdPlatform ---
+
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px;">
+        <h2 style="color: #2563eb;">Password Reset</h2>
+        <p>You requested a password reset for your AdPlatform account.</p>
+        <p>Click the button below to set a new password. This link will expire in 1 hour.</p>
+        <div style="margin: 30px 0;">
+            <a href="http://localhost:5173/reset-password?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzb2hlbDAxMzA4NDRAZ21haWwuY29tIiwiZXhwIjoxNzY5Mjc3NTY3LCJ0eXBlIjoicGFzc3dvcmRfcmVzZXQifQ.7Xf-v68UHKVk-W-eF1neWjPDOnrCx5hsLZKvPyPHN3Q" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+        </div>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+        <p style="font-size: 12px; color: #64748b;">AdPlatform Premium Terminal Access</p>
+    </div>
+    
+
+--- sohel0130844@gmail.com | Password Reset Request - AdPlatform ---
+
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px;">
+        <h2 style="color: #2563eb;">Password Reset</h2>
+        <p>You requested a password reset for your AdPlatform account.</p>
+        <p>Click the button below to set a new password. This link will expire in 1 hour.</p>
+        <div style="margin: 30px 0;">
+            <a href="http://localhost:5173/reset-password?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzb2hlbDAxMzA4NDRAZ21haWwuY29tIiwiZXhwIjoxNzY5Mjc3NzQzLCJ0eXBlIjoicGFzc3dvcmRfcmVzZXQifQ.eBVMaWhWnj2FXgzJlKQPl1OhFLmKf3VIAHDXJdWe_fs" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+        </div>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+        <p style="font-size: 12px; color: #64748b;">AdPlatform Premium Terminal Access</p>
+    </div>
+    
+
+--- sohel0130844@gmail.com | Password Reset Request - AdPlatform ---
+
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px;">
+        <h2 style="color: #2563eb;">Password Reset</h2>
+        <p>You requested a password reset for your AdPlatform account.</p>
+        <p>Click the button below to set a new password. This link will expire in 1 hour.</p>
+        <div style="margin: 30px 0;">
+            <a href="http://localhost:5173/reset-password?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzb2hlbDAxMzA4NDRAZ21haWwuY29tIiwiZXhwIjoxNzY5Mjc3ODcxLCJ0eXBlIjoicGFzc3dvcmRfcmVzZXQifQ.p4CQoe1oAYoBWDHPrQRp-N5eumOrcWMqgFq7LCbyuoY" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+        </div>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+        <p style="font-size: 12px; color: #64748b;">AdPlatform Premium Terminal Access</p>
+    </div>
+    
+
+--- sohel0130844@gmail.com | Password Reset Request - AdPlatform ---
+
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px;">
+        <h2 style="color: #2563eb;">Password Reset</h2>
+        <p>You requested a password reset for your AdPlatform account.</p>
+        <p>Click the button below to set a new password. This link will expire in 1 hour.</p>
+        <div style="margin: 30px 0;">
+            <a href="http://localhost:5173/reset-password?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzb2hlbDAxMzA4NDRAZ21haWwuY29tIiwiZXhwIjoxNzY5Mjc3ODk0LCJ0eXBlIjoicGFzc3dvcmRfcmVzZXQifQ.jIrWCS0IQ5wHFtxJekrs-MaV9xJUPj5Q_O9vP-5Tz2Q" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+        </div>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+        <p style="font-size: 12px; color: #64748b;">AdPlatform Premium Terminal Access</p>
+    </div>
+    
+
+--- sohel0130844@gmail.com | Password Reset Request - AdPlatform ---
+
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px;">
+        <h2 style="color: #2563eb;">Password Reset</h2>
+        <p>You requested a password reset for your AdPlatform account.</p>
+        <p>Click the button below to set a new password. This link will expire in 1 hour.</p>
+        <div style="margin: 30px 0;">
+            <a href="http://localhost:5173/reset-password?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzb2hlbDAxMzA4NDRAZ21haWwuY29tIiwiZXhwIjoxNzY5Mjc3OTE2LCJ0eXBlIjoicGFzc3dvcmRfcmVzZXQifQ.FemsNMuPJoAQf91nUPYbBaoSl_-qKk8dnUpvooWFbSo" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+        </div>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+        <p style="font-size: 12px; color: #64748b;">AdPlatform Premium Terminal Access</p>
+    </div>
+    
+
+--- sohel0130844@gmail.com | Password Reset Request - AdPlatform ---
+
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px;">
+        <h2 style="color: #2563eb;">Password Reset</h2>
+        <p>You requested a password reset for your AdPlatform account.</p>
+        <p>Click the button below to set a new password. This link will expire in 1 hour.</p>
+        <div style="margin: 30px 0;">
+            <a href="http://localhost:5173/reset-password?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzb2hlbDAxMzA4NDRAZ21haWwuY29tIiwiZXhwIjoxNzY5Mjc4Mzg3LCJ0eXBlIjoicGFzc3dvcmRfcmVzZXQifQ.ApGxB4h42nwsDmw8-y_hH9V1yBrY69SjU5DuXrogVSM" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+        </div>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+        <p style="font-size: 12px; color: #64748b;">AdPlatform Premium Terminal Access</p>
+    </div>
+    
+
+--- sohel0130844@gmail.com | Password Reset Request - AdPlatform ---
+
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px;">
+        <h2 style="color: #2563eb;">Password Reset</h2>
+        <p>You requested a password reset for your AdPlatform account.</p>
+        <p>Click the button below to set a new password. This link will expire in 1 hour.</p>
+        <div style="margin: 30px 0;">
+            <a href="http://localhost:5173/reset-password?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzb2hlbDAxMzA4NDRAZ21haWwuY29tIiwiZXhwIjoxNzY5Mjc4NDI0LCJ0eXBlIjoicGFzc3dvcmRfcmVzZXQifQ.Yd8e-mqnKID6yB_mobiJFKDG4L2Nd6r7LrTdplS6l88" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+        </div>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+        <p style="font-size: 12px; color: #64748b;">AdPlatform Premium Terminal Access</p>
+    </div>
+    
+
+--- sohel0130844@gmail.com | Password Reset Request - AdPlatform ---
+
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px;">
+        <h2 style="color: #2563eb;">Password Reset</h2>
+        <p>You requested a password reset for your AdPlatform account.</p>
+        <p>Click the button below to set a new password. This link will expire in 1 hour.</p>
+        <div style="margin: 30px 0;">
+            <a href="http://localhost:5173/reset-password?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzb2hlbDAxMzA4NDRAZ21haWwuY29tIiwiZXhwIjoxNzY5Mjc4NDM2LCJ0eXBlIjoicGFzc3dvcmRfcmVzZXQifQ.OYsmA06moNDUtvy6ytU94grfn_B1r81O6qj3m8eR_kU" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+        </div>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+        <p style="font-size: 12px; color: #64748b;">AdPlatform Premium Terminal Access</p>
+    </div>
+    
+
+--- sohel0130844@gmail.com | Password Reset Request - AdPlatform ---
+
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px;">
+        <h2 style="color: #2563eb;">Password Reset</h2>
+        <p>You requested a password reset for your AdPlatform account.</p>
+        <p>Click the button below to set a new password. This link will expire in 1 hour.</p>
+        <div style="margin: 30px 0;">
+            <a href="http://localhost:5173/reset-password?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzb2hlbDAxMzA4NDRAZ21haWwuY29tIiwiZXhwIjoxNzY5Mjc4NDQ0LCJ0eXBlIjoicGFzc3dvcmRfcmVzZXQifQ.1gmhlrU7uPZKy7K4V_JyI-rjE2CgW4n0-TAUVOAJaZs" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+        </div>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+        <p style="font-size: 12px; color: #64748b;">AdPlatform Premium Terminal Access</p>
+    </div>
+    
+
+--- sohel0130844@gmail.com | Password Reset Request - AdPlatform ---
+
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px;">
+        <h2 style="color: #2563eb;">Password Reset</h2>
+        <p>You requested a password reset for your AdPlatform account.</p>
+        <p>Click the button below to set a new password. This link will expire in 1 hour.</p>
+        <div style="margin: 30px 0;">
+            <a href="http://localhost:5173/reset-password?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzb2hlbDAxMzA4NDRAZ21haWwuY29tIiwiZXhwIjoxNzY5Mjc4NDg2LCJ0eXBlIjoicGFzc3dvcmRfcmVzZXQifQ.Wc499YmPtYBgK7geZw4I0b-lDZSLr6Xx5AR7DJU4t8c" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+        </div>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+        <p style="font-size: 12px; color: #64748b;">AdPlatform Premium Terminal Access</p>
+    </div>
+    
+
+--- sohel0130844@gmail.com | Password Reset Request - AdPlatform ---
+
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px;">
+        <h2 style="color: #2563eb;">Password Reset</h2>
+        <p>You requested a password reset for your AdPlatform account.</p>
+        <p>Click the button below to set a new password. This link will expire in 1 hour.</p>
+        <div style="margin: 30px 0;">
+            <a href="http://localhost:5173/reset-password?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzb2hlbDAxMzA4NDRAZ21haWwuY29tIiwiZXhwIjoxNzY5Mjc4NTMyLCJ0eXBlIjoicGFzc3dvcmRfcmVzZXQifQ.fOSo2wfMYFLWyNfuTUJ0rO1h3bQnv8QLsd1VAbJO9NU" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+        </div>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+        <p style="font-size: 12px; color: #64748b;">AdPlatform Premium Terminal Access</p>
+    </div>
+    
+
+--- sohel0130844@gmail.com | Password Reset Request - AdPlatform ---
+
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px;">
+        <h2 style="color: #2563eb;">Password Reset</h2>
+        <p>You requested a password reset for your AdPlatform account.</p>
+        <p>Click the button below to set a new password. This link will expire in 1 hour.</p>
+        <div style="margin: 30px 0;">
+            <a href="http://localhost:5173/reset-password?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzb2hlbDAxMzA4NDRAZ21haWwuY29tIiwiZXhwIjoxNzY5Mjc4NTM3LCJ0eXBlIjoicGFzc3dvcmRfcmVzZXQifQ.wbVngYU491KlkS_ZepKMn9JA4UJprRpUE3ABYRxtBGM" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+        </div>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+        <p style="font-size: 12px; color: #64748b;">AdPlatform Premium Terminal Access</p>
+    </div>
+    

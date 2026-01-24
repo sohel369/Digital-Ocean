@@ -15,6 +15,7 @@ import { Toaster } from 'sonner';
 
 import { useApp } from './context/AppContext';
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
 
 const AdminGuard = ({ children }) => {
     const { user } = useApp();
@@ -63,6 +64,7 @@ function App() {
             <Toaster position="top-right" richColors closeButton theme="dark" />
             <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route
                     path="/*"
                     element={

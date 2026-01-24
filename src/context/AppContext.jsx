@@ -737,6 +737,35 @@ export const AppProvider = ({ children }) => {
         }
     };
 
+    const resetPassword = async (email) => {
+        try {
+            console.log(`🔄 Sending Reset Link via Backend SMTP for: ${email}`);
+
+            const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                toast.success("Reset Link Sent", {
+                    description: "Please check your Gmail inbox (and Spam folder)."
+                });
+                return { success: true };
+            } else {
+                // If backend fails, try a quick Firebase fallback
+                console.warn("⚠️ Backend SMTP failed, trying Firebase fallback...");
+                const { sendPasswordReset } = await import('../firebase');
+                return await sendPasswordReset(email);
+            }
+        } catch (error) {
+            console.error("Reset Password Error:", error);
+            return { success: false, message: "Server connection failed." };
+        }
+    };
+
     const [currency, setCurrencyState] = useState(() => localStorage.getItem('currency') || 'USD');
     const [language, setLanguageState] = useState(() => localStorage.getItem('language') || 'en');
     const [country, setCountry] = useState(() => localStorage.getItem('country') || 'US');
@@ -1185,6 +1214,7 @@ export const AppProvider = ({ children }) => {
             logout,
             login,
             signup,
+            resetPassword,
             googleAuth,
             authLoading,
             isGeoLoading,

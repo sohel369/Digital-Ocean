@@ -516,23 +516,10 @@ const CampaignCreation = () => {
                                         <div className="absolute left-5 top-1/2 -translate-y-1/2 text-primary font-black text-xl italic">{currentCurrency.symbol}</div>
                                         <input
                                             type="text"
-                                            readOnly
-                                            className="w-full bg-slate-900/50 border border-slate-700/50 rounded-2xl pl-12 pr-5 py-4 text-2xl font-black text-white outline-none focus:ring-2 focus:ring-primary/50 cursor-not-allowed opacity-80"
-                                            value={(() => {
-                                                const formatData = pricingData.adTypes.find(a => a.name.toLowerCase() === formData.format.replace('_', ' ').toLowerCase()) || { baseRate: 79 };
-                                                const industryData = pricingData.industries.find(i => i.name.toLowerCase() === (formData.industry || '').toLowerCase()) || { multiplier: 1.0 };
-                                                const monthlyRate = formatData.baseRate * (industryData.multiplier || 1.0) * (formData.coverageArea === 'national' ? 5 : (formData.coverageArea === 'state' ? 2.5 : 1.0));
-
-                                                const durationMonths = parseInt(formData.duration || '3');
-                                                let total = monthlyRate * durationMonths;
-                                                if (durationMonths >= 12) total *= 0.80;
-                                                else if (durationMonths >= 6) total *= 0.90;
-
-                                                return convertPrice(total, pricingData.currency).toLocaleString(undefined, {
-                                                    minimumFractionDigits: 0,
-                                                    maximumFractionDigits: 0
-                                                });
-                                            })()}
+                                            name="budget"
+                                            className="w-full bg-slate-900/50 border border-slate-700/50 rounded-2xl pl-12 pr-5 py-4 text-2xl font-black text-white outline-none focus:ring-2 focus:ring-primary/50"
+                                            value={formData.budget}
+                                            onChange={handleInputChange}
                                         />
                                     </div>
                                 </div>

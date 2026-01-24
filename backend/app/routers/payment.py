@@ -89,23 +89,17 @@ async def create_checkout_session(
     
     # Pricing verify
     duration_days = max((campaign.end_date - campaign.start_date).days, 1)
-    # Use campaign.calculated_price if available, else recalculate
-    base_price = campaign.calculated_price or campaign.budget
+    # Use campaign.budget STRICTLY as per user request "selected price will be cost no other"
+    # ignoring backend calculated_price which might have defaulted to high values
+    base_price = campaign.budget
     
-    # Exchange rates
-    exchange_rates = { 
-        'usd': 1.0, 
-        'aud': 1.5, 
-        'cad': 1.35, 
-        'eur': 0.92, 
-        'gbp': 0.8, 
-        'bdt': 120.0, 
-        'thb': 35.0 
-    }
-    base_currency = getattr(settings, 'BASE_CURRENCY', 'usd').lower()
-    conversion_rate = exchange_rates.get(target_currency, 1.0) / exchange_rates.get(base_currency, 1.0)
+    # SIMPLIFIED CALCULATION:
+    # We trust that 'base_price' (campaign.budget) is already expressed in the 'currency' requested,
+    # because the frontend displays it and saves it in that context.
+    # Therefore, we do NOT convert it again. We just handle the cents multiplier.
     
-    amount_smallest_unit = int(base_price * conversion_rate * multiplier)
+    amount_smallest_unit = int(base_price * multiplier)
+    
     if amount_smallest_unit < 50 and multiplier == 100: # Stripe minimum $0.50
         amount_smallest_unit = 50
     elif amount_smallest_unit <= 0:

@@ -65,18 +65,25 @@ const Pricing = () => {
     const [isCreating, setIsCreating] = useState(false);
 
     // Sync defaults
+    // Sync defaults - ONLY if not already modified by user
     React.useEffect(() => {
-        if (pricingData?.industries?.length > 0) {
+        if (pricingData?.industries?.length > 0 && selectedIndustry.name === 'Tech') {
             const defaultInd = user?.industry ? pricingData.industries.find(i => i.name.toLowerCase() === user.industry.toLowerCase()) : pricingData.industries[0];
             if (defaultInd) setSelectedIndustry(defaultInd);
         }
-        if (pricingData?.adTypes?.length > 0) {
+        if (pricingData?.adTypes?.length > 0 && selectedAdType.name === 'Display') {
             const validTypes = pricingData.adTypes.filter(a => a.name !== 'Video');
             if (validTypes.length > 0) setSelectedAdType(validTypes[0]);
         }
+        // State defaults should trigger update, but we don't want to overwrite if user changed it.
+        // However, state selection depends on country, so if country changes we SHOULD reset.
+    }, [pricingData, user]);
+
+    // Handle Country/State reset separately
+    React.useEffect(() => {
         const countryStates = (pricingData?.states || []).filter(s => s.countryCode === country);
         if (countryStates.length > 0) setSelectedState(countryStates[0]);
-    }, [pricingData, user, country]);
+    }, [pricingData, country]);
 
     const RADIUS_AREA = 2827;
     const calculation = useMemo(() => {

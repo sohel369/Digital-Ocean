@@ -207,7 +207,8 @@ async def update_campaign(
     if hasattr(campaign_update, 'duration') and campaign_update.duration:
         campaign.end_date = campaign.start_date + relativedelta(months=campaign_update.duration)
     
-    # Recalculate pricing if relevant fields changed
+    # Recalculate pricing ONLY for metadata updates (coverage area description), NOT pricing numbers.
+    # We now trust the campaign.budget as the source of truth for pricing.
     if any(key in update_data for key in ['industry_type', 'coverage_type', 'start_date', 'end_date', 'target_postcode', 'target_state', 'target_country']) or (hasattr(campaign_update, 'duration') and campaign_update.duration):
         duration_days = (campaign.end_date - campaign.start_date).days
         pricing_result = pricing_engine.calculate_price(
@@ -219,8 +220,10 @@ async def update_campaign(
             target_state=campaign.target_state,
             target_country=campaign.target_country
         )
-        campaign.calculated_price = pricing_result.total_price
+        # Update descriptive fields only
         campaign.coverage_area = pricing_result.breakdown['coverage_area_description']
+        # DO NOT update campaign.calculated_price or campaign.budget automatically
+        # The user sets this manually now.
     
     campaign.updated_at = datetime.utcnow()
     db.commit()

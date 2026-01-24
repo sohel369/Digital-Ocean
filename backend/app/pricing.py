@@ -187,9 +187,9 @@ class PricingEngine:
         """Create default pricing matrix (not saved to DB)."""
         # Default base rates by coverage type
         default_base_rates = {
-            models.CoverageType.RADIUS_30: 2500.0,
-            models.CoverageType.STATE: 15000.0,
-            models.CoverageType.COUNTRY: 50000.0
+            models.CoverageType.RADIUS_30: 150.0,
+            models.CoverageType.STATE: 500.0,
+            models.CoverageType.COUNTRY: 1500.0
         }
         
         return models.PricingMatrix(

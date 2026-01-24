@@ -136,6 +136,8 @@ class Campaign(Base):
     advertiser = relationship("User", back_populates="campaigns", foreign_keys=[advertiser_id])
     reviewer = relationship("User", back_populates="reviewed_campaigns", foreign_keys=[reviewed_by])
     media_files = relationship("Media", back_populates="campaign", cascade="all, delete-orphan")
+    payment_transactions = relationship("PaymentTransaction", back_populates="campaign", cascade="all, delete-orphan")
+    notifications = relationship("Notification", back_populates="campaign", cascade="all, delete-orphan")
     
     @property
     def ctr(self) -> float:
@@ -153,7 +155,7 @@ class Media(Base):
     __tablename__ = "media"
     
     id = Column(Integer, primary_key=True, index=True)
-    campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=False)
+    campaign_id = Column(Integer, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False)
     
     # File information
     file_path = Column(String(500), nullable=False)  # Local path or S3 URL
@@ -242,7 +244,7 @@ class PaymentTransaction(Base):
     __tablename__ = "payment_transactions"
     
     id = Column(Integer, primary_key=True, index=True)
-    campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=False)
+    campaign_id = Column(Integer, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     
     # Stripe transaction details
@@ -265,6 +267,9 @@ class PaymentTransaction(Base):
     def __repr__(self):
         return f"<Payment {self.stripe_payment_intent_id} - {self.status}>"
 
+    # Relationship
+    campaign = relationship("Campaign", back_populates="payment_transactions")
+
 
 class NotificationType(str, enum.Enum):
     """Notification type enumeration."""
@@ -281,7 +286,7 @@ class Notification(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=True)
+    campaign_id = Column(Integer, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=True)
     
     # Notification content
     notification_type = Column(Enum(NotificationType), nullable=False)
@@ -297,3 +302,6 @@ class Notification(Base):
     
     def __repr__(self):
         return f"<Notification {self.title} for User {self.user_id}>"
+
+    # Relationship
+    campaign = relationship("Campaign", back_populates="notifications")

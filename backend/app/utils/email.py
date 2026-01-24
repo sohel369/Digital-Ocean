@@ -8,11 +8,22 @@ def send_email(to_email: str, subject: str, html_content: str):
     """
     Send an email using SMTP settings from config.
     """
-    if not settings.SMTP_HOST or not settings.SMTP_USER or "your-email" in settings.SMTP_USER:
-        logger.warning(f"⚠️ SMTP not configured. Email to {to_email} logged to email_logs.txt instead.")
+    if not settings.SMTP_HOST:
+        logger.warning(f"⚠️ SMTP_HOST not configured. Email to {to_email} logged to email_logs.txt.")
+        fallback = True
+    elif not settings.SMTP_USER:
+        logger.warning(f"⚠️ SMTP_USER not configured. Email to {to_email} logged to email_logs.txt.")
+        fallback = True
+    elif "your-email" in settings.SMTP_USER:
+        logger.warning(f"⚠️ SMTP_USER still has placeholder value. Email to {to_email} logged to email_logs.txt.")
+        fallback = True
+    else:
+        fallback = False
+
+    if fallback:
         with open("email_logs.txt", "a", encoding="utf-8") as f:
             f.write(f"\n--- {to_email} | {subject} ---\n{html_content}\n")
-        return True # Return true so the UI thinks it sent during dev
+        return True
 
     try:
         message = emails.html(

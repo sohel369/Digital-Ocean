@@ -464,7 +464,7 @@ async def startup_event():
             try:
                 from sqlalchemy import text
                 with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
-                    # Notifications -> Campaigns Cascade
+                    # 5a. Notifications -> Campaigns Cascade
                     conn.execute(text("""
                         DO $$ 
                         BEGIN 
@@ -475,7 +475,32 @@ async def startup_event():
                             END IF;
                         END $$;
                     """))
-                    logger.info("✅ Notifications FK updated to CASCADE")
+                    
+                    # 5b. Payment Transactions -> Campaigns Cascade
+                    conn.execute(text("""
+                        DO $$ 
+                        BEGIN 
+                            IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'payment_transactions_campaign_id_fkey') THEN
+                                ALTER TABLE payment_transactions DROP CONSTRAINT payment_transactions_campaign_id_fkey;
+                                ALTER TABLE payment_transactions ADD CONSTRAINT payment_transactions_campaign_id_fkey 
+                                FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE;
+                            END IF;
+                        END $$;
+                    """))
+                    
+                    # 5c. Media -> Campaigns Cascade
+                    conn.execute(text("""
+                        DO $$ 
+                        BEGIN 
+                            IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'media_campaign_id_fkey') THEN
+                                ALTER TABLE media DROP CONSTRAINT media_campaign_id_fkey;
+                                ALTER TABLE media ADD CONSTRAINT media_campaign_id_fkey 
+                                FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE;
+                            END IF;
+                        END $$;
+                    """))
+                    
+                    logger.info("✅ All Campaign FKs updated to CASCADE")
             except Exception as fk_err:
                 logger.warning(f"⚠️ FK migration skipped: {fk_err}")
 

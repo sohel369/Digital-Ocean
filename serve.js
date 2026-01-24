@@ -30,7 +30,7 @@ app.get('/', (req, res, next) => {
 });
 
 // 3. Backend URL
-const BACKEND_URL = process.env.BACKEND_URL || process.env.VITE_API_URL || 'https://balanced-wholeness-production-ca00.up.railway.app';
+const BACKEND_URL = process.env.BACKEND_URL || process.env.VITE_API_URL || 'https://digital-ocean-production-01ee.up.railway.app';
 const API_TARGET = BACKEND_URL.replace(/\/api$/, '');
 
 // 4. API Proxy

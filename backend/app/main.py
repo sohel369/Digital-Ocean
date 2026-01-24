@@ -156,26 +156,57 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 @app.get("/test-email")
 async def test_email_setup(email: str = "sohel0130844@gmail.com"):
-    """Check SMTP settings and return precise error to browser."""
-    from .utils.email import send_email
+    """Force clean variables and test SMTP connection."""
     import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    from .config import settings
     
+    # 1. CLEAN VARIABLES (Prevent common user errors)
+    host = settings.SMTP_HOST.strip()
+    port = int(str(settings.SMTP_PORT).strip())
+    user = settings.SMTP_USER.strip()
+    password = settings.SMTP_PASSWORD.replace(" ", "").strip()
+    from_email = settings.FROM_EMAIL.strip() or user
+    
+    msg = MIMEMultipart()
+    msg['From'] = from_email
+    msg['To'] = email
+    msg['Subject'] = "Railway Deployment Test"
+    msg.attach(MIMEText("<h1>SMTP is Verified!</h1><p>You can now reset your password.</p>", 'html'))
+
     try:
-        success = send_email(
-            to_email=email,
-            subject="Backend Connection Test",
-            html_content="<h1>SMTP is Working!</h1><p>If you see this, your Gmail settings are correct.</p>"
-        )
-        if success:
-            return {"status": "success", "message": f"Test email sent to {email}. Check inbox/spam."}
+        # Step 2: Connect
+        if port == 465:
+            server = smtplib.SMTP_SSL(host, port, timeout=15)
         else:
-            return {
-                "status": "error", 
-                "message": "Failed to send. It could be an invalid App Password or FROM_EMAIL mismatch.",
-                "logs_instruction": "Check Railway logs for 'SMTP ERROR' to see the exact reason."
+            server = smtplib.SMTP(host, port, timeout=15)
+            server.starttls()
+            
+        # Step 3: Login
+        server.login(user, password)
+        
+        # Step 4: Send
+        server.send_message(msg)
+        server.quit()
+        
+        return {
+            "status": "success", 
+            "message": f"Email sent! If you don't see it in inbox, check SPAM.",
+            "config_logged": {
+                "host": host,
+                "user": user,
+                "from": from_email,
+                "port": port
             }
+        }
     except Exception as e:
-        return {"status": "exception", "error": str(e)}
+        return {
+            "status": "failed", 
+            "error_type": type(e).__name__,
+            "error_message": str(e),
+            "hint": "Check if Railway Vars has exactly 'wzrpastkpxesqzch' as password."
+        }
 
 
 @app.get("/", tags=["Root"])

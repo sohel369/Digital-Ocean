@@ -15,7 +15,22 @@ import math
 
 # Initialize Stripe
 stripe.api_version = "2023-10-16"
-stripe.api_key = settings.STRIPE_SECRET_KEY
+
+# ROBUST KEY HANDLING: Check for user copy-paste errors
+SECRET_KEY_CANDIDATE = settings.STRIPE_SECRET_KEY
+PUBLISHABLE_KEY_CANDIDATE = settings.STRIPE_PUBLISHABLE_KEY
+
+# Swap if user accidentally put pk_ in secret slot and sk_ in public slot
+if SECRET_KEY_CANDIDATE.startswith("pk_") and PUBLISHABLE_KEY_CANDIDATE.startswith("sk_"):
+    logging.warning("⚠️  SWAPPED KEYS DETECTED: Automatically fixing Stripe keys.")
+    SECRET_KEY_CANDIDATE, PUBLISHABLE_KEY_CANDIDATE = PUBLISHABLE_KEY_CANDIDATE, SECRET_KEY_CANDIDATE
+
+stripe.api_key = SECRET_KEY_CANDIDATE
+
+# Validation
+if stripe.api_key and stripe.api_key.startswith("pk_"):
+    logging.error("❌  FATAL STRIPE ERROR: 'STRIPE_SECRET_KEY' contains a PUBLISHABLE key (pk_...). It MUST be a SECRET key (sk_...). Payment will fail.")
+
 
 def is_stripe_configured():
     return bool(settings.STRIPE_SECRET_KEY and not settings.STRIPE_SECRET_KEY.startswith("dummy") and settings.STRIPE_SECRET_KEY != "")

@@ -304,7 +304,24 @@ async def startup_event():
         logger.info(f"SECRET_KEY Preview: {settings.SECRET_KEY[:15]}...{settings.SECRET_KEY[-15:]}")
         logger.info(f"Algorithm: {settings.ALGORITHM}")
         logger.info(f"Access Token Expiration: {settings.ACCESS_TOKEN_EXPIRE_MINUTES} minutes ({settings.ACCESS_TOKEN_EXPIRE_MINUTES/60:.1f} hours)")
+        logger.info(f"Access Token Expiration: {settings.ACCESS_TOKEN_EXPIRE_MINUTES} minutes ({settings.ACCESS_TOKEN_EXPIRE_MINUTES/60:.1f} hours)")
         logger.info(f"Refresh Token Expiration: {settings.REFRESH_TOKEN_EXPIRE_DAYS} days")
+
+        # STRIPE KEY DIAGNOSTICS
+        logger.info("="*80)
+        logger.info("💳 STRIPE CONFIGURATION CHECK")
+        stripe_key = settings.STRIPE_SECRET_KEY
+        if stripe_key:
+            prefix = stripe_key[:7] if len(stripe_key) > 7 else "???"
+            logger.info(f"✅ Stripe Secret Key Detected: {prefix}****************")
+            if prefix.startswith("pk_"):
+                logger.error("❌ CRITICAL: Your SECRET key starts with 'pk_'. This is a PUBLISHABLE key!")
+                logger.error("👉 ACTION: Go to Railway > Variables > STRIPE_SECRET_KEY and replace it with your 'sk_...' key.")
+            elif prefix.startswith("sk_"):
+                logger.info("✅ Key format looks correct (starts with sk_)")
+        else:
+            logger.warning("❌ NO STRIPE SECRET KEY DETECTED! Payments will default to Mock Mode.")
+        logger.info("="*80)
         
         if settings.SECRET_KEY == "dev_secret_key_change_me_in_production":
             logger.warning("="*80)

@@ -454,7 +454,7 @@ export const AppProvider = ({ children }) => {
             console.log('🔄 Syncing country from user profile:', user.country);
             handleCountryChange(user.country);
         }
-    }, [user?.id]); // Only sync when the user identity changes
+    }, [user?.country]); // Sync whenever country field updates (e.g. after background refresh)
 
     // Fetch initial data from API and persist authentication
     useEffect(() => {
@@ -466,6 +466,36 @@ export const AppProvider = ({ children }) => {
                 try {
                     const userData = JSON.parse(storedUser);
                     setUser(userData);
+
+                    // Force refresh user data from backend to ensure country/industry are synced
+                    // This fixes the issue where local storage has stale "US" default while DB has "Thailand"
+                    try {
+                        const meRes = await fetch(`${API_BASE_URL}/auth/me`, {
+                            headers: { 'Authorization': `Bearer ${accessToken}` }
+                        });
+                        if (meRes.ok) {
+                            const freshUser = await meRes.json();
+                            // Map backend fields to frontend user object structure if needed
+                            const mappedUser = {
+                                ...userData, // keep client-side props
+                                id: freshUser.id,
+                                username: freshUser.name,
+                                email: freshUser.email,
+                                role: freshUser.role,
+                                country: freshUser.country || userData.country,
+                                industry: freshUser.industry || userData.industry,
+                                avatar: freshUser.profile_picture || userData.avatar
+                            };
+                            if (JSON.stringify(mappedUser) !== JSON.stringify(userData)) {
+                                console.log("🔄 Refreshing stale user profile from backend...");
+                                setUser(mappedUser);
+                                localStorage.setItem('user', JSON.stringify(mappedUser));
+                            }
+                        }
+                    } catch (err) {
+                        console.warn("Background user sync failed:", err);
+                    }
+
                     await fetchData();
                 } catch (e) {
                     console.error('Failed to restore user session:', e);
@@ -684,7 +714,12 @@ export const AppProvider = ({ children }) => {
     const signup = async (username, email, password, extraData = {}) => {
         try {
             // Strictly use Firebase for registration
+            // Create user in Firebase
             const fbUser = await registerWithEmail(email, password, username);
+
+            // Sync with backend including the selected country/industry
+            // The extraData parameter was already correctly passed to this function, 
+            // but we need to ensure firebaseSync sends it.
             const result = await firebaseSync(fbUser, extraData);
 
             if (result.success) {

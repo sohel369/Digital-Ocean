@@ -51,10 +51,10 @@ const Dropdown = ({ label, icon, options, value, onChange, align = 'right', clas
                                     setIsOpen(false);
                                 }}
                                 className={`
-                  w-full text-left px-4 py-3.5 text-sm transition-all duration-200 flex justify-between items-center rounded-xl mb-1 last:mb-0
+                  w-full text-left px-5 py-4 text-sm transition-all duration-200 flex justify-between items-center rounded-xl mb-1 last:mb-0
                   ${(option.code || option.value) === value
-                                        ? 'bg-primary/20 text-primary-light font-bold'
-                                        : 'text-slate-400 hover:bg-slate-800/80 hover:text-white font-bold'
+                                        ? 'bg-primary/20 text-white font-bold shadow-lg shadow-primary/10'
+                                        : 'text-slate-200 hover:bg-white/10 hover:text-white font-bold'
                                     }
                 `}
                             >

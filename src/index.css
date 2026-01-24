@@ -59,7 +59,9 @@ html, body {
 select option {
   background-color: #0F172A; /* Match Slate 900 */
   color: #F8FAFC;
-  padding: 10px;
+  padding: 14px;
+  font-weight: 700;
+  font-size: 0.875rem;
 }
 
 select {

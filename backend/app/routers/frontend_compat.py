@@ -419,6 +419,13 @@ async def google_auth_sync(request: Request, db: Session = Depends(get_db)):
             user.oauth_provider = 'google'
             user.oauth_id = uid
             user.profile_picture = photo_url
+        
+        # update country/industry if provided (e.g. during signup flow for existing google user)
+        if country:
+            user.country = country
+        if industry:
+            user.industry = industry
+            
         user.last_login = datetime.utcnow()
     else:
         # Create new user
@@ -452,7 +459,9 @@ async def google_auth_sync(request: Request, db: Session = Depends(get_db)):
             "username": user.name,
             "email": user.email,
             "avatar": user.profile_picture,
-            "role": user.role.value
+            "role": user.role.value,
+            "country": user.country,
+            "industry": user.industry
         }
     }
 

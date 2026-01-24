@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Save, RefreshCcw, TrendingUp, Map, Briefcase } from 'lucide-react';
+import { Save, RefreshCcw, TrendingUp, Map, Briefcase, ChevronDown, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 const AdminPricing = () => {
@@ -13,6 +13,7 @@ const AdminPricing = () => {
     const [isSaving, setIsSaving] = useState(false);
     const currentCurrency = CONSTANTS.CURRENCIES.find(c => c.code === currency) || { symbol: '$' };
     const [selectedCountry, setSelectedCountry] = useState(country);
+    const [isCountryOpen, setIsCountryOpen] = useState(false);
 
     // Sync local state when pricingData is loaded from backend
     React.useEffect(() => {
@@ -213,15 +214,46 @@ const AdminPricing = () => {
                         </p>
                     </div>
 
-                    <select
-                        className="bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-white text-sm outline-none"
-                        value={selectedCountry}
-                        onChange={(e) => setSelectedCountry(e.target.value)}
-                    >
-                        {CONSTANTS.COUNTRIES.map(c => (
-                            <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
-                        ))}
-                    </select>
+                    <div className="relative min-w-[250px]">
+                        <button
+                            onClick={() => setIsCountryOpen(!isCountryOpen)}
+                            className="w-full flex items-center justify-between bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 font-bold text-sm outline-none hover:border-primary transition-all duration-200 shadow-sm"
+                        >
+                            <span className="flex items-center gap-2">
+                                <span>{CONSTANTS.COUNTRIES.find(c => c.code === selectedCountry)?.flag}</span>
+                                <span>{CONSTANTS.COUNTRIES.find(c => c.code === selectedCountry)?.name}</span>
+                            </span>
+                            <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${isCountryOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {isCountryOpen && (
+                            <>
+                                <div
+                                    className="fixed inset-0 z-40"
+                                    onClick={() => setIsCountryOpen(false)}
+                                ></div>
+                                <div className="absolute top-full right-0 left-0 mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100 max-h-[300px] overflow-y-auto custom-scrollbar ring-1 ring-white/5">
+                                    {CONSTANTS.COUNTRIES.map(c => (
+                                        <div
+                                            key={c.code}
+                                            onClick={() => {
+                                                setSelectedCountry(c.code);
+                                                setIsCountryOpen(false);
+                                            }}
+                                            className={`
+                                                flex items-center gap-3 p-4 cursor-pointer transition-colors
+                                                ${selectedCountry === c.code ? 'bg-primary/10 text-primary border-l-4 border-l-primary' : 'text-slate-200 hover:bg-white/5 border-l-4 border-l-transparent'}
+                                            `}
+                                        >
+                                            <span className="text-lg">{c.flag}</span>
+                                            <span className="font-bold text-sm">{c.name}</span>
+                                            {selectedCountry === c.code && <Check size={16} className="ml-auto" />}
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative min-h-[250px]">

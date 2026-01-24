@@ -15,7 +15,7 @@ const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [industry, setIndustry] = useState('');
-    const [selectedCountry, setSelectedCountry] = useState('United States');
+    const [selectedCountry, setSelectedCountry] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
@@ -116,7 +116,19 @@ const Login = () => {
                     toast.error(t('common.error'), { description: result.message || 'Invalid credentials provided.' });
                 }
             } else {
-                const result = await signup(username, email, password, { industry, country: selectedCountry });
+                if (!industry || !selectedCountry) {
+                    toast.error(t('common.error'), {
+                        description: 'Please select both Industry and Country to continue.'
+                    });
+                    setLoading(false);
+                    return;
+                }
+
+                // Ensure arguments match: username, email, password, { extraData }
+                const result = await signup(username, email, password, {
+                    industry: industry,
+                    country: selectedCountry
+                });
                 if (result.success) {
                     toast.success(t('common.success'), { description: 'Welcome to the platform!' });
 
@@ -211,6 +223,7 @@ const Login = () => {
                                     menuWidth="w-full"
                                     align="left"
                                 />
+                                {!selectedCountry && <p className="text-[10px] text-red-400 font-medium pl-1">Country selection is required</p>}
                             </div>
                         </>
                     )}

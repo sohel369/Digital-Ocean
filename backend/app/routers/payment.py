@@ -129,7 +129,7 @@ async def create_checkout_session(
                 'price_data': {
                     'currency': target_currency,
                     'product_data': {
-                        'name': f'Campaign: {campaign.name}',
+                        'name': campaign.name,
                         'description': f"Premium reach for {campaign.industry_type} in {campaign.coverage_area}",
                     },
                     'unit_amount': amount_smallest_unit,

@@ -66,7 +66,7 @@ async def create_campaign(
         start_date=campaign_data.start_date,
         end_date=campaign_data.end_date,
         budget=campaign_data.budget,
-        calculated_price=pricing_result.total_price,
+        calculated_price=campaign_data.budget, # Trusting the frontend explicitly per user request "selected price will be cost no other"
         status=target_status,
         submitted_at=datetime.utcnow() if target_status == models.CampaignStatus.PENDING_REVIEW else None,
         coverage_type=campaign_data.coverage_type,

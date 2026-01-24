@@ -196,14 +196,16 @@ const Pricing = () => {
                                 <div className="flex justify-between text-sm"><span className="text-slate-500 font-bold uppercase text-[10px]">{t('pricing.config_label')}</span><span className="text-slate-200 font-bold text-right">{selectedAdType.name} @ {selectedIndustry.name}</span></div>
                                 <div className="flex justify-between text-sm"><span className="text-slate-500 font-bold uppercase text-[10px]">{t('pricing.reach_label')}</span><span className="text-slate-200 font-bold text-right">{calculation.areaDescription} (x{calculation.sections})</span></div>
                             </div>
-                            <div className="space-y-3">
-                                <div className="flex justify-between text-sm"><span className="text-slate-400">{t('pricing.subtotal')}</span><span className="font-bold text-white">{formatCurrency(calculation.basePrice)}</span></div>
-                                {calculation.discountAmt > 0 && <div className="flex justify-between text-sm text-emerald-400 italic"><span>{t('pricing.saving')} ({calculation.discountPercent}%)</span><span className="font-bold">-{formatCurrency(calculation.discountAmt)}</span></div>}
-                            </div>
+                            {calculation.discountAmt > 0 && (
+                                <div className="space-y-3">
+                                    <div className="flex justify-between text-sm"><span className="text-slate-400">{t('pricing.subtotal')}</span><span className="font-bold text-white">{formatCurrency(calculation.basePrice)}</span></div>
+                                    <div className="flex justify-between text-sm text-emerald-400 italic"><span>{t('pricing.saving')} ({calculation.discountPercent}%)</span><span className="font-bold">-{formatCurrency(calculation.discountAmt)}</span></div>
+                                </div>
+                            )}
                             <div className="pt-6">
                                 <div className="flex flex-col items-end mb-6">
                                     <span className="text-4xl font-black text-white tracking-tighter">{formatCurrency(calculation.finalPrice)}</span>
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('pricing.monthly_est')}</span>
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Fixed Price</span>
                                 </div>
                                 <button onClick={handleNextStep} disabled={isCreating} className="w-full premium-btn py-4 rounded-xl text-lg font-black group shadow-lg shadow-primary/20 italic flex items-center justify-center gap-2 transition-all disabled:opacity-50">
                                     {isCreating ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <>{t('pricing.next_step')}<ChevronRight size={20} /></>}

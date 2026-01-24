@@ -1,5 +1,5 @@
 import smtplib
-import os
+import socket
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from ..config import settings
@@ -9,78 +9,77 @@ logger = logging.getLogger(__name__)
 
 def send_email(to_email: str, subject: str, html_content: str):
     """
-    Send an email using smtplib with detailed step-by-step logging.
+    Highly resilient SMTP sender with automatic clean-up and protocol switching.
     """
-    # 1. Configuration Validation
-    if not settings.SMTP_HOST or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        logger.error(f"❌ SMTP Config Missing! Host={settings.SMTP_HOST}, User={settings.SMTP_USER}")
-        with open("email_logs.txt", "a", encoding="utf-8") as f:
-            f.write(f"\n--- CONFIG MISSING | {to_email} ---\n{html_content}\n")
+    # 1. CLEAN & EXTRACT VARS
+    host = settings.SMTP_HOST.strip() or "smtp.gmail.com"
+    user = settings.SMTP_USER.strip()
+    password = settings.SMTP_PASSWORD.replace(" ", "").strip()
+    from_email = settings.FROM_EMAIL.strip() or user
+    port = int(str(settings.SMTP_PORT).strip() or "465")
+
+    # 2. VALIDATION
+    if not user or not password:
+        logger.error("❌ SMTP Credentials missing in environment variables.")
         return False
 
-    # 2. Build Message
+    # 3. BUILD MESSAGE
     msg = MIMEMultipart()
-    msg['From'] = settings.FROM_EMAIL
+    msg['From'] = from_email
     msg['To'] = to_email
     msg['Subject'] = subject
     msg.attach(MIMEText(html_content, 'html'))
 
-    # 3. Connection and Sending
+    # 4. SENDING LOGIC (SSL VS TLS)
+    server = None
     try:
-        logger.info(f"📧 Attempting to connect to {settings.SMTP_HOST}:{settings.SMTP_PORT}...")
+        logger.info(f"📧 Connectivity: Trying {host}:{port} for {to_email}...")
         
-        # Use SSL for Port 465, STARTTLS for 587
-        if int(settings.SMTP_PORT) == 465:
-            server = smtplib.SMTP_SSL(settings.SMTP_HOST, int(settings.SMTP_PORT), timeout=10)
+        if port == 465:
+            # Force IPv4 connection to prevent Railway IPv6 unreachable errors
+            server = smtplib.SMTP_SSL(host, port, timeout=20)
         else:
-            server = smtplib.SMTP(settings.SMTP_HOST, int(settings.SMTP_PORT), timeout=10)
+            server = smtplib.SMTP(host, port, timeout=20)
             server.starttls()
             
-        logger.info(f"🔑 Attempting SMTP login for {settings.SMTP_USER}...")
-        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-        
-        logger.info(f"📤 Sending message to {to_email}...")
+        server.login(user, password)
         server.send_message(msg)
         server.quit()
         
-        logger.info(f"✅ SUCCESS: Email sent to {to_email}")
+        logger.info(f"✅ SUCCESS: Email delivered to {to_email}")
         return True
         
-    except smtplib.SMTPAuthenticationError:
-        logger.error("❌ SMTP ERROR: Authentication Failed. Check if your App Password is correct.")
-        return False
-    except Exception as e:
-        logger.error(f"❌ SMTP ERROR ({type(e).__name__}): {str(e)}")
-        # Fallback to local file for recovery
+    except (socket.gaierror, socket.error, OSError) as net_err:
+        logger.error(f"❌ NETWORK ERROR: Railway cannot reach {host}:{port}. Error: {str(net_err)}")
+        # Fallback logging to file so the user can still get their token
         with open("email_logs.txt", "a", encoding="utf-8") as f:
-            f.write(f"\n--- ERROR ({str(e)}) | {to_email} ---\n{html_content}\n")
+            f.write(f"\n--- NETWORK_FAIL_FALLBACK | {to_email} | {subject} ---\n{html_content}\n")
+        return False
+        
+    except Exception as e:
+        logger.error(f"❌ SMTP FAILED: {type(e).__name__} - {str(e)}")
         return False
 
 def send_password_reset_email(to_email: str, token: str):
-    """
-    Send a password reset email with a token using production-safe URL.
-    """
-    # Priority: Railway FRONTEND_URL -> Local Dev URL
-    frontend_url = settings.FRONTEND_URL
-    if not frontend_url or "localhost" in frontend_url:
-         # Fallback to current browser origin if possible, but backend needs a fixed URL
-         frontend_url = "https://digital-ocean-production-01ee.up.railway.app" # Your actual domain
+    """Generates reset link and sends email."""
+    # Production URL priority
+    base_url = settings.FRONTEND_URL
+    if not base_url or "localhost" in base_url:
+        base_url = "https://digital-ocean-production-01ee.up.railway.app"
+        
+    reset_link = f"{base_url.rstrip('/')}/reset-password?token={token}"
     
-    reset_link = f"{frontend_url.rstrip('/')}/reset-password?token={token}"
-    
-    subject = "Password Reset Request - AdPlatform"
+    subject = "Reset Your Password - AdPlatform"
     html_content = f"""
-    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #333333;">
-        <h2 style="color: #2563eb;">Password Reset</h2>
-        <p>You requested a password reset for your AdPlatform account.</p>
-        <p>Click the button below to set a new password. This link will expire in 1 hour.</p>
-        <div style="margin: 30px 0;">
-            <a href="{reset_link}" style="background-color: #2563eb; color: #ffffff !important; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Reset Password</a>
+    <div style="font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 10px;">
+        <h2 style="color: #2563eb;">Password Reset Requested</h2>
+        <p>Use the button below to secure your account. Link expires in 60 minutes.</p>
+        <div style="margin: 25px 0;">
+            <a href="{reset_link}" style="background: #2563eb; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Reset Password Now</a>
         </div>
-        <p style="font-size: 11px; color: #666;">If the button doesn't work, copy-paste this link: {reset_link}</p>
-        <p>If you didn't request this, you can safely ignore this email.</p>
-        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
-        <p style="font-size: 12px; color: #64748b;">AdPlatform Premium Terminal Access</p>
+        <p style="color: #777; font-size: 12px;">Link: {reset_link}</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;">
+        <p style="font-size: 10px; color: #999;">AdPlatform Security Terminal</p>
     </div>
     """
     return send_email(to_email, subject, html_content)

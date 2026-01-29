@@ -26,9 +26,16 @@ const GeoTargeting = () => {
 
     // Ensure regions are loaded for the current country if missing
     useEffect(() => {
-        const hasRegions = pricingData.states.some(s => s.countryCode === country);
-        if (!hasRegions && country) {
-            console.log(`🔍 GeoTargeting: Missing regions for ${country}, loading...`);
+        if (!country) return;
+
+        // Normalize comparison to prevent infinite fetch loop (e.g. 'us' vs 'US')
+        const normalizedCountry = country.toUpperCase();
+        const hasRegions = pricingData.states.some(s =>
+            String(s.countryCode || '').toUpperCase() === normalizedCountry
+        );
+
+        if (!hasRegions) {
+            console.log(`🔍 GeoTargeting: Fetching regions for ${normalizedCountry}...`);
             loadRegionsForCountry(country);
         }
     }, [country, pricingData.states.length]);

@@ -165,28 +165,27 @@ async def get_current_user(
     try:
         # Debug: Log the token arrival (masked)
         token_preview = f"{token[:10]}...{token[-10:]}" if token and len(token) > 20 else "short_token"
-        print(f"🔐 AUTH: Validating token {token_preview}")
         
         payload = decode_token(token)
         sub = payload.get("sub")
         if sub is None:
-            print("❌ AUTH ERROR: Token payload missing 'sub'")
+            print(f"❌ AUTH ERROR: Token payload missing 'sub'. Payload: {payload}")
             raise credentials_exception
         try:
             user_id = int(sub)
         except (ValueError, TypeError):
-            print(f"❌ AUTH ERROR: Invalid user ID format in token sub: {sub}")
+            print(f"❌ AUTH ERROR: Invalid user ID format in token sub: '{sub}' (expects integer)")
             raise credentials_exception
-    except JWTError as e:
-        print(f"❌ AUTH ERROR: JWT Error: {str(e)}")
-        raise credentials_exception
+    except HTTPException as e:
+        # Re-raise our own 401s
+        raise e
     except Exception as e:
-        print(f"❌ AUTH ERROR: Token decode failed: {str(e)}")
+        print(f"❌ AUTH ERROR: Token decode failed: {type(e).__name__} - {str(e)}")
         raise credentials_exception
     
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if user is None:
-        print(f"❌ AUTH ERROR: User ID {user_id} from token not found in database")
+        print(f"❌ AUTH ERROR: User ID {user_id} found in token payload but NOT in database tables.")
         raise credentials_exception
     
     print(f"✅ AUTH: Validated user {user.email} (ID: {user.id})")
@@ -273,6 +272,36 @@ async def get_current_admin_user(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
+        )
+    return current_user
+
+
+async def get_any_admin_user(
+    current_user: models.User = Depends(get_current_user)
+) -> models.User:
+    """
+    Get current user and verify they have SOME admin role.
+    Allows Super Admin and Country Admin.
+    """
+    if current_user.role not in [models.UserRole.ADMIN, models.UserRole.COUNTRY_ADMIN]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrative access required"
+        )
+    return current_user
+
+
+async def get_current_pricing_admin_user(
+    current_user: models.User = Depends(get_current_user)
+) -> models.User:
+    """
+    Get current user and verify they can manage pricing.
+    Allows Super Admin and Country Admin.
+    """
+    if current_user.role not in [models.UserRole.ADMIN, models.UserRole.COUNTRY_ADMIN]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Pricing administrative access required"
         )
     return current_user
 

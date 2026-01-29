@@ -1,0 +1,7 @@
+country_code,name,state_code,land_mass,population,density_multiplier
+US,California,CA,423970,39538223,1.5
+US,New York,NY,141300,20201249,2.0
+GB,London,LDN,1572,8982000,2.5
+AU,New South Wales,NSW,800642,8166000,1.2
+BD,Dhaka,DHK,1463,21000000,5.0
+BD,Chittagong,CTG,168,9000000,3.5

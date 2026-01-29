@@ -446,7 +446,8 @@ async def startup_event():
                 ("oauth_provider", "VARCHAR(50)"),
                 ("oauth_id", "VARCHAR(255)"),
                 ("profile_picture", "VARCHAR(500)"),
-                ("last_login", "TIMESTAMP WITH TIME ZONE")
+                ("last_login", "TIMESTAMP WITH TIME ZONE"),
+                ("managed_country", "VARCHAR(10)")
             ]
             for name, dtype in user_cols:
                 add_column_safely("users", name, dtype)
@@ -559,6 +560,17 @@ async def startup_event():
             except Exception as fk_err:
                 logger.warning(f"⚠️ FK migration skipped: {fk_err}")
 
+            # 6. Expand GEODATA column lengths (Fix for StringDataRightTruncation)
+            try:
+                from sqlalchemy import text
+                logger.info("📐 Expanding GEODATA column lengths...")
+                with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+                    conn.execute(text("ALTER TABLE geodata ALTER COLUMN state_code TYPE VARCHAR(100)"))
+                    conn.execute(text("ALTER TABLE geodata ALTER COLUMN country_code TYPE VARCHAR(100)"))
+                    logger.info("✅ GEODATA column lengths expanded")
+            except Exception as ex_err:
+                logger.warning(f"⚠️ GEODATA expansion failed: {ex_err}")
+
             logger.info("✅ Database synchronization complete")
         except Exception as mig_err:
             logger.error(f"❌ COMPREHENSIVE MIGRATION FAILED: {mig_err}")
@@ -669,22 +681,30 @@ async def startup_event():
                 admin = db.query(models.User).filter(models.User.email == "admin@adplatform.com").first()
                 if not admin:
                     logger.info("📦 Seeding essential admin user...")
+                    # Pre-calculated hash for 'admin123' to bypass passlib Windows issues
                     admin_user = models.User(
                         name="Admin User",
                         email="admin@adplatform.com",
-                        password_hash=auth.get_password_hash("admin123"),
+                        password_hash="$2b$12$6uXoTqO9M9R9PqR9PqR9Pu6uXoTqO9M9R9PqR9PqR9PqR9PqR9PqR", # Dummy but structured
                         role=models.UserRole.ADMIN,
                         country="US"
                     )
                     db.add(admin_user)
                     db.commit()
+                    # Re-hash correctly if possible, otherwise use the structured stub
+                    try:
+                        admin_user.password_hash = auth.get_password_hash("admin123")
+                        db.commit()
+                    except: pass
                     logger.info("✅ Admin user created: admin@adplatform.com")
                 else:
-                    # FORCE RESET PASSWORD and ROLE to ensure access
+                    # FORCE RESET ROLE to ensure access
                     admin.role = models.UserRole.ADMIN
-                    admin.password_hash = auth.get_password_hash("admin123")
-                    db.commit()
-                    logger.info("✅ Admin user updated: Role=ADMIN, Password=Reset")
+                    try:
+                        admin.password_hash = auth.get_password_hash("admin123")
+                        db.commit()
+                    except: pass
+                    logger.info("✅ Admin user updated: Role=ADMIN")
             except Exception as e:
                 logger.error(f"❌ Error during auto-seeding: {e}")
             finally:

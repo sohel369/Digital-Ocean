@@ -18,7 +18,7 @@ class UserRole(str, enum.Enum):
     ADVERTISER = "advertiser"
     USER = "user"
     ADMIN = "admin"
-
+    COUNTRY_ADMIN = "country_admin"
 
 
 class CampaignStatus(str, enum.Enum):
@@ -61,6 +61,7 @@ class User(Base):
     role = Column(Enum(UserRole), default=UserRole.ADVERTISER, nullable=False)
     country = Column(String(100), nullable=True)
     industry = Column(String(255), nullable=True)
+    managed_country = Column(String(10), nullable=True) # ISO code for country admins
     
     # OAuth fields
     oauth_provider = Column(String(50), nullable=True)  # 'google', 'facebook', etc.
@@ -219,14 +220,21 @@ class GeoData(Base):
     id = Column(Integer, primary_key=True, index=True)
     
     # Location identifiers
-    country_code = Column(String(10), nullable=False)  # ISO code
-    state_code = Column(String(10), nullable=True)  # State/province code
+    country_code = Column(String(100), nullable=False)  # ISO code or Name
+    state_code = Column(String(100), nullable=True)  # State/province code or Name
     state_name = Column(String(100), nullable=True)
     
     # Geographic metrics
     land_area_sq_km = Column(Float, nullable=False)  # Total area
     population = Column(Integer, nullable=False)
+    radius_areas_count = Column(Integer, default=1) # No of 30 mile radius areas
     density_multiplier = Column(Float, default=1.0)  # Population density factor
+    
+    # Extra demographic data
+    fips = Column(Integer, nullable=True)
+    density_mi = Column(Float, nullable=True)
+    rank = Column(Integer, nullable=True)
+    population_percent = Column(Float, nullable=True)
     
     # Urban/Rural split (optional)
     urban_percentage = Column(Float, nullable=True)

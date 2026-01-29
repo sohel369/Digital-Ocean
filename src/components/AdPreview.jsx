@@ -39,9 +39,15 @@ export const AdPreview = ({ formData = {} }) => {
         headline = '',
         description = '',
         cta = 'Learn More',
-        image = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
+        image = 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-1.2.1&auto=format&fit=crop&w=2426&q=80',
         format = ''
     } = formData;
+
+    // Enhanced Realistic Defaults for Preview
+    const displayHeadline = headline || "Premium Brand Promotion";
+    const displayDescription = description || "Experience world-class service with our industry-leading solutions. Target your local audience effectively today.";
+    const displayImage = image || 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-1.2.1&auto=format&fit=crop&w=2426&q=80';
+
 
     // Helper for visual classes based on format and device
     const getFormatStyles = () => {
@@ -114,7 +120,7 @@ export const AdPreview = ({ formData = {} }) => {
             <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-700/50 bg-slate-900/50 gap-4 flex-wrap">
                 <div className="flex items-center gap-3">
                     <h3 className="font-bold text-slate-200 text-sm sm:text-base border-l-2 border-primary pl-3 whitespace-nowrap">{t('campaign.live_preview')}</h3>
-                    <span className="hidden sm:inline-block px-2 py-0.5 bg-slate-800 rounded text-[10px] font-black text-primary border border-primary/20 tracking-tighter uppercase italic">{styles.label}</span>
+                    <span className="hidden sm:inline-block px-2 py-1 bg-emerald-500/10 rounded text-[10px] font-black text-emerald-500 border border-emerald-500/30 tracking-widest uppercase italic shadow-[0_0_10px_rgba(16,185,129,0.1)]">{styles.label}</span>
                 </div>
 
                 <div className="flex p-0.5 sm:p-1 bg-slate-800 rounded-xl border border-slate-700/50">
@@ -141,7 +147,7 @@ export const AdPreview = ({ formData = {} }) => {
             <div ref={containerRef} className="flex-1 bg-slate-950 relative overflow-hidden flex flex-col items-center justify-center p-8">
 
                 {/* Dimensions Overlay (Mobile friendly) */}
-                <div className="absolute top-4 right-4 text-[9px] font-bold text-slate-600 uppercase tracking-widest z-10 sm:hidden">
+                <div className="absolute top-4 right-4 text-[9px] font-bold text-emerald-400 uppercase tracking-widest z-10 sm:hidden bg-slate-900/50 px-2 py-1 rounded backdrop-blur-sm border border-emerald-500/20">
                     {styles.label}
                 </div>
 
@@ -170,29 +176,25 @@ export const AdPreview = ({ formData = {} }) => {
                     <div className={`flex ${styles.layout} h-full group`}>
                         {/* Image Area */}
                         <div className={`relative overflow-hidden bg-slate-100 ${styles.imgW ? `${styles.imgW}` : 'w-full'} ${styles.imgH ? `${styles.imgH}` : 'h-full'}`}>
-                            <img src={image} alt="Ad" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                            {styles.h > 50 && (
-                                <div className="absolute top-2 left-2 bg-black/40 backdrop-blur-md text-white text-[8px] font-bold px-2 py-0.5 rounded uppercase">
-                                    {t('preview.sponsored')}
-                                </div>
-                            )}
+                            <img src={displayImage} alt="" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                            {/* AD Badge Removed per feedback */}
                         </div>
 
                         {/* Text Area */}
                         <div className={`flex flex-col flex-1 min-w-0 ${styles.text}`}>
                             {styles.h > 80 && (
-                                <div className="text-primary text-[8px] font-bold uppercase tracking-widest mb-1">{t('preview.recommended')}</div>
+                                <div className="text-emerald-500 text-[8px] font-bold uppercase tracking-widest mb-1">{t('preview.recommended')}</div>
                             )}
                             <h2 className={`font-bold text-slate-900 leading-tight ${activeTab === 'email' ? 'font-serif' : ''} 
                                 ${styles.h <= 50 ? 'text-[10px] mb-0 truncate' : styles.h <= 90 ? 'text-xs mb-0' : 'text-xl mb-2'}`}>
-                                {headline || t('campaign.headline_placeholder')}
+                                {displayHeadline}
                             </h2>
                             <p className={`text-slate-600 text-[11px] leading-snug mb-3 
-                                ${styles.h <= 100 ? 'hidden' : 'block line-clamp-2'}`}>
-                                {description || t('campaign.description_placeholder')}
+                                ${styles.h <= 80 ? 'hidden' : 'block line-clamp-2'}`}>
+                                {displayDescription}
                             </p>
                             <button className={`font-black uppercase tracking-tighter whitespace-nowrap transition-all 
-                                ${activeTab === 'email' ? 'bg-indigo-600 text-white' : 'bg-slate-950 text-white hover:bg-slate-800'}
+                                ${activeTab === 'email' ? 'bg-primary text-white' : 'bg-slate-950 text-white hover:bg-slate-800'}
                                 ${styles.h <= 50 ? 'py-1 px-2 text-[8px] ml-auto self-center' : styles.h <= 90 ? 'py-1.5 px-3 text-[10px] ml-auto self-center' : 'py-2 px-4 rounded-lg self-start text-xs'}`}>
                                 {t(`campaign.${cta}`) || cta}
                             </button>
@@ -208,7 +210,7 @@ export const AdPreview = ({ formData = {} }) => {
                 )}
 
                 {activeTab === 'email' && (
-                    <div className="mt-8 text-[10px] text-slate-500 text-center max-w-[600px] px-4 opacity-50 uppercase tracking-widest font-black">
+                    <div className="mt-8 text-[11px] text-emerald-400 text-center max-w-[600px] px-4 opacity-90 uppercase tracking-widest font-black bg-emerald-500/10 py-4 rounded-2xl border border-emerald-500/20">
                         <p>{t('preview.newsletter_tip')}</p>
                     </div>
                 )}

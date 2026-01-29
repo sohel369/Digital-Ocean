@@ -62,9 +62,9 @@ const StatusBadge = ({ status }) => {
         },
         submitted: {
             label: 'Submitted',
-            bg: 'bg-blue-500/10',
-            text: 'text-blue-400',
-            border: 'border-blue-500/20',
+            bg: 'bg-primary/10',
+            text: 'text-primary-light',
+            border: 'border-primary/20',
             icon: Clock
         },
         draft: {

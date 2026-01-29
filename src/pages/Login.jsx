@@ -177,7 +177,7 @@ const Login = () => {
         <div className="min-h-screen flex items-center justify-center bg-[#050810] p-4">
             <div className="max-w-[440px] w-full bg-[#0a0f1d] p-10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5 relative">
                 <div className="text-center mb-10">
-                    <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-blue-600/5 text-blue-500 mb-6 border border-blue-500/10">
+                    <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-primary/5 text-primary mb-6 border border-primary/10">
                         <Terminal size={32} strokeWidth={2.5} />
                     </div>
                     <h1 className="text-4xl font-extrabold text-white mb-2 tracking-tight">{t('auth.title')}</h1>
@@ -201,7 +201,7 @@ const Login = () => {
                             type="text"
                             value={isLogin && isForgot ? email : (isLogin ? email : username)}
                             onChange={(e) => isLogin ? setEmail(e.target.value) : setUsername(e.target.value)}
-                            className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-bold text-sm placeholder:text-slate-700"
+                            className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-emerald-500 transition-all font-bold text-sm placeholder:text-slate-700"
                             placeholder={isLogin ? (isForgot ? "Enter your registered email" : "admin@adplatform.com") : "NEW_OPERATOR_01"}
                             required autoComplete="off"
                         />
@@ -215,7 +215,7 @@ const Login = () => {
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-bold text-sm placeholder:text-slate-700"
+                                    className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-emerald-500 transition-all font-bold text-sm placeholder:text-slate-700"
                                     placeholder="operator@adplatform.com"
                                     required
                                 />
@@ -257,7 +257,7 @@ const Login = () => {
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-bold text-sm placeholder:text-slate-700"
+                                className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-emerald-500 transition-all font-bold text-sm placeholder:text-slate-700"
                                 placeholder="••••••••"
                                 required={!isForgot}
                             />
@@ -266,7 +266,7 @@ const Login = () => {
 
                     {isLogin && !isForgot && (
                         <div className="flex justify-end">
-                            <button type="button" onClick={() => setIsForgot(true)} className="text-[11px] font-bold text-slate-500 hover:text-blue-500 transition-colors uppercase tracking-wider">
+                            <button type="button" onClick={() => setIsForgot(true)} className="text-[11px] font-bold text-slate-500 hover:text-emerald-500 transition-colors uppercase tracking-wider">
                                 Forgot Password?
                             </button>
                         </div>
@@ -275,7 +275,7 @@ const Login = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-[#2563eb] text-white font-bold py-4 rounded-2xl shadow-xl shadow-blue-600/20 hover:bg-blue-600 transition-all active:scale-[0.98] disabled:opacity-50 text-sm"
+                        className="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-xl shadow-primary/20 hover:bg-primary-dark transition-all active:scale-[0.98] disabled:opacity-50 text-sm"
                     >
                         {loading ? t('auth.processing') : (isForgot ? "Send Reset Link" : (isLogin ? t('auth.login_btn') : t('auth.register_btn')))}
                     </button>

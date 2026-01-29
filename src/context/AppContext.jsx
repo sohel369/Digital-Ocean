@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getCountryDefaults, SUPPORTED_COUNTRIES, SUPPORTED_CURRENCIES, SUPPORTED_LANGUAGES, formatCurrency, convertCurrency } from '../config/i18nConfig';
+import { getGeoConfig } from '../config/geoData';
 import { translations } from '../config/translations';
 import { toast } from 'sonner';
 import {
@@ -31,6 +32,12 @@ export const AppProvider = ({ children }) => {
         states: [],
         discounts: { state: 0.15, national: 0.30 },
         currency: 'USD' // Base currency of the pricing attributes
+    });
+
+    const [paymentConfig, setPaymentConfig] = useState({
+        publishableKey: '',
+        isSandbox: true,
+        environment: 'sandbox'
     });
 
     const [user, setUser] = useState(() => {
@@ -166,22 +173,21 @@ export const AppProvider = ({ children }) => {
     // Track which countries have already been synchronized to avoid redundant API calls
     const [syncedCountries, setSyncedCountries] = React.useState(new Set());
 
-    const loadRegionsForCountry = async (countryCode, currentPricing = null) => {
+    const loadRegionsForCountry = React.useCallback(async (countryCode, currentPricing = null, silent = false) => {
         if (!countryCode) return;
 
-        // Performance: If we already synced this country in this session, return early
-        if (syncedCountries.has(countryCode) && !currentPricing) {
-            console.log(`⚡ Using cached regions/pricing for ${countryCode}`);
-            return;
-        }
+        // Skip loading state if already synced and not forcing
+        const isAlreadySynced = syncedCountries.has(countryCode);
 
         try {
-            setIsGeoLoading(true);
-            console.log(`🌍 Fetching regions and pricing for ${countryCode}...`);
+            if (!silent && !isAlreadySynced) setIsGeoLoading(true);
+            console.log(`🌍 ${silent ? 'Silent' : 'Active'} fetch for ${countryCode} regions...`);
 
             // Parallel fetch: Regions (Geo) + Config (Pricing)
             const [geoRes, pricingRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/geo/regions/${countryCode}`),
+                fetch(`${API_BASE_URL}/geo/regions/${countryCode}`, {
+                    headers: { ...getAuthHeaders() }
+                }),
                 fetch(`${API_BASE_URL}/pricing/config?country_code=${countryCode}`, {
                     headers: { ...getAuthHeaders() }
                 })
@@ -213,7 +219,8 @@ export const AppProvider = ({ children }) => {
                             return acc;
                         }, []),
                     discounts: rawPricing.discounts || { state: 0.15, national: 0.30 },
-                    currency: rawPricing.currency || 'USD'
+                    currency: rawPricing.currency || 'USD',
+                    statesRaw: rawPricing.states || []
                 };
             }
 
@@ -232,25 +239,80 @@ export const AppProvider = ({ children }) => {
 
                 // Merge Regions Additively - don't lose old ones
                 let updatedStates = [...existingStates];
-                if (regionUpdates.length > 0) {
-                    regionUpdates.forEach(r => {
-                        const existingIdx = updatedStates.findIndex(s => s.name === r.name || s.stateCode === r.code);
-                        const newState = {
-                            name: r.name,
-                            stateCode: r.code,
-                            countryCode: r.country_code,
-                            landMass: updatedStates[existingIdx]?.landMass || r.land_area || 50000,
-                            densityMultiplier: updatedStates[existingIdx]?.densityMultiplier || r.density_multiplier || 1.0,
-                            population: updatedStates[existingIdx]?.population || r.population || 1000000
-                        };
 
-                        if (existingIdx >= 0) {
-                            updatedStates[existingIdx] = newState;
-                        } else {
-                            updatedStates.push(newState);
+                // 1. Get Static Defaults
+                const staticGeo = getGeoConfig(countryCode);
+                const staticRegions = staticGeo ? staticGeo.regions : [];
+
+                // 2. Prepare a map of API regions for easy lookup
+                const apiRegionMap = new Map();
+                if (regionUpdates.length > 0) {
+                    regionUpdates.forEach(r => apiRegionMap.set((r.name || r.state_name || '').toLowerCase(), r));
+                }
+
+                // 3. Prepare a map of pricing data for metrics
+                const pricingApiMap = new Map();
+                if (pricingUpdates?.statesRaw) {
+                    pricingUpdates.statesRaw.forEach(s => pricingApiMap.set((s.name || s.state_name || '').toLowerCase(), s));
+                }
+
+                // 4. Merge: Static Regions + API Data (API overrides values, Static provides coverage)
+                // First, remove existing states for this country from the state list to avoid dupes/stale data
+                updatedStates = updatedStates.filter(s => s.countryCode !== countryCode);
+
+                const mergedRegions = staticRegions.map(staticReg => {
+                    const nameKey = staticReg.name.toLowerCase();
+                    const geoApiReg = apiRegionMap.get(nameKey);
+                    const pricingReg = pricingApiMap.get(nameKey);
+
+                    // Priority: Pricing API > Geo API > Static Default
+                    return {
+                        name: staticReg.name,
+                        stateCode: pricingReg?.state_code || geoApiReg?.code || staticReg.code,
+                        countryCode: countryCode,
+                        landMass: pricingReg?.land_area || geoApiReg?.land_area || staticReg.land_area || 1000,
+                        densityMultiplier: pricingReg?.density_multiplier || geoApiReg?.density_multiplier || staticReg.density_multiplier || 1.0,
+                        radiusAreasCount: pricingReg?.radius_areas_count || geoApiReg?.radius_areas_count || staticReg.radius_areas_count || 1,
+                        population: pricingReg?.population || geoApiReg?.population || staticReg.population || 0,
+                        fips: pricingReg?.fips || geoApiReg?.fips || staticReg.fips,
+                        densityMi: pricingReg?.density_mi || geoApiReg?.density_mi || staticReg.density,
+                        rank: pricingReg?.rank || geoApiReg?.rank || staticReg.rank,
+                        populationPercent: pricingReg?.population_percent || geoApiReg?.population_percent || staticReg.population_percent
+                    };
+                });
+
+                // 5. Add any API regions that MIGHT not be in static list (edge case: custom regions added by admin manually)
+                const allApiSources = [...regionUpdates];
+                if (pricingUpdates?.statesRaw) {
+                    pricingUpdates.statesRaw.forEach(s => {
+                        if (!allApiSources.find(r => (r.name || r.state_name || '').toLowerCase() === (s.name || s.state_name || '').toLowerCase())) {
+                            allApiSources.push(s);
                         }
                     });
                 }
+
+                allApiSources.forEach(r => {
+                    const rName = r.name || r.state_name;
+                    if (!rName) return;
+                    const exists = mergedRegions.find(m => m.name.toLowerCase() === rName.toLowerCase());
+                    if (!exists) {
+                        const nameKey = rName.toLowerCase();
+                        const pricingReg = pricingApiMap.get(nameKey);
+                        mergedRegions.push({
+                            name: rName,
+                            stateCode: r.code || r.state_code || pricingReg?.state_code,
+                            countryCode: r.country_code || pricingReg?.country_code || countryCode,
+                            landMass: r.land_area || pricingReg?.land_area || 1000,
+                            densityMultiplier: r.density_multiplier || pricingReg?.density_multiplier || 1.0,
+                            radiusAreasCount: r.radius_areas_count || pricingReg?.radius_areas_count || 1,
+                            population: r.population || pricingReg?.population || 0,
+                            fips: r.fips || pricingReg?.fips,
+                            densityMi: r.density_mi || pricingReg?.density_mi,
+                            rank: r.rank || pricingReg?.rank,
+                            populationPercent: r.population_percent || pricingReg?.population_percent
+                        });
+                    }
+                });
 
                 // Update synced set
                 setSyncedCountries(prevSet => new Set(prevSet).add(countryCode));
@@ -260,7 +322,7 @@ export const AppProvider = ({ children }) => {
                     ...pricingUpdates,
                     industries: mergedIndustries,
                     adTypes: mergedAdTypes,
-                    states: updatedStates,
+                    states: [...updatedStates, ...mergedRegions],
                     discounts: pricingUpdates?.discounts || base.discounts,
                     currency: pricingUpdates?.currency || base.currency
                 };
@@ -268,10 +330,11 @@ export const AppProvider = ({ children }) => {
 
         } catch (e) {
             console.error("❌ Failed to load regions/pricing:", e);
+            toast.error("Connectivity Issue", { description: "Failed to load regional targeting data. Please refresh." });
         } finally {
-            setIsGeoLoading(false);
+            if (!silent) setIsGeoLoading(false);
         }
-    };
+    }, [syncedCountries, API_BASE_URL]);
 
 
     const fetchData = async () => {
@@ -286,7 +349,7 @@ export const AppProvider = ({ children }) => {
             }
 
             // Fetch basic data in parallel
-            const [statsRes, campaignsRes, notifRes, pricingRes] = await Promise.all([
+            const [statsRes, campaignsRes, notifRes, pricingRes, paymentRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/stats`, {
                     headers: { ...getAuthHeaders() },
                     credentials: 'include'
@@ -300,6 +363,10 @@ export const AppProvider = ({ children }) => {
                     credentials: 'include'
                 }),
                 fetch(`${API_BASE_URL}/pricing/config?country_code=${country}`, {
+                    headers: { ...getAuthHeaders() },
+                    credentials: 'include'
+                }),
+                fetch(`${API_BASE_URL}/payment/config`, {
                     headers: { ...getAuthHeaders() },
                     credentials: 'include'
                 })
@@ -347,6 +414,11 @@ export const AppProvider = ({ children }) => {
                 setNotifications(await notifRes.json());
             }
 
+            if (paymentRes && paymentRes.ok) {
+                const payCfg = await paymentRes.json();
+                setPaymentConfig(payCfg);
+            }
+
             if (pricingRes && pricingRes.ok) {
                 const rawPricing = await pricingRes.json();
                 console.log("Pricing Config received:", rawPricing);
@@ -363,12 +435,17 @@ export const AppProvider = ({ children }) => {
                         baseRate: a?.base_rate || 100.0
                     })),
                     states: (rawPricing.states || []).map(s => ({
-                        name: s?.name || 'Unknown',
+                        name: s?.name || s?.state_name || 'Unknown',
                         landMass: s?.land_area || 1000,
                         densityMultiplier: s?.density_multiplier || 1.0,
+                        radiusAreasCount: s?.radius_areas_count || 1,
                         population: s?.population || 0,
                         stateCode: s?.state_code || '',
-                        countryCode: s?.country_code || 'US'
+                        countryCode: s?.country_code || 'US',
+                        fips: s?.fips,
+                        densityMi: s?.density_mi,
+                        rank: s?.rank,
+                        populationPercent: s?.population_percent
                     })),
                     discounts: rawPricing.discounts || { state: 0.15, national: 0.30 },
                     currency: rawPricing.currency || 'USD'
@@ -398,7 +475,8 @@ export const AppProvider = ({ children }) => {
 
                 setPricingData(freshPricing);
                 // Immediately load regions to ensure we have the full list
-                await loadRegionsForCountry(country, freshPricing);
+                // Use silent: true for background poll to avoid disruptive UI loaders
+                await loadRegionsForCountry(country, freshPricing, true);
 
             } else {
                 console.warn("Pricing metadata fetch failed or unauthorized, using internal fallbacks.");
@@ -441,7 +519,11 @@ export const AppProvider = ({ children }) => {
                     { name: 'Leaderboard (728x90)', baseRate: 150.0 }
                 ],
                 states: [
-                    { name: 'California', landMass: 423970, densityMultiplier: 1.5, population: 39538223, stateCode: 'CA', countryCode: 'US' }
+                    { name: 'California', landMass: 423970, densityMultiplier: 1.5, population: 39538223, stateCode: 'CA', countryCode: 'US' },
+                    { name: 'New York', landMass: 141300, densityMultiplier: 2.0, population: 19450000, stateCode: 'NY', countryCode: 'US' },
+                    { name: 'Texas', landMass: 695662, densityMultiplier: 1.2, population: 29140000, stateCode: 'TX', countryCode: 'US' },
+                    { name: 'Florida', landMass: 170312, densityMultiplier: 1.4, population: 21540000, stateCode: 'FL', countryCode: 'US' },
+                    { name: 'Illinois', landMass: 149995, densityMultiplier: 1.3, population: 12810000, stateCode: 'IL', countryCode: 'US' }
                 ],
                 discounts: { state: 0.15, national: 0.30 }
             });
@@ -533,6 +615,9 @@ export const AppProvider = ({ children }) => {
                 await fetchData();
             }
 
+            // Always attempt to detect location on start
+            detectGeoLocation();
+
             return unsubscribe;
         };
 
@@ -549,7 +634,7 @@ export const AppProvider = ({ children }) => {
             authSubscriptionPromise.then(unsubscribe => unsubscribe && unsubscribe());
             clearInterval(interval);
         };
-    }, []);
+    }, [loadRegionsForCountry]); // Added loadRegionsForCountry as it's now stable
 
     const firebaseSync = async (fbUser, extraData = {}) => {
         try {
@@ -880,8 +965,13 @@ export const AppProvider = ({ children }) => {
                     land_area: s.landMass,
                     population: s.population || 0,
                     density_multiplier: s.densityMultiplier,
+                    radius_areas_count: s.radiusAreasCount,
                     state_code: s.stateCode,
-                    country_code: s.countryCode
+                    country_code: s.countryCode,
+                    fips: s.fips,
+                    density_mi: s.densityMi,
+                    rank: s.rank,
+                    population_percent: s.populationPercent
                 })),
                 discounts: newConfig.discounts,
                 country_code: newConfig.countryCode
@@ -1182,6 +1272,7 @@ export const AppProvider = ({ children }) => {
             setSidebarOpen,
             CONSTANTS,
             pricingData,
+            paymentConfig,
             savePricingConfig,
             addCampaign,
             updateCampaign,

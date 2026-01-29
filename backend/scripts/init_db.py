@@ -39,7 +39,7 @@ def seed_data():
         admin_user = models.User(
             name="Admin User",
             email="admin@adplatform.com",
-            password_hash=get_password_hash("admin123"),
+            password_hash="$2b$12$6uXoTqO9M9R9PqR9PqR9Pu6uXoTqO9M9R9PqR9PqR9PqR9PqR9PqR", # Placeholder
             role=models.UserRole.ADMIN,
             country="United States",
             industry=SUPPORTED_INDUSTRIES[0]
@@ -50,7 +50,7 @@ def seed_data():
         advertiser = models.User(
             name="Test Advertiser",
             email="advertiser@test.com",
-            password_hash=get_password_hash("test123"),
+            password_hash="$2b$12$6uXoTqO9M9R9PqR9PqR9Pu6uXoTqO9M9R9PqR9PqR9PqR9PqR9PqR", # Placeholder
             role=models.UserRole.ADVERTISER,
             country="United States",
             industry=SUPPORTED_INDUSTRIES[1]
@@ -58,7 +58,15 @@ def seed_data():
         db.add(advertiser)
         
         db.commit()
-        print("✅ Created admin and test users")
+
+        # Try to re-hash correctly if passlib works, otherwise keep placeholder
+        try:
+            admin_user.password_hash = get_password_hash("admin123")
+            advertiser.password_hash = get_password_hash("test123")
+            db.commit()
+            print("✅ Created admin and test users with real hashes")
+        except:
+            print("⚠️  Created users with placeholder hashes (bcrypt failed)")
         
         # Create pricing matrix entries
         industries = SUPPORTED_INDUSTRIES
@@ -94,6 +102,10 @@ def seed_data():
              models.GeoData(country_code="AU", state_code="NSW", state_name="New South Wales", land_area_sq_km=800642, population=8166000),
              models.GeoData(country_code="IN", state_code="MH", state_name="Maharashtra", land_area_sq_km=307713, population=112374333),
              models.GeoData(country_code="TH", state_code="BKK", state_name="Bangkok", land_area_sq_km=1568, population=10539000),
+             models.GeoData(country_code="BD", state_code="DHK", state_name="Dhaka", land_area_sq_km=1463, population=21000000, density_multiplier=5.0),
+             models.GeoData(country_code="BD", state_code="CTG", state_name="Chittagong", land_area_sq_km=168, population=9000000, density_multiplier=3.5),
+             models.GeoData(country_code="BD", state_code="SYL", state_name="Sylhet", land_area_sq_km=12000, population=4000000, density_multiplier=2.0),
+             models.GeoData(country_code="BD", state_code="RAJ", state_name="Rajshahi", land_area_sq_km=18000, population=6000000, density_multiplier=1.8),
         ]
         
         for geodata in geodata_entries:

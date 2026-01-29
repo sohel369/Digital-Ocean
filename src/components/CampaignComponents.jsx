@@ -8,7 +8,7 @@ const StatusBadge = ({ status }) => {
     const styles = {
         draft: 'bg-slate-700/50 text-slate-400 border-slate-600',
         review: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-        approved: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+        approved: 'bg-primary/10 text-primary-light border-primary/20',
         live: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
     };
 
@@ -93,7 +93,7 @@ export const ActivityFeed = ({ activities }) => {
         switch (type) {
             case 'approval':
                 return (
-                    <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/10">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 text-primary-light flex items-center justify-center border border-primary/10">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
                 );

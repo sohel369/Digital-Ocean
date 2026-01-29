@@ -25,7 +25,7 @@ export const PaymentCheckout = ({
     campaignId,
     onCancel
 }) => {
-    const { initiatePayment, formatCurrency } = useApp();
+    const { initiatePayment, formatCurrency, paymentConfig } = useApp();
     const [isProcessing, setIsProcessing] = useState(false);
 
     const handleStripeCheckout = async () => {
@@ -44,6 +44,13 @@ export const PaymentCheckout = ({
 
     return (
         <div className="w-full max-w-md mx-auto bg-slate-950/90 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden font-sans text-slate-200">
+            {/* Sandbox Banner - STEP 8 */}
+            {paymentConfig.isSandbox && (
+                <div className="bg-amber-500/10 text-amber-500 text-[10px] font-black uppercase text-center py-2 border-b border-amber-500/20 tracking-widest">
+                    Stripe Test Mode (Sandbox)
+                </div>
+            )}
+
             {/* Header / Summary */}
             <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-8 border-b border-white/5 flex justify-between items-center relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl rounded-full -mr-16 -mt-16"></div>

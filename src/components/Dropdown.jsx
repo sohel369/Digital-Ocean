@@ -28,9 +28,9 @@ const Dropdown = ({ label, icon, options, value, onChange, align = 'right', clas
                     }
         `}
             >
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                     {icon && <span className="shrink-0">{icon}</span>}
-                    <span className="text-sm font-bold text-left leading-tight">
+                    <span className="text-sm font-bold text-left leading-tight truncate block">
                         {options.find(o => o.code === value || o.value === value)?.name ||
                             options.find(o => o.code === value || o.value === value)?.label ||
                             value || label || 'Select Option'}
@@ -58,7 +58,7 @@ const Dropdown = ({ label, icon, options, value, onChange, align = 'right', clas
                                     }
                 `}
                             >
-                                <span className="leading-snug">{option.name || option.label}</span>
+                                <span className="leading-snug whitespace-normal break-words text-left">{option.name || option.label}</span>
                                 <div className="flex items-center gap-2">
                                     {option.symbol && <span className="text-[10px] bg-slate-950 border border-slate-800 px-1.5 py-0.5 rounded text-slate-400 font-mono font-bold">{option.symbol}</span>}
                                     {option.currency && <span className="text-[10px] bg-slate-950 border border-slate-800 px-1.5 py-0.5 rounded text-slate-400 font-mono font-bold">{option.currency}</span>}

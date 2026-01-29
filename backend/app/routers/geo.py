@@ -1,6 +1,9 @@
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request, Depends
 from typing import List, Dict, Optional
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from ..database import get_db
+from .. import models
 from ..utils import geo_ip
 
 router = APIRouter(
@@ -12,6 +15,14 @@ class Region(BaseModel):
     name: str
     code: str
     country_code: str
+    population: Optional[int] = 0
+    land_area: Optional[float] = 0.0
+    density_multiplier: Optional[float] = 1.0
+    fips: Optional[int] = None
+    density_mi: Optional[float] = None
+    rank: Optional[int] = None
+    population_percent: Optional[float] = None
+    radius_areas_count: Optional[int] = 1
 
 # Static Data for Supported Countries
 # robust list ensuring all 50 US states + other countries
@@ -75,13 +86,33 @@ GEO_DATA = {
 }
 
 @router.get("/regions/{country_code}", response_model=List[Region])
-async def get_regions(country_code: str):
+async def get_regions(country_code: str, db: Session = Depends(get_db)):
     """
     Get administrative regions (States/Provinces) for a specific country.
     """
     code = country_code.upper()
+    
+    # 1. Try fetching from database first
+    db_regions = db.query(models.GeoData).filter(models.GeoData.country_code == code).all()
+    if db_regions:
+        return [
+            Region(
+                name=r.state_name, 
+                code=r.state_code, 
+                country_code=code,
+                population=r.population,
+                land_area=r.land_area_sq_km,
+                density_multiplier=r.density_multiplier,
+                fips=r.fips,
+                density_mi=r.density_mi,
+                rank=r.rank,
+                population_percent=r.population_percent,
+                radius_areas_count=r.radius_areas_count
+            ) for r in db_regions
+        ]
+    
+    # 2. Fallback to static data if DB is empty for this country
     if code not in GEO_DATA:
-        # Fallback or empty list
         return []
     
     regions = GEO_DATA[code]

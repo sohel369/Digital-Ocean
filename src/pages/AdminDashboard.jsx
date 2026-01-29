@@ -120,7 +120,7 @@ const AdminDashboard = () => {
                     value={`${((stats?.impressions || 0) / 1000).toFixed(1)}K`}
                     subtext="Total Impressions Distributed"
                     icon={TrendingUp}
-                    colorClass="blue-500"
+                    colorClass="emerald-500"
                 />
                 <AdminStatCard
                     title="Pending Approvals"

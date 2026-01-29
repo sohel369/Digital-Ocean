@@ -31,14 +31,14 @@ const StatCard = ({ title, value, subtext, icon: Icon, trend, colorClass }) => (
                     <AreaChart data={sparklineData}>
                         <defs>
                             <linearGradient id={`grad-${title}`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor={trend === 'up' ? '#10b981' : '#3b82f6'} stopOpacity={0.2} />
-                                <stop offset="100%" stopColor={trend === 'up' ? '#10b981' : '#3b82f6'} stopOpacity={0} />
+                                <stop offset="0%" stopColor={trend === 'up' ? '#10b981' : '#059669'} stopOpacity={0.2} />
+                                <stop offset="100%" stopColor={trend === 'up' ? '#10b981' : '#059669'} stopOpacity={0} />
                             </linearGradient>
                         </defs>
                         <Area
                             type="monotone"
                             dataKey="v"
-                            stroke={trend === 'up' ? '#10b981' : '#3b82f6'}
+                            stroke={trend === 'up' ? '#10b981' : '#059669'}
                             strokeWidth={2}
                             fill={`url(#grad-${title})`}
                         />
@@ -51,7 +51,7 @@ const StatCard = ({ title, value, subtext, icon: Icon, trend, colorClass }) => (
             <div className="flex flex-wrap items-baseline gap-1.5 sm:gap-2">
                 <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-black text-white tracking-tighter truncate max-w-full" title={typeof value === 'string' ? value : ''}>{value}</p>
                 {trend && (
-                    <span className={`text-[10px] sm:text-xs font-black italic ${trend === 'up' ? 'text-emerald-400' : 'text-blue-400'}`}>
+                    <span className={`text-[10px] sm:text-xs font-black italic ${trend === 'up' ? 'text-emerald-400' : 'text-primary-light'}`}>
                         {trend === 'up' ? '↑ 12%' : '↓ 3%'}
                     </span>
                 )}
@@ -119,9 +119,9 @@ const Dashboard = () => {
                 ))}
 
                 {campaigns.some(c => c.status === 'pending_review') && (
-                    <div className="p-4 rounded-2xl border bg-blue-500/10 border-blue-500/20">
+                    <div className="p-4 rounded-2xl border bg-primary/10 border-primary/20">
                         <div className="flex items-center gap-4">
-                            <div className="p-2 rounded-lg bg-blue-500/20 text-blue-400">
+                            <div className="p-2 rounded-lg bg-primary/20 text-primary-light">
                                 <Clock size={20} />
                             </div>
                             <p className="text-xs font-medium text-slate-300">
@@ -136,7 +136,7 @@ const Dashboard = () => {
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 w-full">
                 <div className="space-y-1">
                     <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase italic leading-none">
-                        {t('dashboard.title')} <span className="text-primary drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]">{t('dashboard.subtitle')}</span>
+                        {t('dashboard.title')} <span className="text-primary drop-shadow-[0_0_15px_rgba(16,185,129,0.3)]">{t('dashboard.subtitle')}</span>
                     </h1>
                     <p className="text-slate-500 font-bold text-xs md:text-sm uppercase tracking-widest opacity-80 pl-1">
                         {t('dashboard.monitoring', { count: activeCampaignsCount })}
@@ -146,13 +146,13 @@ const Dashboard = () => {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 lg:ml-auto w-full lg:w-auto">
                     {/* Search Field */}
                     <div className="relative group w-full sm:w-64 h-[52px]">
-                        <div className="absolute inset-0 bg-blue-500/5 rounded-2xl blur-lg group-focus-within:bg-blue-500/10 transition-all duration-500"></div>
+                        <div className="absolute inset-0 bg-primary/5 rounded-2xl blur-lg group-focus-within:bg-primary/10 transition-all duration-500"></div>
                         <div className="relative flex items-center h-full">
-                            <Search className="absolute left-4 text-slate-500 group-hover:text-blue-400 group-focus-within:text-blue-400 transition-colors" size={18} />
+                            <Search className="absolute left-4 text-slate-500 group-hover:text-primary-light group-focus-within:text-primary-light transition-colors" size={18} />
                             <input
                                 type="text"
                                 placeholder={t('common.search')}
-                                className="w-full h-full bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-2xl pl-12 pr-4 text-sm text-slate-100 outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/20 transition-all placeholder:text-slate-600 font-bold"
+                                className="w-full h-full bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-2xl pl-12 pr-4 text-sm text-slate-100 outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/20 transition-all placeholder:text-slate-600 font-bold"
                             />
                         </div>
                     </div>
@@ -164,7 +164,7 @@ const Dashboard = () => {
                         </button>
 
                         {/* New Campaign CTA */}
-                        <Link to="/campaigns/new" className="premium-btn flex-1 sm:w-56 h-[52px] rounded-2xl text-[10px] sm:text-xs md:text-sm italic font-black flex items-center justify-center gap-2.5 shadow-[0_10px_25px_-5px_rgba(37,99,235,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0">
+                        <Link to="/campaigns/new" className="premium-btn flex-1 sm:w-56 h-[52px] rounded-2xl text-[10px] sm:text-xs md:text-sm italic font-black flex items-center justify-center gap-2.5 shadow-[0_10px_25px_-5px_rgba(16,185,129,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0">
                             <div className="bg-white/20 p-1 rounded-lg">
                                 <Plus size={16} strokeWidth={3} />
                             </div>
@@ -181,12 +181,12 @@ const Dashboard = () => {
                     value={formatCurrency(stats?.totalSpend || 0)}
                     subtext={t('dashboard.monthly_est') || 'Monthly Estimated'}
                     icon={Activity}
-                    colorClass="indigo-500"
+                    colorClass="emerald-500"
                 />
                 <StatCard
-                    title={t('dashboard.impressions')}
+                    title="Estimated Population"
                     value={`${((stats?.impressions || 0) / 1000).toFixed(1)}K`}
-                    subtext={`+2.4k ${t('dashboard.today')}`}
+                    subtext={`Population Target`}
                     icon={Eye}
                     trend="up"
                     colorClass="emerald-500"
@@ -197,7 +197,7 @@ const Dashboard = () => {
                     subtext={t('dashboard.avg_stats', { val: '2.4%', stat: t('dashboard.performance') })}
                     icon={MousePointer2}
                     trend="up"
-                    colorClass="blue-400"
+                    colorClass="primary-light"
                 />
                 <StatCard
                     title={t('dashboard.ctr')}
@@ -205,7 +205,7 @@ const Dashboard = () => {
                     subtext={`${t('dashboard.target')}: 3.5%`}
                     icon={TrendingUp}
                     trend="down"
-                    colorClass="indigo-500"
+                    colorClass="emerald-500"
                 />
             </div>
 
@@ -266,9 +266,15 @@ const Dashboard = () => {
                                                             LIVE
                                                         </span>
                                                     ) : camp.status === 'pending_review' || camp.status === 'submitted' ? (
-                                                        <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full text-[9px] font-black uppercase tracking-widest italic">
+                                                        <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full text-[9px] font-black uppercase tracking-widest italic cursor-help group/status relative" title="Geo status: Pending activation and network propagation">
                                                             <Clock size={10} className="shrink-0" />
-                                                            PENDING
+                                                            Pending Activation
+
+                                                            {/* Tooltip for Step 7 */}
+                                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 border border-white/10 text-white text-[10px] rounded-xl opacity-0 group-hover/status:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-[100] shadow-2xl">
+                                                                <p className="font-black text-amber-400 mb-1 uppercase tracking-tighter">Geo Sync Progress</p>
+                                                                <p className="font-medium text-slate-400 lowercase">Targeting is being propagated to nodes...</p>
+                                                            </div>
                                                         </span>
                                                     ) : camp.status === 'rejected' ? (
                                                         <span className="flex items-center gap-1.5 px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded-full text-[9px] font-black uppercase tracking-widest italic group relative" title={camp.admin_message || 'Rejected'}>
@@ -342,7 +348,7 @@ const Dashboard = () => {
                         ) : (
                             notifications.slice(0, 4).map((n, i) => (
                                 <div key={i} className="flex gap-4 p-3 rounded-2xl hover:bg-slate-800/30 transition-all border border-transparent hover:border-slate-800 cursor-help">
-                                    <div className={`mt-1 h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${n.type === 'approval' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400'}`}>
+                                    <div className={`mt-1 h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${n.type === 'approval' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-primary/10 text-primary-light'}`}>
                                         {n.type === 'approval' ? <CheckCircle2 size={20} /> : <TrendingUp size={20} />}
                                     </div>
                                     <div>

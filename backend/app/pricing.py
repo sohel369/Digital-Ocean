@@ -59,46 +59,59 @@ class PricingEngine:
     ) -> schemas.PricingCalculateResponse:
         """
         Calculate total campaign price based on all parameters.
-        
-        Args:
-            industry_type: Type of industry (e.g., 'retail', 'healthcare')
-            advert_type: Type of advertisement (e.g., 'display', 'video')
-            coverage_type: Coverage area type
-            duration_days: Campaign duration in days
-            target_postcode: Postcode for radius targeting
-            target_state: State for state-wide targeting
-            target_country: Country for country-wide targeting
-        
-        Returns:
-            Detailed pricing breakdown
         """
-        # Get pricing matrix for this configuration
+        # 1. Get Base Pricing Matrix 
+        # For STATE and COUNTRY, we SCALE based on RADIUS_30 parameters for "accuracy"
+        # but we check if a specific matrix exists first.
         pricing_matrix = self._get_pricing_matrix(
             industry_type, advert_type, coverage_type, target_country
         )
         
+        # If calculating for STATE/COUNTRY and no specific matrix exists, 
+        # fallback to RADIUS_30 and scale up manually.
+        if not pricing_matrix and coverage_type != models.CoverageType.RADIUS_30:
+            pricing_matrix = self._get_pricing_matrix(
+                industry_type, advert_type, models.CoverageType.RADIUS_30, target_country
+            )
+
         if not pricing_matrix:
-            # Return default pricing if no matrix exists
             pricing_matrix = self._create_default_pricing(industry_type, advert_type, coverage_type)
         
-        # Calculate base components (Monthly Basis)
+        # 2. Determine Coverage Multiplier (The "Accurate" Calculation)
+        coverage_multiplier = self.COVERAGE_MULTIPLIERS.get(coverage_type, 1.0)
+        
+        geodata = None
+        if coverage_type == models.CoverageType.STATE and target_state:
+            geodata = self._get_geodata_for_state(target_state, target_country)
+            if geodata:
+                # Formula: No of slots * Population Density Factor
+                # This ensures California (1.0) is the control, and others scale based on user data
+                coverage_multiplier = (geodata.radius_areas_count or 1) * (geodata.density_multiplier or 1.0)
+        
+        elif coverage_type == models.CoverageType.COUNTRY and target_country:
+            # For country-wide, sum up all states for that country if available
+            country_sum = self.db.query(
+                func.sum(models.GeoData.radius_areas_count * models.GeoData.density_multiplier)
+            ).filter(models.GeoData.country_code == target_country).scalar()
+            
+            if country_sum:
+                coverage_multiplier = float(country_sum)
+            else:
+                coverage_multiplier = self.COVERAGE_MULTIPLIERS.get(models.CoverageType.COUNTRY, 5.0)
+
+        # 3. Calculate Monthly Gross Price (Base Monthly * Industry * Coverage)
         base_rate = pricing_matrix.base_rate
         industry_multiplier = pricing_matrix.multiplier
-        coverage_multiplier = self._get_coverage_multiplier(coverage_type)
+        monthly_gross = base_rate * industry_multiplier * coverage_multiplier
         
-        # Calculate estimated reach
+        # 4. Calculate estimated reach
         estimated_reach = self._calculate_reach(
             coverage_type, target_postcode, target_state, target_country
         )
         
-        # Calculate Monthly Gross Price (FIXED COST)
-        # This is a fixed monthly investment fee.
-        # It is NOT based on estimated reach, clicks, or impressions.
-        # Formula: Base (Monthly) * Industry * Coverage
-        monthly_gross = base_rate * industry_multiplier * coverage_multiplier
-        
-        # Apply discounts to Monthly Price
+        # 5. Apply Discounts
         discount_amount = 0.0
+        # Check for coverage-specific discounts (state-wide / national)
         if coverage_type == models.CoverageType.STATE:
             discount_amount = monthly_gross * (pricing_matrix.state_discount / 100)
         elif coverage_type == models.CoverageType.COUNTRY:
@@ -107,16 +120,8 @@ class PricingEngine:
         # Final Monthly Price
         monthly_price = max(monthly_gross - discount_amount, 0)
         
-        # Calculate Total Price based on Fixed Monthly Blocks
-        # Users purchase in 1-month increments only.
-        # 1 day to 30 days = 1 Month charge
-        # 31 days to 60 days = 2 Months charge
+        # 6. Calculate Duration and Duration Discounts
         duration_months = math.ceil(duration_days / 30.0)
-        
-        # Optional: Long-term commitment discounts
-        # 3+ Months = 5% off
-        # 6+ Months = 10% off
-        # 12+ Months = 15% off
         commitment_discount_percent = 0.0
         if duration_months >= 12:
             commitment_discount_percent = 15.0
@@ -133,17 +138,19 @@ class PricingEngine:
         breakdown = {
             "base_rate_monthly": base_rate,
             "industry_multiplier": industry_multiplier,
-            "coverage_multiplier": coverage_multiplier,
+            "coverage_multiplier": round(coverage_multiplier, 3),
             "duration_days": duration_days,
             "billed_months": int(duration_months),
-            "monthly_gross": monthly_gross,
-            "monthly_price": monthly_price,
+            "monthly_gross": round(monthly_gross, 2),
+            "monthly_price": round(monthly_price, 2),
+            "discount_amount_monthly": round(discount_amount, 2),
             "state_discount_percent": pricing_matrix.state_discount if coverage_type == models.CoverageType.STATE else 0,
             "national_discount_percent": pricing_matrix.national_discount if coverage_type == models.CoverageType.COUNTRY else 0,
-            "discount_amount_monthly": discount_amount,
             "commitment_discount_percent": commitment_discount_percent,
             "commitment_saving_total": round(commitment_saving, 2),
-            "coverage_area_description": self._get_coverage_description(
+            "density_factor": geodata.density_multiplier if geodata else 1.0,
+            "areas_covered": geodata.radius_areas_count if geodata else (1 if coverage_type == models.CoverageType.RADIUS_30 else "State/National"),
+            "coverage_description": self._get_coverage_description(
                 coverage_type, target_postcode, target_state, target_country
             )
         }
@@ -151,8 +158,8 @@ class PricingEngine:
         return schemas.PricingCalculateResponse(
             base_rate=base_rate,
             multiplier=industry_multiplier,
-            coverage_multiplier=coverage_multiplier,
-            discount=discount_amount,
+            coverage_multiplier=round(coverage_multiplier, 3),
+            discount=round(discount_amount + (commitment_saving / max(duration_months, 1)), 2),
             estimated_reach=estimated_reach,
             monthly_price=round(monthly_price, 2),
             total_price=round(total_price, 2),

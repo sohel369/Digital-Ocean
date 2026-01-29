@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { UploadCloud, DollarSign, X, MapPin, Globe, Building2, ChevronRight, ChevronDown, ShieldAlert, Clock, Info } from 'lucide-react';
+import { UploadCloud, DollarSign, X, MapPin, Globe, Building2, ChevronRight, ChevronDown, ShieldAlert, Clock, Info, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
 import { useNavigate, useParams, Link, useLocation } from 'react-router-dom';
 import AdPreview from '../components/AdPreview';
 import { getGeoConfig } from '../config/geoData';
@@ -98,16 +98,20 @@ const CampaignCreation = () => {
 
     // Auto-calculate budget whenever influencing factors change
     React.useEffect(() => {
-        const formatData = pricingData.adTypes.find(a => a.name.toLowerCase() === formData.format.replace('_', ' ').toLowerCase()) || { baseRate: 79 };
+        const adTypeName = formData.format.replace(/_/g, ' ').toLowerCase();
+        const formatData = pricingData.adTypes.find(a =>
+            a.name.toLowerCase().includes(adTypeName) || adTypeName.includes(a.name.toLowerCase())
+        ) || { baseRate: 100 };
+
         const industryData = pricingData.industries.find(i => i.name.toLowerCase() === (formData.industry || '').toLowerCase()) || { multiplier: 1.0 };
-        const monthlyRate = formatData.baseRate * (industryData.multiplier || 1.0) * (formData.coverageArea === 'national' ? 5 : (formData.coverageArea === 'state' ? 2.5 : 1.0));
+
+        // Coverage Multiplier - Simplified for Campaign Creation to match simplified UI
+        // In radius mode it's 1.0. For state/national we use the same fallback multipliers as Pricing tool logic
+        const coverageMulti = formData.coverageArea === 'national' ? 5 : (formData.coverageArea === 'state' ? 2.5 : 1.0);
+        const monthlyRate = formatData.baseRate * (industryData.multiplier || 1.0) * coverageMulti;
 
         const durationMonths = parseInt(formData.duration || '3');
         let discount = 1.0;
-        // Discount logic for total term (if applicable) - currently same as monthly
-        // But for Total Term, it is Monthly * Duration
-        // Use the same discount logic as Monthly Amount if that's how it works, 
-        // OR if the discount applies to the rate.
         if (durationMonths >= 12) discount = 0.50;
         else if (durationMonths >= 6) discount = 0.75;
 
@@ -116,7 +120,7 @@ const CampaignCreation = () => {
         // Update budget in state
         setFormData(prev => ({
             ...prev,
-            budget: totalCost.toFixed(0)
+            budget: Math.round(totalCost).toString()
         }));
     }, [formData.format, formData.industry, formData.coverageArea, formData.duration, pricingData]);
 
@@ -127,7 +131,56 @@ const CampaignCreation = () => {
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
-                setFormData(prev => ({ ...prev, image: reader.result }));
+                // Image Validation
+                const img = new Image();
+                img.onload = () => {
+                    // 1. Find the expected dimensions based on selected format
+                    const formatString = formData.format || '';
+                    const formatKey = formatString.toLowerCase().replace(/ /g, '_').replace(/[()0-9x]/g, '').replace(/__+/g, '_').replace(/_$/, '');
+
+                    // Standard Dimensions Lookup
+                    const standardDims = {
+                        'leaderboard': [728, 90],
+                        'skyscraper': [160, 600],
+                        'medium_rectangle': [300, 250],
+                        'mobile_leaderboard': [320, 50],
+                        'email_newsletter': [600, 200]
+                    };
+
+                    let targetW, targetH;
+                    const match = formatString.match(/(\d+)x(\d+)/);
+
+                    if (match) {
+                        targetW = parseInt(match[1]);
+                        targetH = parseInt(match[2]);
+                    } else {
+                        // Fallback to lookup
+                        const foundKey = Object.keys(standardDims).find(k => formatKey.includes(k));
+                        if (foundKey) {
+                            [targetW, targetH] = standardDims[foundKey];
+                        }
+                    }
+
+                    if (targetW && targetH) {
+                        const targetRatio = targetW / targetH;
+                        const actualRatio = img.width / img.height;
+                        const ratioTolerance = 0.05; // 5% tolerance for aspect ratio
+
+                        // Exact dimension check for better professional results
+                        const isExactWidth = Math.abs(img.width - targetW) < 5;
+                        const isExactHeight = Math.abs(img.height - targetH) < 5;
+                        const isExactRatio = Math.abs(actualRatio - targetRatio) < ratioTolerance;
+
+                        if (!isExactRatio) {
+                            alert(`❌ WRONG DIMENSIONS!\n\nThe selected format "${formatString}" requires a ${targetW}x${targetH} aspect ratio.\n\nYour image is ${img.width}x${img.height} (Ratio: ${(img.width / img.height).toFixed(2)})\nTarget Ratio: ${targetRatio.toFixed(2)}\n\nPlease resize your creative to exactly ${targetW}x${targetH}px for optimal display.`);
+                        } else if (!isExactWidth || !isExactHeight) {
+                            // Correct ratio but different size (e.g. 2x retina)
+                            console.log("Image has correct ratio but higher resolution (Retina/High-res). This is acceptable.");
+                        }
+                    }
+                    setFormData(prev => ({ ...prev, image: reader.result }));
+                };
+                img.src = reader.result;
             };
             reader.readAsDataURL(file);
         }
@@ -224,13 +277,13 @@ const CampaignCreation = () => {
 
                             <div className="md:col-span-2">
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-2">{t('campaign.industry')}</label>
-                                <div className="w-full bg-slate-900/30 border border-slate-700/50 rounded-xl sm:rounded-2xl px-3 sm:px-5 py-2.5 sm:py-3.5 text-slate-400 text-xs sm:text-sm cursor-not-allowed">
+                                <div title={formData.industry} className="w-full bg-slate-900/30 border border-slate-700/50 rounded-xl sm:rounded-2xl px-3 sm:px-5 py-2.5 sm:py-3.5 text-slate-400 text-xs sm:text-sm cursor-not-allowed truncate">
                                     {/* Display registered industry */}
                                     {t(`industry.${(formData.industry || '').toLowerCase().replace(/ /g, '_')}`) || formData.industry || formatIndustryName(formData.industry)}
-                                    <span className="block text-[10px] text-slate-600 mt-1 uppercase tracking-wider font-bold">
-                                        {t('campaign.locked_industry_desc')}
-                                    </span>
                                 </div>
+                                <span className="block text-[10px] text-slate-600 mt-1 uppercase tracking-wider font-bold">
+                                    {t('campaign.locked_industry_desc')}
+                                </span>
                             </div>
 
                             <div>
@@ -295,9 +348,9 @@ const CampaignCreation = () => {
                                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">{t('geo.coverage_area')}</p>
                                 </div>
                             </div>
-                            <Link to="/geo-targeting" className="group flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary hover:text-white border border-primary/30 rounded-xl transition-all shadow-lg shadow-primary/5">
-                                <span className="text-[10px] font-black uppercase tracking-widest">Edit in Geo Targeting</span>
-                                <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                            <Link to="/geo-targeting" className="group flex items-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500 hover:text-white border border-emerald-500/30 rounded-xl transition-all shadow-lg shadow-emerald-500/5">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500 group-hover:text-white">Edit in Geo Targeting</span>
+                                <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform text-emerald-500 group-hover:text-white" />
                             </Link>
                         </div>
 
@@ -314,7 +367,7 @@ const CampaignCreation = () => {
                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Location Summary</p>
                                     <p className="text-sm font-bold text-primary-light">
                                         {geoSettings.coverageArea === 'radius'
-                                            ? `${geoSettings.addressLabel || 'New York, US'} • ${geoSettings.radius} mile radius`
+                                            ? `${geoSettings.addressLabel || geoSettings.postcode || (country === 'US' ? 'Washinton D.C, US' : (country === 'AU' ? 'Sydney, AU' : 'Location Not Set'))} • ${geoSettings.radius} mile radius`
                                             : (geoSettings.coverageArea === 'state' ? `Full coverage of ${geoSettings.targetState || 'Region'}` : 'Full Australian Market Penetration')}
                                     </p>
                                 </div>
@@ -326,16 +379,35 @@ const CampaignCreation = () => {
                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Estimated Reach</p>
                                     <div className="flex items-baseline gap-2">
                                         <p className="text-2xl font-black text-white">
-                                            {geoSettings.coverageArea === 'national' ? '1,250,000' : (geoSettings.coverageArea === 'state' ? '450,000' : (Math.floor(Math.PI * geoSettings.radius * geoSettings.radius * 35)).toLocaleString())}
+                                            {(() => {
+                                                if (geoSettings.coverageArea === 'national') {
+                                                    const total = pricingData.states
+                                                        .filter(s => s.countryCode === country)
+                                                        .reduce((sum, s) => sum + (s.population || 0), 0);
+                                                    return total.toLocaleString();
+                                                }
+                                                if (geoSettings.coverageArea === 'state') {
+                                                    const state = pricingData.states.find(s => s.name === geoSettings.targetState);
+                                                    return (state?.population || 0).toLocaleString();
+                                                }
+                                                return (Math.floor(Math.PI * geoSettings.radius * geoSettings.radius * 35)).toLocaleString();
+                                            })()}
                                         </p>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase">Users</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase">Estimated Population</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center justify-between text-[10px]">
-                                    <div className="flex items-center gap-1 text-emerald-400 font-bold uppercase tracking-wider bg-emerald-400/5 px-2 py-1 rounded-lg border border-emerald-400/10">
-                                        <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse"></div>
-                                        Live & Real Data
-                                    </div>
+                                    {geoSettings.lastUpdated ? (
+                                        <div className="flex items-center gap-1 text-emerald-400 font-bold uppercase tracking-wider bg-emerald-400/5 px-2 py-1 rounded-lg border border-emerald-400/10">
+                                            <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse"></div>
+                                            Live & Real Data
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-1 text-amber-500 font-bold uppercase tracking-wider bg-amber-500/5 px-2 py-1 rounded-lg border border-amber-500/10" title="Activates on launch">
+                                            <div className="w-1 h-1 bg-amber-500 rounded-full animate-pulse"></div>
+                                            Pending Activation
+                                        </div>
+                                    )}
                                     <p className="text-slate-500 font-black uppercase tracking-widest">
                                         Last updated: {geoSettings.lastUpdated ? new Date(geoSettings.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
                                     </p>
@@ -343,10 +415,10 @@ const CampaignCreation = () => {
                             </div>
                         </div>
 
-                        <div className="mt-4 flex items-center gap-3 px-5 py-3 bg-blue-500/5 border border-blue-500/10 rounded-xl">
-                            <Info size={16} className="text-blue-400 shrink-0" />
+                        <div className="mt-4 flex items-center gap-3 px-5 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl">
+                            <Info size={16} className="text-emerald-400 shrink-0" />
                             <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase tracking-wider">
-                                Location configurations are managed in the <Link to="/geo-targeting" className="text-primary hover:underline underline-offset-4">Geo Targeting tab</Link> to ensure precise mapping and radius accuracy.
+                                Location configurations are managed in the <Link to="/geo-targeting" className="text-emerald-500 hover:underline underline-offset-4">Geo Targeting tab</Link> to ensure precise mapping and radius accuracy.
                             </p>
                         </div>
                     </div>
@@ -487,8 +559,10 @@ const CampaignCreation = () => {
                                 <span className="text-slate-200 font-mono">
                                     {/* Dynamic Price Display */}
                                     {(() => {
-                                        // Find base rate for selected format
-                                        const rate = pricingData.adTypes.find(a => a.name.toLowerCase() === formData.format.replace('_', ' ').toLowerCase())?.baseRate || 100;
+                                        const adTypeName = formData.format.replace(/_/g, ' ').toLowerCase();
+                                        const rate = pricingData.adTypes.find(a =>
+                                            a.name.toLowerCase().includes(adTypeName) || adTypeName.includes(a.name.toLowerCase())
+                                        )?.baseRate || 100;
                                         // Convert from specific source currency (e.g. THB) to user display currency
                                         const converted = convertPrice(rate, pricingData.currency);
                                         return formatCurrency(converted);
@@ -498,9 +572,9 @@ const CampaignCreation = () => {
                             </div>
                             {/* Multiplier Hidden for Advertiser */}
                             <div className="flex justify-between text-xs text-slate-400">
-                                <span>{t('campaign.industry_multiplier')} ({formatIndustryName(formData.industry)})</span>
+                                <span>{t('campaign.industry') || 'Industry'} ({formatIndustryName(formData.industry)})</span>
                                 <span className="text-primary font-bold">
-                                    x{pricingData.industries.find(i => i.name === formData.industry)?.multiplier || 1.0}
+                                    Included
                                 </span>
                             </div>
                         </div>
@@ -508,32 +582,70 @@ const CampaignCreation = () => {
                         <div className="space-y-4">
                             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
                                 <div className="flex-1 w-full">
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">{t('campaign.monthly_commitment') || 'Monthly Installment'}</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">MONTHLY COMMITMENT</label>
                                     <div className="relative">
                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary/60 font-bold text-lg italic">{currentCurrency.symbol}</div>
-                                        <div className="w-full bg-slate-900/30 border border-slate-700/30 rounded-xl pl-10 pr-5 py-3 text-xl font-bold text-slate-300">
-                                            {(() => {
-                                                const formatData = pricingData.adTypes.find(a => a.name.toLowerCase() === formData.format.replace('_', ' ').toLowerCase()) || { baseRate: 79 };
-                                                const industryData = pricingData.industries.find(i => i.name.toLowerCase() === (formData.industry || '').toLowerCase()) || { multiplier: 1.0 };
-                                                const monthlyRate = formatData.baseRate * (industryData.multiplier || 1.0) * (formData.coverageArea === 'national' ? 5 : (formData.coverageArea === 'state' ? 2.5 : 1.0));
+                                        <div className="w-full bg-slate-900/30 border border-slate-700/30 rounded-xl pl-10 pr-5 py-3 text-xl font-bold text-slate-100 flex items-center justify-between min-h-[64px]">
+                                            <div className="flex flex-col">
+                                                <div className="flex items-center gap-2">
+                                                    <span>
+                                                        {(() => {
+                                                            const adTypeName = formData.format.replace(/_/g, ' ').toLowerCase();
+                                                            const formatData = pricingData.adTypes.find(a =>
+                                                                a.name.toLowerCase().includes(adTypeName) || adTypeName.includes(a.name.toLowerCase())
+                                                            ) || { baseRate: 100 };
+                                                            const industryData = pricingData.industries.find(i => i.name.toLowerCase() === (formData.industry || '').toLowerCase()) || { multiplier: 1.0 };
+                                                            const monthlyRate = formatData.baseRate * (industryData.multiplier || 1.0) * (formData.coverageArea === 'national' ? 5 : (formData.coverageArea === 'state' ? 2.5 : 1.0));
 
-                                                const durationMonths = parseInt(formData.duration || '3');
-                                                let discount = 1.0;
-                                                if (durationMonths >= 12) discount = 0.80;
-                                                else if (durationMonths >= 6) discount = 0.90;
+                                                            const durationMonths = parseInt(formData.duration || '3');
+                                                            let discount = 1.0;
+                                                            if (durationMonths >= 12) discount = 0.50;
+                                                            else if (durationMonths >= 6) discount = 0.75;
 
-                                                return convertPrice(monthlyRate * discount, pricingData.currency).toLocaleString(undefined, {
-                                                    minimumFractionDigits: 0,
-                                                    maximumFractionDigits: 0
-                                                });
-                                            })()}
-                                            <span className="text-xs text-slate-500 ml-2 uppercase tracking-widest font-black italic">/ Month</span>
+                                                            return convertPrice(monthlyRate * discount, pricingData.currency).toLocaleString(undefined, {
+                                                                minimumFractionDigits: 0,
+                                                                maximumFractionDigits: 0
+                                                            });
+                                                        })()}
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black italic">/ Month</span>
+                                                </div>
+                                                {/* Detailed Pricing Breakdown for Clarity */}
+                                                <div className="text-[9px] text-slate-600 font-bold uppercase tracking-tight mt-0.5">
+                                                    Fixed recurring installment
+                                                </div>
+                                            </div>
+
+                                            <div className="flex flex-col items-end">
+                                                {/* Discount Note */}
+                                                {(() => {
+                                                    const dur = parseInt(formData.duration || '3');
+                                                    if (dur === 12) return (
+                                                        <div className="flex flex-col items-end gap-1">
+                                                            <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-md border border-emerald-500/20 font-black tracking-tighter shadow-[0_0_10px_rgba(16,185,129,0.1)]">50% DISCOUNT RECEIVED</span>
+                                                            <span className="text-[8px] text-slate-500 italic">Total cost divided by 12 installments</span>
+                                                        </div>
+                                                    );
+                                                    if (dur === 6) return (
+                                                        <div className="flex flex-col items-end gap-1">
+                                                            <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-md border border-emerald-500/20 font-black tracking-tighter shadow-[0_0_10px_rgba(16,185,129,0.1)]">25% DISCOUNT RECEIVED</span>
+                                                            <span className="text-[8px] text-slate-500 italic">Total cost divided by 6 installments</span>
+                                                        </div>
+                                                    );
+                                                    return (
+                                                        <div className="flex flex-col items-end">
+                                                            <span className="text-[9px] text-slate-600 font-bold italic">Standard Rate Applied</span>
+                                                            <span className="text-[8px] text-slate-500 italic mt-0.5">12 month campaigns attract 50% discount</span>
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="flex-1 w-full">
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">{t('campaign.total_cost_fixed') || 'Total Term Investment'}</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">TOTAL CAMPAIGN COST (FIXED)</label>
                                     <div className="relative">
                                         <div className="absolute left-5 top-1/2 -translate-y-1/2 text-primary font-black text-xl italic">{currentCurrency.symbol}</div>
                                         <input
@@ -550,8 +662,7 @@ const CampaignCreation = () => {
                             <div className="flex items-center gap-3 px-4 py-3 bg-primary/5 border border-primary/10 rounded-xl">
                                 <Info size={14} className="text-primary" />
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">
-                                    Billed monthly via automated subscription. No total upfront payment required.
-                                    Inflation-protected fixed rates for the duration of the campaign ({formData.duration || '3'} months).
+                                    Billed monthly via automated subscription. No total upfront payment required. Long-term bookings safeguard your costs against price inflation and ensure consistent premium placement exposure, even as audience numbers grow.
                                 </p>
                             </div>
 
@@ -562,11 +673,11 @@ const CampaignCreation = () => {
                         </div>
                     </div>
                     {isReadOnly && (
-                        <div className="pt-2 px-4 py-3 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center gap-3 animate-in fade-in zoom-in-95">
-                            <div className="p-1.5 bg-blue-500/20 rounded-lg text-blue-400">
+                        <div className="pt-2 px-4 py-3 bg-primary/10 border border-primary/20 rounded-2xl flex items-center gap-3 animate-in fade-in zoom-in-95">
+                            <div className="p-1.5 bg-primary/20 rounded-lg text-primary-light">
                                 <Clock size={16} />
                             </div>
-                            <p className="text-xs font-bold text-blue-400">
+                            <p className="text-xs font-bold text-primary-light">
                                 {formData.status === 'rejected'
                                     ? t('campaign.status_rejected_msg')
                                     : t('campaign.status_msg', { status: formData.status.replace('_', ' ') })}
@@ -582,6 +693,48 @@ const CampaignCreation = () => {
                             <p className="text-[10px] sm:text-xs font-bold text-amber-500/90">{t('campaign.approval_alert')}</p>
                         </div>
                     )}
+
+                    {/* Approval Flow Progress Demo */}
+                    {!isReadOnly && (
+                        <div className="glass-panel rounded-3xl p-6 space-y-4 border-primary/20 bg-primary/5">
+                            <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                                <h4 className="text-[10px] font-black text-primary-light uppercase tracking-widest italic flex items-center gap-2">
+                                    <ShieldCheck size={14} /> Launch Sequence & Approval Flow
+                                </h4>
+                                <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Typical time: 2-4 Hours</span>
+                            </div>
+
+                            <div className="flex items-center justify-between relative px-2">
+                                {/* Connector Line */}
+                                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-800 -translate-y-1/2 z-0"></div>
+
+                                {/* Step 1 */}
+                                <div className="relative z-10 flex flex-col items-center gap-2">
+                                    <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                                        <CheckCircle2 size={20} />
+                                    </div>
+                                    <span className="text-[9px] font-black text-emerald-400 uppercase tracking-tighter">Submit</span>
+                                </div>
+
+                                {/* Step 2 */}
+                                <div className="relative z-10 flex flex-col items-center gap-2">
+                                    <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/20 animate-pulse">
+                                        <ShieldCheck size={20} />
+                                    </div>
+                                    <span className="text-[9px] font-black text-primary-light uppercase tracking-tighter">Admin Review</span>
+                                </div>
+
+                                {/* Step 3 */}
+                                <div className="relative z-10 flex flex-col items-center gap-2 opacity-40">
+                                    <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 border border-white/5">
+                                        <Zap size={20} />
+                                    </div>
+                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Live & Running</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
 
                     <div className="pt-6 flex flex-col sm:flex-row items-stretch gap-4">
                         <button

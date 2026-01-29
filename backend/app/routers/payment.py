@@ -43,6 +43,18 @@ class CheckoutSessionRequest(BaseModel):
     cancel_url: str
     currency: str = "usd"
 
+@router.get("/config")
+async def get_payment_config():
+    """
+    Expose public Stripe configuration.
+    """
+    is_sandbox = settings.STRIPE_SECRET_KEY.startswith("sk_test") or not is_stripe_configured()
+    return {
+        "publishableKey": settings.STRIPE_PUBLISHABLE_KEY,
+        "isSandbox": is_sandbox,
+        "environment": "sandbox" if is_sandbox else "production"
+    }
+
 @router.post("/create-checkout-session")
 async def create_checkout_session(
     request_data: CheckoutSessionRequest,

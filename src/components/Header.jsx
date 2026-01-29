@@ -106,7 +106,7 @@ const Header = () => {
                                         ) : (
                                             notifications.map(n => (
                                                 <div key={n.id} className={`p-3 rounded-xl flex gap-3 ${!n.read ? 'bg-slate-800/80 border border-slate-700/50' : 'hover:bg-slate-800/30'}`}>
-                                                    <div className={`mt-1 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${n.type === 'approval' ? 'bg-emerald-500/10 text-emerald-500' : n.type === 'warning' ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                                                    <div className={`mt-1 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${n.type === 'approval' ? 'bg-emerald-500/10 text-emerald-500' : n.type === 'warning' ? 'bg-amber-500/10 text-amber-500' : 'bg-primary/10 text-primary-light'}`}>
                                                         {n.type === 'approval' ? <Check size={14} /> : <Info size={14} />}
                                                     </div>
                                                     <div>
@@ -137,7 +137,7 @@ const Header = () => {
                     <div className="relative">
                         <button
                             onClick={() => setShowUserMenu(!showUserMenu)}
-                            className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 p-0.5 shadow-md hover:shadow-lg transition-transform hover:scale-105 active:scale-95"
+                            className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-primary-light p-0.5 shadow-md hover:shadow-lg transition-transform hover:scale-105 active:scale-95"
                         >
                             <div className="w-full h-full rounded-full bg-white border-2 border-transparent overflow-hidden">
                                 <img

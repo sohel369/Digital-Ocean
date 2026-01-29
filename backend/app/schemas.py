@@ -331,9 +331,14 @@ class StateConfig(BaseModel):
     name: str
     land_area: float
     population: int
+    radius_areas_count: Optional[int] = 1
     density_multiplier: float
     state_code: Optional[str] = None
     country_code: str = "US"
+    fips: Optional[int] = None
+    density_mi: Optional[float] = None
+    rank: Optional[int] = None
+    population_percent: Optional[float] = None
 
 class DiscountConfig(BaseModel):
     state: float
@@ -377,6 +382,10 @@ class GeoDataResponse(BaseModel):
     population: int
     density_multiplier: float
     urban_percentage: Optional[float]
+    fips: Optional[int]
+    density_mi: Optional[float]
+    rank: Optional[int]
+    population_percent: Optional[float]
     created_at: datetime
     
     class Config:

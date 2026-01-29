@@ -250,7 +250,7 @@ async def get_global_pricing_config(
             industries = [schemas.IndustryConfig(name=current_user.industry, multiplier=1.0)]
 
     # 2. Ad Types & Base Rates
-    # Similar logic: check if this country has a specific base rate for "Display"
+    # Similar logic: check if this country has a specific base rate
     all_ad_types = db.query(models.PricingMatrix.advert_type).distinct().all()
     ad_types = []
     
@@ -270,12 +270,21 @@ async def get_global_pricing_config(
         ]
 
     # 3. Geo Data (Existing Logic)
-    states_data = db.query(models.GeoData).all()
+    geo_query = db.query(models.GeoData)
+    
+    # PERMISSION CHECK: Country Admins only see their own country's states
+    if current_user and current_user.role == models.UserRole.COUNTRY_ADMIN:
+        managed = (current_user.managed_country or "").upper()
+        if managed:
+            geo_query = geo_query.filter(models.GeoData.country_code == managed)
+            
+    states_data = geo_query.all()
     states = [
         schemas.StateConfig(
             name=row.state_name or row.country_code,
             land_area=row.land_area_sq_km,
             population=row.population,
+            radius_areas_count=row.radius_areas_count,
             density_multiplier=row.density_multiplier,
             state_code=row.state_code,
             country_code=row.country_code
@@ -283,8 +292,9 @@ async def get_global_pricing_config(
         for row in states_data
     ]
     if not states:
-         states = [
-            schemas.StateConfig(name="California", land_area=423970, population=39538223, density_multiplier=1.0, state_code="CA", country_code="US")
+        # Provide a contextual fallback based on requested country
+        states = [
+            schemas.StateConfig(name=f"Standard Region ({target_country})", land_area=10000, population=1000000, density_multiplier=1.0, state_code="STD", country_code=target_country)
         ]
 
     # 4. Discounts (Country specific or default)
@@ -328,7 +338,7 @@ async def get_global_pricing_config(
 @router.post("/admin/config", response_model=schemas.MessageResponse)
 async def save_global_pricing_config(
     config: schemas.GlobalPricingConfig,
-    current_user: models.User = Depends(auth.get_current_admin_user),
+    current_user: models.User = Depends(auth.get_current_pricing_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -340,12 +350,21 @@ async def save_global_pricing_config(
     logger = logging.getLogger(__name__)
     
     try:
-        logger.info(f"💾 ADMIN SAVE INITIATED by {current_user.email}")
-        logger.info(f"📋 Config data: {len(config.industries)} industries, {len(config.ad_types)} ad types, {len(config.states)} states")
+        # Determine target country for these pricing rows
+        target_country = (config.country_code or "US").upper()
         
-        # 0. Determine target country for these pricing rows
-        target_country = config.country_code.upper() if config.country_code else "US"
-        logger.info(f"🎯 Target country: {target_country}")
+        # PERMISSION CHECK: Country Admins can only edit their own country
+        if current_user.role == models.UserRole.COUNTRY_ADMIN:
+            managed = (current_user.managed_country or "").upper()
+            if managed != target_country:
+                logger.warning(f"🚫 PERMISSION DENIED: {current_user.email} (managed={managed}) attempted to edit {target_country}")
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Access Denied: You are only authorized to manage pricing for {managed}."
+                )
+
+        logger.info(f"💾 ADMIN SAVE INITIATED by {current_user.email} for {target_country}")
+        logger.info(f"📋 Config data: {len(config.industries)} industries, {len(config.ad_types)} ad types, {len(config.states)} states")
 
         # 1. Update/Upsert Industry Multipliers in PricingMatrix
         for ind in config.industries:
@@ -409,6 +428,7 @@ async def save_global_pricing_config(
             if existing_geo:
                 existing_geo.density_multiplier = state.density_multiplier
                 existing_geo.population = state.population
+                existing_geo.radius_areas_count = state.radius_areas_count
                 existing_geo.land_area_sq_km = state.land_area
                 existing_geo.state_code = state.state_code
                 existing_geo.country_code = state.country_code
@@ -419,6 +439,7 @@ async def save_global_pricing_config(
                     state_code=state.state_code,
                     land_area_sq_km=state.land_area,
                     population=state.population,
+                    radius_areas_count=state.radius_areas_count,
                     density_multiplier=state.density_multiplier
                 )
                 db.add(new_geo)

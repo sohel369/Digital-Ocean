@@ -1,0 +1,18 @@
+[
+    {
+        "country_code": "US",
+        "name": "California",
+        "state_code": "CA",
+        "land_mass": 423970,
+        "population": 39538223,
+        "density_multiplier": 1.5
+    },
+    {
+        "country_code": "BD",
+        "name": "Dhaka",
+        "state_code": "DHK",
+        "land_mass": 1463,
+        "population": 21000000,
+        "density_multiplier": 5.0
+    }
+]

@@ -53,18 +53,30 @@ const CustomSelect = ({ value, options, onChange, formatName, t, type, placehold
 
 const Pricing = () => {
     const navigate = useNavigate();
-    const { pricingData, formatCurrency, convertPrice, t, country, formatIndustryName, user, addCampaign, currency } = useApp();
+    const {
+        pricingData,
+        formatCurrency,
+        convertPrice,
+        t,
+        country,
+        formatIndustryName,
+        user,
+        addCampaign,
+        currency,
+        geoSettings,
+        loadRegionsForCountry
+    } = useApp();
 
     const [selectedIndustry, setSelectedIndustry] = useState({ name: 'Tech', multiplier: 1.0 });
     const [selectedAdType, setSelectedAdType] = useState({ name: 'Display', baseRate: 15.0 });
-    const [coverageArea, setCoverageArea] = useState('radius');
-    const [selectedState, setSelectedState] = useState({ name: 'New York', landMass: 54000, densityMultiplier: 1.2 });
-    const [postcode, setPostcode] = useState('');
+    const [coverageArea, setCoverageArea] = useState(geoSettings?.coverageArea || 'radius');
+    const [selectedState, setSelectedState] = useState({ name: 'Select Region', landMass: 0, densityMultiplier: 1.0 });
+    const [postcode, setPostcode] = useState(geoSettings?.postcode || '');
+    const [duration, setDuration] = useState('3'); // Default 3 months
     const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
     const [tempCampaignId, setTempCampaignId] = useState(null);
     const [isCreating, setIsCreating] = useState(false);
 
-    // Sync defaults
     // Sync defaults - ONLY if not already modified by user
     React.useEffect(() => {
         if (pricingData?.industries?.length > 0 && selectedIndustry.name === 'Tech') {
@@ -75,41 +87,95 @@ const Pricing = () => {
             const validTypes = pricingData.adTypes.filter(a => a.name !== 'Video');
             if (validTypes.length > 0) setSelectedAdType(validTypes[0]);
         }
-        // State defaults should trigger update, but we don't want to overwrite if user changed it.
-        // However, state selection depends on country, so if country changes we SHOULD reset.
     }, [pricingData, user]);
 
-    // Handle Country/State reset separately
+    // Ensure regions are loaded for the current country if missing
     React.useEffect(() => {
+        const hasRegions = pricingData.states.some(s => s.countryCode === country);
+        if (!hasRegions && country) {
+            console.log(`🔍 Pricing Page: Missing regions for ${country}, loading...`);
+            loadRegionsForCountry(country);
+        }
+    }, [country, pricingData.states.length]);
+
+    // Handle Country/State/Coverage sync from Global Geo Settings
+    React.useEffect(() => {
+        // 1. Sync Coverage Area
+        if (geoSettings?.coverageArea) {
+            setCoverageArea(geoSettings.coverageArea);
+        }
+
+        // 2. Sync Postcode
+        if (geoSettings?.postcode) {
+            setPostcode(geoSettings.postcode);
+        }
+
+        // 3. Sync State Selection
         const countryStates = (pricingData?.states || []).filter(s => s.countryCode === country);
-        if (countryStates.length > 0) {
-            // If current selected state is NOT in the new list, pick the first one
+
+        if (geoSettings?.coverageArea === 'state' && geoSettings?.targetState) {
+            const target = countryStates.find(s => s.name === geoSettings.targetState);
+            if (target) {
+                setSelectedState(target);
+            } else if (countryStates.length > 0) {
+                // If the target state isn't found in current country, default to first available
+                setSelectedState(countryStates[0]);
+            }
+        } else if (countryStates.length > 0) {
+            // Default to first state if none selected or invalid
             const isCurrentValid = countryStates.find(s => s.name === selectedState.name);
-            if (!isCurrentValid) setSelectedState(countryStates[0]);
+            if (!isCurrentValid || selectedState.name === 'Select Region') {
+                setSelectedState(countryStates[0]);
+            }
         } else {
-            // Clear selection if no states available for country
             setSelectedState({ name: t('common.no_regions') || 'No Regions Available', landMass: 0, densityMultiplier: 1.0 });
         }
-    }, [pricingData, country]);
+    }, [geoSettings, country, pricingData?.states]);
 
-    const RADIUS_AREA = 2827;
+    const RADIUS_AREA = Math.PI * Math.pow(geoSettings?.radius || 30, 2);
+
+    // STEP 4: Discount Logic (Duration based)
     const calculation = useMemo(() => {
         if (!pricingData?.industries?.length) return { basePrice: 0, finalPrice: 0, sections: "0.00", discountPercent: "0", areaDescription: "" };
-        let sections = 1, discount = 0, areaDescription = t('pricing.radius_desc', { radius: 30 });
-        if (coverageArea === 'state' && selectedState) {
+
+        // STEP 3: Sync Radius from Geo Config
+        const currentRadius = geoSettings?.radius || 30;
+        let sections = 1, areaDescription = t('pricing.radius_desc', { radius: currentRadius });
+
+        if (coverageArea === 'radius') {
+            // Radius area calculation
+            sections = 1; // Base unit is 1 standard radius
+        } else if (coverageArea === 'state' && selectedState) {
             sections = (selectedState.landMass / RADIUS_AREA) * selectedState.densityMultiplier;
-            discount = pricingData.discounts?.state || 0;
             areaDescription = t('pricing.state_desc', { state: selectedState.name });
         } else if (coverageArea === 'national') {
             sections = (pricingData.states || []).reduce((acc, s) => acc + (s.landMass / RADIUS_AREA * s.densityMultiplier), 0);
-            discount = pricingData.discounts?.national || 0;
             areaDescription = t('pricing.national_desc');
         }
+
         const rawBase = sections * (selectedAdType?.baseRate || 0) * (selectedIndustry?.multiplier || 1.0);
         const basePrice = convertPrice(rawBase, pricingData.currency);
-        const discountAmt = basePrice * discount;
-        return { basePrice, discountAmt, finalPrice: basePrice - discountAmt, sections: sections.toFixed(2), discountPercent: (discount * 100).toFixed(0), areaDescription };
-    }, [coverageArea, selectedState, selectedAdType, selectedIndustry, pricingData, t, convertPrice]);
+
+        // Duration Discount Calculation
+        let durationDiscount = 0;
+        const dur = parseInt(duration);
+        if (dur >= 12) durationDiscount = 0.50;      // 50% for 12 months
+        else if (dur >= 6) durationDiscount = 0.25;  // 25% for 6 months
+
+        // Combine with coverage/volume discounts if needed, but for now we prioritize the duration discount request
+        // The user asked specifically for: "Monthly price = base - discount"
+
+        const monthlyPrice = basePrice * (1 - durationDiscount);
+
+        return {
+            basePrice,
+            discountAmt: basePrice - monthlyPrice,
+            finalPrice: monthlyPrice,
+            sections: sections.toFixed(2),
+            discountPercent: (durationDiscount * 100).toFixed(0),
+            areaDescription
+        };
+    }, [coverageArea, selectedState, selectedAdType, selectedIndustry, pricingData, t, convertPrice, duration, geoSettings]);
 
     const handleNextStep = async () => {
         setIsCreating(true);
@@ -160,8 +226,28 @@ const Pricing = () => {
                                 <CustomSelect value={selectedIndustry.name} options={pricingData.industries} onChange={setSelectedIndustry} t={t} formatName={formatIndustryName} type="industry" placeholder="Select Industry" />
                             </div>
                             <div className="space-y-3">
-                                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest px-1">{t('campaign.format')}</label>
+                                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest px-1">&nbsp;</label>
                                 <CustomSelect value={selectedAdType.name} options={pricingData.adTypes.filter(a => a.name !== 'Video')} onChange={setSelectedAdType} t={t} formatName={(n) => n} type="formats" placeholder="Select Format" />
+                            </div>
+                            <div className="md:col-span-2 space-y-3">
+                                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest px-1">Commitment Duration (Save up to 50%)</label>
+                                <div className="grid grid-cols-3 gap-3">
+                                    {[{ val: '3', label: '3 Months', discount: '0%' }, { val: '6', label: '6 Months', discount: '25%' }, { val: '12', label: '12 Months', discount: '50%' }].map(opt => (
+                                        <button
+                                            key={opt.val}
+                                            onClick={() => setDuration(opt.val)}
+                                            className={`group relative py-3 rounded-xl text-sm font-bold border transition-all ${duration === opt.val ? 'bg-primary text-white border-primary' : 'bg-slate-900 border-white/5 text-slate-400 hover:bg-white/5'}`}
+                                        >
+                                            {opt.label}
+                                            {opt.discount !== '0%' && <span className="block text-[10px] text-emerald-400">Save {opt.discount}</span>}
+
+                                            {/* Tooltip for Step 4 */}
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                                                {opt.val === '6' ? '25% discount for 6 months commitment' : (opt.val === '12' ? '50% discount for 12 months commitment' : 'Standard 3 months commitment')}
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -169,7 +255,7 @@ const Pricing = () => {
                     <div className="glass-panel p-8 rounded-[2rem] relative z-10">
                         <h3 className="text-xl font-bold text-white flex items-center gap-3 mb-8"><MapPin size={24} className="text-primary" />{t('pricing.reach')}</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-                            {[{ id: 'radius', label: t('campaign.radius_30'), icon: MapPin }, { id: 'state', label: t('campaign.state_wide'), icon: Building2 }, { id: 'national', label: t('campaign.national'), icon: Globe }].map(opt => (
+                            {[{ id: 'radius', label: `${geoSettings?.radius || 30} Mile Radius`, icon: MapPin }, { id: 'state', label: t('campaign.state_wide'), icon: Building2 }, { id: 'national', label: t('campaign.national'), icon: Globe }].map(opt => (
                                 <button key={opt.id} onClick={() => setCoverageArea(opt.id)} className={`p-6 rounded-2xl text-left border-2 transition-all flex flex-col gap-3 ${coverageArea === opt.id ? 'bg-primary/10 border-primary text-white shadow-lg' : 'bg-slate-900/40 border-slate-800 text-slate-500'}`}>
                                     <opt.icon size={28} className={coverageArea === opt.id ? 'text-primary' : 'text-slate-600'} />
                                     <span className="font-bold text-sm uppercase tracking-wider">{opt.label}</span>
@@ -183,12 +269,23 @@ const Pricing = () => {
 
                         {coverageArea === 'state' && (
                             <>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                                    {(pricingData.states || [])
-                                        .filter(s => !country || s.countryCode === country || s.countryCode === 'US') // Fallback to US if country match fails or allow all if country undefined
-                                        .map(s => (
-                                            <button key={s.name} onClick={() => setSelectedState(s)} className={`px-4 py-3 rounded-xl text-xs font-black transition-all border ${selectedState.name === s.name ? 'bg-primary text-white border-primary shadow-lg' : 'bg-slate-800/40 text-slate-400 border-white/5'}`}>{s.name}</button>
-                                        ))}
+                                <div className="p-4 bg-slate-900 border border-slate-700 rounded-2xl flex items-center justify-between">
+                                    <div>
+                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Targeting Region</p>
+                                        <p className="text-white font-bold text-lg">{selectedState.name}</p>
+                                    </div>
+                                    <button
+                                        onClick={() => navigate('/geo-targeting')}
+                                        className="text-[10px] bg-slate-800 text-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-700 font-bold uppercase tracking-wide border border-white/5"
+                                    >
+                                        Change Region
+                                    </button>
+                                </div>
+                                <div className="mt-4 flex items-center gap-3 px-4 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl">
+                                    <Info size={16} className="text-emerald-400 shrink-0" />
+                                    <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase tracking-wider">
+                                        Location and radius are managed in the Geo Targeting tab.
+                                    </p>
                                 </div>
                                 {(pricingData.discounts?.state > 0) && (
                                     <div className="bg-blue-500/10 border border-blue-500/20 rounded-3xl p-6 flex gap-5 items-center mt-6">
@@ -221,7 +318,7 @@ const Pricing = () => {
                         <div className="space-y-6">
                             <div className="space-y-4 border-b border-white/5 pb-6">
                                 <div className="flex justify-between text-sm"><span className="text-slate-500 font-bold uppercase text-[10px]">{t('pricing.config_label')}</span><span className="text-slate-200 font-bold text-right">{selectedAdType.name} @ {selectedIndustry.name}</span></div>
-                                <div className="flex justify-between text-sm"><span className="text-slate-500 font-bold uppercase text-[10px]">{t('pricing.reach_label')}</span><span className="text-slate-200 font-bold text-right">{calculation.areaDescription} (x{calculation.sections})</span></div>
+                                <div className="flex justify-between text-sm"><span className="text-slate-500 font-bold uppercase text-[10px]">{t('pricing.reach_label')}</span><span className="text-slate-200 font-bold text-right">{calculation.areaDescription}</span></div>
                             </div>
                             {calculation.discountAmt > 0 && (
                                 <div className="space-y-3">
@@ -232,7 +329,12 @@ const Pricing = () => {
                             <div className="pt-6">
                                 <div className="flex flex-col items-end mb-6">
                                     <span className="text-4xl font-black text-white tracking-tighter">{formatCurrency(calculation.finalPrice)}</span>
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Fixed Price</span>
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                            {t('pricing.monthly_est', { discount: calculation.discountPercent })}
+                                        </span>
+                                        {duration === '12' && <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Locked in for 12 months</span>}
+                                    </div>
                                 </div>
                                 <button onClick={handleNextStep} disabled={isCreating} className="w-full premium-btn py-4 rounded-xl text-lg font-black group shadow-lg shadow-primary/20 italic flex items-center justify-center gap-2 transition-all disabled:opacity-50">
                                     {isCreating ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <>{t('pricing.next_step')}<ChevronRight size={20} /></>}

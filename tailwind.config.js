@@ -8,9 +8,9 @@ export default {
         extend: {
             colors: {
                 primary: {
-                    DEFAULT: "#1E40AF", // Rich Royal Blue
-                    dark: "#1E3A8A",    // Deep Navy Blue
-                    light: "#3B82F6",   // Bright Blue
+                    DEFAULT: "#059669", // Deep Emerald
+                    dark: "#047857",    // Darker Emerald
+                    light: "#10B981",   // Bright Emerald
                 },
                 secondary: "#64748b",
                 accent: {

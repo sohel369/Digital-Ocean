@@ -47,13 +47,28 @@ async def get_stats(
     Get dashboard statistics for the authenticated user.
     """
     try:
-        # If admin, show system-wide stats or just 0s as per original compat intent
-        # But for advertiser, show their own stats
-        if current_user.role == models.UserRole.ADMIN:
+        # If admin or country_admin
+        if current_user.role in [models.UserRole.ADMIN, models.UserRole.COUNTRY_ADMIN]:
             from sqlalchemy import func
-            total_spend = db.query(func.sum(models.Campaign.calculated_price)).filter(models.Campaign.status.in_([models.CampaignStatus.APPROVED, models.CampaignStatus.ACTIVE, models.CampaignStatus.COMPLETED])).scalar() or 0
-            impressions = db.query(func.sum(models.Campaign.impressions)).scalar() or 0
-            clicks = db.query(func.sum(models.Campaign.clicks)).scalar() or 0
+            
+            spend_query = db.query(func.sum(models.Campaign.calculated_price)).filter(
+                models.Campaign.status.in_([models.CampaignStatus.APPROVED, models.CampaignStatus.ACTIVE, models.CampaignStatus.COMPLETED])
+            )
+            impressions_query = db.query(func.sum(models.Campaign.impressions))
+            clicks_query = db.query(func.sum(models.Campaign.clicks))
+            
+            # Filter by managed country if Country Admin
+            if current_user.role == models.UserRole.COUNTRY_ADMIN:
+                managed = (current_user.managed_country or "").upper()
+                if managed:
+                    spend_query = spend_query.filter(models.Campaign.target_country == managed)
+                    impressions_query = impressions_query.filter(models.Campaign.target_country == managed)
+                    clicks_query = clicks_query.filter(models.Campaign.target_country == managed)
+            
+            total_spend = spend_query.scalar() or 0
+            impressions = impressions_query.scalar() or 0
+            clicks = clicks_query.scalar() or 0
+            
             return {
                 "totalSpend": round(float(total_spend), 2),
                 "impressions": int(impressions),

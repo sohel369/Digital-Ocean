@@ -101,19 +101,27 @@ async def submit_campaign_for_review(
 
 @router.get("/pending", response_model=List[schemas.PendingCampaignResponse])
 async def list_pending_campaigns(
-    admin_user: models.User = Depends(require_admin),
+    admin_user: models.User = Depends(auth.get_any_admin_user),
     db: Session = Depends(get_db)
 ):
     """
     List all campaigns pending admin review.
-    Admin-only endpoint.
+    Filtered by managed_country if user is a COUNTRY_ADMIN.
     """
-    pending_campaigns = db.query(models.Campaign).filter(
+    query = db.query(models.Campaign).filter(
         models.Campaign.status.in_([
             models.CampaignStatus.PENDING_REVIEW, 
             models.CampaignStatus.PENDING
         ])
-    ).order_by(models.Campaign.submitted_at.asc()).all()
+    )
+    
+    # PERMISSION CHECK: Country Admins only see campaigns for their country
+    if admin_user.role == models.UserRole.COUNTRY_ADMIN:
+        managed = (admin_user.managed_country or "").upper()
+        if managed:
+            query = query.filter(models.Campaign.target_country == managed)
+
+    pending_campaigns = query.order_by(models.Campaign.submitted_at.asc()).all()
     
     result = []
     for c in pending_campaigns:
@@ -144,7 +152,7 @@ async def list_pending_campaigns(
             logger.error(f"❌ Error processing pending campaign {c.id}: {item_err}")
             continue
     
-    logger.info(f"📋 Admin {admin_user.email} fetched {len(result)} pending campaigns")
+    logger.info(f"📋 Admin {admin_user.email} (Role: {admin_user.role}) fetched {len(result)} pending campaigns")
     return result
 
 
@@ -152,11 +160,12 @@ async def list_pending_campaigns(
 async def take_approval_action(
     campaign_id: int,
     action_request: schemas.CampaignApprovalAction,
-    admin_user: models.User = Depends(require_admin),
+    admin_user: models.User = Depends(auth.get_any_admin_user),
     db: Session = Depends(get_db)
 ):
     """
     Admin action on a campaign: approve, reject, or request changes.
+    Restricted by managed_country for COUNTRY_ADMIN.
     """
     campaign = db.query(models.Campaign).filter(
         models.Campaign.id == campaign_id
@@ -167,6 +176,16 @@ async def take_approval_action(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Campaign not found"
         )
+    
+    # PERMISSION CHECK: Country Admin cannot manage other country campaigns
+    if admin_user.role == models.UserRole.COUNTRY_ADMIN:
+        managed = (admin_user.managed_country or "").upper()
+        if campaign.target_country != managed:
+            logger.warning(f"🚫 UNAUTHORIZED ACCESS: {admin_user.email} tried to manage {campaign.target_country} campaign {campaign.id}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access Denied: You are only authorized to manage campaigns for {managed}."
+            )
     
     if campaign.status not in [models.CampaignStatus.PENDING_REVIEW, models.CampaignStatus.PENDING]:
         raise HTTPException(

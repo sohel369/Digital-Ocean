@@ -949,13 +949,18 @@ export const AppProvider = ({ children }) => {
         const found = SUPPORTED_COUNTRIES.find(c => c.code === targetParam || c.name === targetParam);
         const countryCode = found ? found.code : targetParam;
 
-        setCountry(countryCode);
-        localStorage.setItem('country', countryCode);
+        // CRITICAL: Only proceed if country actually changed 
+        // This prevents the 0.5s reset loop you are seeing
+        if (countryCode !== country) {
+            setCountry(countryCode);
+            localStorage.setItem('country', countryCode);
 
-        // Reset geo targeting state selection when country changes to avoid stale selections
-        setGeoSettings(prev => ({ ...prev, targetState: '' }));
+            // Reset selection only when changing countries
+            setGeoSettings(prev => ({ ...prev, targetState: '' }));
+            console.log(`🌍 Country changed to ${countryCode}, resetting selection.`);
+        }
 
-        // Load regions for the new country immediately
+        // Load regions (this handles its own sync check internally)
         await loadRegionsForCountry(countryCode);
 
         const defaults = getCountryDefaults(countryCode);
@@ -964,7 +969,6 @@ export const AppProvider = ({ children }) => {
             setLanguage(defaults.language, false);
             setIsCurrencyOverridden(false);
             setIsLanguageOverridden(false);
-            console.log(`🌍 Synced: ${countryCode} defaults applied.`);
         }
     };
 

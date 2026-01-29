@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { MapPin, Navigation, Info, Building2, Globe } from 'lucide-react';
 import Dropdown from '../components/Dropdown';
@@ -33,17 +33,19 @@ const GeoTargeting = () => {
         }
     }, [country, pricingData.states.length]);
 
-    const filteredStates = (pricingData.states || [])
-        .filter(s => String(s.countryCode || '').toUpperCase() === String(country || '').toUpperCase())
-        .sort((a, b) => (a.name || '').localeCompare(b.name || '')) || [];
+    // Use useMemo to prevent unnecessary re-filtering which causes dropdown jumps/resets
+    const filteredStates = useMemo(() => {
+        return (pricingData.states || [])
+            .filter(s => String(s.countryCode || '').toUpperCase() === String(country || '').toUpperCase())
+            .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }, [pricingData.states, country]);
 
     // Detailed debug logs for Railway troubleshooting
     useEffect(() => {
         if (filteredStates.length > 0) {
-            console.log(`🗺️ GeoTargeting: ${filteredStates.length} states found for ${country}. Displaying first 3:`,
-                filteredStates.slice(0, 3).map(s => s.name));
+            console.log(`🗺️ GeoTargeting: ${filteredStates.length} states found for ${country}.`);
         } else if (country) {
-            console.warn(`⚠️ GeoTargeting: No states found for country ${country}. Active country code is: "${country}"`);
+            console.warn(`⚠️ GeoTargeting: No states found for country ${country}.`);
         }
     }, [filteredStates.length, country]);
 

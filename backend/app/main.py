@@ -585,9 +585,16 @@ async def startup_event():
                 us_count = db.query(models.GeoData).filter(models.GeoData.country_code == "US").count()
                 dc_exists = db.query(models.GeoData).filter(models.GeoData.country_code == "US", models.GeoData.state_code == "DC").first()
                 
-                if us_count < 51 or not dc_exists:
-                    logger.info(f"📦 Seeding/Updating US Geodata (Found {us_count}, needing 51)...")
-                    # Data from seed_railway_geodata.py
+                # If data is incomplete or corrupted (e.g. population 0), re-seed.
+                force_reseed = db.query(models.GeoData).filter(models.GeoData.country_code == "US", models.GeoData.population == 0).count() > 0
+                
+                if us_count < 51 or not dc_exists or force_reseed:
+                    logger.info(f"📦 Re-seeding US Geodata (Found {us_count}, needing 51, reseed_forced={force_reseed})...")
+                    # Clear incomplete US records to prevent duplicates or mix-ups
+                    db.query(models.GeoData).filter(models.GeoData.country_code == "US").delete()
+                    db.commit()
+                    
+                    # Comprehensive US Data including DC
                     us_states_data = [
                         ("California", "CA", 6, 39896400, 256.1, 1, 0.1153, 155779.0, 297, 1.0000),
                         ("Texas", "TX", 48, 32416700, 124.09, 2, 0.0936, 261232.0, 639, 0.4845),

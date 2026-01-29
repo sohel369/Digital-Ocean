@@ -37,10 +37,15 @@ const GeoTargeting = () => {
         .filter(s => String(s.countryCode || '').toUpperCase() === String(country || '').toUpperCase())
         .sort((a, b) => (a.name || '').localeCompare(b.name || '')) || [];
 
-    console.log(`🗺️ GeoTargeting Render: ${filteredStates.length} states found for ${country}. Total cached: ${pricingData.states.length}`);
-    if (filteredStates.length === 0) {
-        console.warn(`⚠️ No states found for country: ${country}. Available:`, pricingData.states.map(s => s.countryCode));
-    }
+    // Detailed debug logs for Railway troubleshooting
+    useEffect(() => {
+        if (filteredStates.length > 0) {
+            console.log(`🗺️ GeoTargeting: ${filteredStates.length} states found for ${country}. Displaying first 3:`,
+                filteredStates.slice(0, 3).map(s => s.name));
+        } else if (country) {
+            console.warn(`⚠️ GeoTargeting: No states found for country ${country}. Active country code is: "${country}"`);
+        }
+    }, [filteredStates.length, country]);
 
     useEffect(() => {
         const loadLeaflet = async () => {

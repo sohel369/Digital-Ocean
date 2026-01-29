@@ -265,15 +265,19 @@ export const AppProvider = ({ children }) => {
                     const geoApiReg = apiRegionMap.get(nameKey);
                     const pricingReg = pricingApiMap.get(nameKey);
 
-                    // Priority: Pricing API > Geo API > Static Default
+                    // Priority: Pricing API > Geo API > Static Default (Fallback to static if API returns 0)
+                    const apiPop = pricingReg?.population || geoApiReg?.population;
+                    const apiArea = pricingReg?.land_area || geoApiReg?.land_area;
+                    const apiDensity = pricingReg?.density_multiplier || geoApiReg?.density_multiplier;
+
                     return {
                         name: staticReg.name,
                         stateCode: pricingReg?.state_code || geoApiReg?.code || staticReg.code,
                         countryCode: countryCode,
-                        landMass: pricingReg?.land_area || geoApiReg?.land_area || staticReg.land_area || 1000,
-                        densityMultiplier: pricingReg?.density_multiplier || geoApiReg?.density_multiplier || staticReg.density_multiplier || 1.0,
+                        landMass: (apiArea && apiArea > 0) ? apiArea : (staticReg.land_area || 1000),
+                        densityMultiplier: (apiDensity && apiDensity > 0) ? apiDensity : (staticReg.density_multiplier || 1.0),
                         radiusAreasCount: pricingReg?.radius_areas_count || geoApiReg?.radius_areas_count || staticReg.radius_areas_count || 1,
-                        population: pricingReg?.population || geoApiReg?.population || staticReg.population || 0,
+                        population: (apiPop && apiPop > 0) ? apiPop : (staticReg.population || 0),
                         fips: pricingReg?.fips || geoApiReg?.fips || staticReg.fips,
                         densityMi: pricingReg?.density_mi || geoApiReg?.density_mi || staticReg.density,
                         rank: pricingReg?.rank || geoApiReg?.rank || staticReg.rank,
@@ -938,22 +942,29 @@ export const AppProvider = ({ children }) => {
     // Country × Language × Currency Sync Logic
     const handleCountryChange = async (target) => {
         // Resolve code if name was passed
-        const found = SUPPORTED_COUNTRIES.find(c => c.code === target || c.name === target);
-        const countryCode = found ? found.code : target;
+        let targetParam = target;
+        if (targetParam === 'United States' || targetParam === 'USA') targetParam = 'US';
+        if (targetParam === 'United Kingdom' || targetParam === 'UK') targetParam = 'GB';
+
+        const found = SUPPORTED_COUNTRIES.find(c => c.code === targetParam || c.name === targetParam);
+        const countryCode = found ? found.code : targetParam;
 
         setCountry(countryCode);
+        localStorage.setItem('country', countryCode);
+
+        // Reset geo targeting state selection when country changes to avoid stale selections
+        setGeoSettings(prev => ({ ...prev, targetState: '' }));
 
         // Load regions for the new country immediately
         await loadRegionsForCountry(countryCode);
 
         const defaults = getCountryDefaults(countryCode);
         if (defaults) {
-            // Country change ALWAYS resets overrides to ensure predictable behavior
             setCurrency(defaults.currency, false);
             setLanguage(defaults.language, false);
             setIsCurrencyOverridden(false);
             setIsLanguageOverridden(false);
-            toast.info(`Synced: ${countryCode} defaults applied.`);
+            console.log(`🌍 Synced: ${countryCode} defaults applied.`);
         }
     };
 

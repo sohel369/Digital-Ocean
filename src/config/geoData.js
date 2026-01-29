@@ -57,7 +57,8 @@ export const GEO_DATA = {
             { name: 'Washington', code: 'WA', population: 7812880, land_area: 66455, density: 117.6 },
             { name: 'West Virginia', code: 'WV', population: 1770071, land_area: 24038, density: 73.6 },
             { name: 'Wisconsin', code: 'WI', population: 5910109, land_area: 54158, density: 109.1 },
-            { name: 'Wyoming', code: 'WY', population: 584057, land_area: 97093, density: 6.0 }
+            { name: 'Wyoming', code: 'WY', population: 584057, land_area: 97093, density: 6.0 },
+            { name: 'Washington D.C.', code: 'DC', population: 678972, land_area: 158, density: 11280.7 }
         ],
         postcodeRegex: /^\d{5}(-\d{4})?$/,
         postcodeFormat: "99999"

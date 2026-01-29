@@ -34,7 +34,7 @@ const GeoTargeting = () => {
     }, [country, pricingData.states.length]);
 
     const filteredStates = (pricingData.states || [])
-        .filter(s => s.countryCode === country)
+        .filter(s => String(s.countryCode || '').toUpperCase() === String(country || '').toUpperCase())
         .sort((a, b) => (a.name || '').localeCompare(b.name || '')) || [];
 
     console.log(`🗺️ GeoTargeting Render: ${filteredStates.length} states found for ${country}. Total cached: ${pricingData.states.length}`);

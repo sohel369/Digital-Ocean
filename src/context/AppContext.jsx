@@ -258,7 +258,7 @@ export const AppProvider = ({ children }) => {
 
                 // 4. Merge: Static Regions + API Data (API overrides values, Static provides coverage)
                 // First, remove existing states for this country from the state list to avoid dupes/stale data
-                updatedStates = updatedStates.filter(s => s.countryCode !== countryCode);
+                updatedStates = updatedStates.filter(s => String(s.countryCode || '').toUpperCase() !== String(countryCode || '').toUpperCase());
 
                 const mergedRegions = staticRegions.map(staticReg => {
                     const nameKey = staticReg.name.toLowerCase();
@@ -523,7 +523,12 @@ export const AppProvider = ({ children }) => {
                     { name: 'New York', landMass: 141300, densityMultiplier: 2.0, population: 19450000, stateCode: 'NY', countryCode: 'US' },
                     { name: 'Texas', landMass: 695662, densityMultiplier: 1.2, population: 29140000, stateCode: 'TX', countryCode: 'US' },
                     { name: 'Florida', landMass: 170312, densityMultiplier: 1.4, population: 21540000, stateCode: 'FL', countryCode: 'US' },
-                    { name: 'Illinois', landMass: 149995, densityMultiplier: 1.3, population: 12810000, stateCode: 'IL', countryCode: 'US' }
+                    { name: 'Illinois', landMass: 149995, densityMultiplier: 1.3, population: 12810000, stateCode: 'IL', countryCode: 'US' },
+                    { name: 'Pennsylvania', landMass: 119283, densityMultiplier: 1.3, population: 12800000, stateCode: 'PA', countryCode: 'US' },
+                    { name: 'Ohio', landMass: 116096, densityMultiplier: 1.2, population: 11690000, stateCode: 'OH', countryCode: 'US' },
+                    { name: 'Georgia', landMass: 153910, densityMultiplier: 1.1, population: 10620000, stateCode: 'GA', countryCode: 'US' },
+                    { name: 'North Carolina', landMass: 139391, densityMultiplier: 1.1, population: 10490000, stateCode: 'NC', countryCode: 'US' },
+                    { name: 'Michigan', landMass: 250487, densityMultiplier: 1.1, population: 9990000, stateCode: 'MI', countryCode: 'US' }
                 ],
                 discounts: { state: 0.15, national: 0.30 }
             });

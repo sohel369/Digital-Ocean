@@ -277,6 +277,9 @@ async def get_global_pricing_config(
         managed = (current_user.managed_country or "").upper()
         if managed:
             geo_query = geo_query.filter(models.GeoData.country_code == managed)
+    else:
+        # Default filtering by target country for advertisers/admins
+        geo_query = geo_query.filter(models.GeoData.country_code == target_country)
             
     states_data = geo_query.all()
     states = [

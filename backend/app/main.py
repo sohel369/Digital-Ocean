@@ -575,70 +575,106 @@ async def startup_event():
         except Exception as mig_err:
             logger.error(f"❌ COMPREHENSIVE MIGRATION FAILED: {mig_err}")
 
-        # Ensure PricingMatrix and GeoData are initialized (Production Fix)
+        # COMPREHENSIVE GEODATA SEEDING (Ensures all 50 US states + DC)
         try:
             from .database import SessionLocal
             from . import models
             db = SessionLocal()
             try:
-                # Check if PricingMatrix is missing essential industries
-                try:
-                    industry_count = db.query(models.PricingMatrix).filter(
-                        models.PricingMatrix.industry_type == "Tyres And Wheels"
-                    ).count()
-                except Exception:
-                    industry_count = 0
-                    
-                if industry_count == 0:
-                    logger.info("📦 Seeding comprehensive Industry & Ad Type PricingMatrix...")
-                    
-                    industries = [
-                        "Tyres And Wheels", "Vehicle Servicing And Maintenance", "Panel Beating And Smash Repairs",
-                        "Automotive Finance Solutions", "Vehicle Insurance Products", "Auto Parts Tools And Accessories",
-                        "Fleet Management Tools", "Workshop Technology And Equipment", "Telematics Systems And Vehicle Tracking Solutions",
-                        "Fuel Cards And Fuel Management Services", "Vehicle Cleaning And Detailing Services", "Logistics And Scheduling Software",
-                        "Safety And Compliance Solutions", "Driver Training And Induction Programs", "Roadside Assistance Programs",
-                        "Gps Navigation And Route Optimisation Tools", "Ev Charging Infrastructure And Electric Vehicle Solutions",
-                        "Mobile Device Integration And Communications Equipment", "Asset Recovery And Anti Theft Technologies"
+                # Check US states count (Need 51: 50 states + 1 DC)
+                us_count = db.query(models.GeoData).filter(models.GeoData.country_code == "US").count()
+                dc_exists = db.query(models.GeoData).filter(models.GeoData.country_code == "US", models.GeoData.state_code == "DC").first()
+                
+                if us_count < 51 or not dc_exists:
+                    logger.info(f"📦 Seeding/Updating US Geodata (Found {us_count}, needing 51)...")
+                    # Data from seed_railway_geodata.py
+                    us_states_data = [
+                        ("California", "CA", 6, 39896400, 256.1, 1, 0.1153, 155779.0, 297, 1.0000),
+                        ("Texas", "TX", 48, 32416700, 124.09, 2, 0.0936, 261232.0, 639, 0.4845),
+                        ("Florida", "FL", 12, 24306900, 453.27, 3, 0.0702, 53625.0, 291, 1.7699),
+                        ("New York", "NY", 36, 20127000, 427.08, 4, 0.0581, 47126.0, 372, 1.6676),
+                        ("Pennsylvania", "PA", 42, 13200800, 295.03, 5, 0.0381, 44743.0, 288, 1.1520),
+                        ("Illinois", "IL", 17, 12846000, 231.38, 6, 0.0371, 55519.0, 471, 0.9034),
+                        ("Ohio", "OH", 39, 12001800, 293.72, 7, 0.0346, 40861.0, 256, 1.1469),
+                        ("Georgia", "GA", 13, 11413800, 198.45, 8, 0.0329, 57513.0, 832, 0.7749),
+                        ("North Carolina", "NC", 37, 11375700, 233.98, 9, 0.0328, 48618.0, 351, 0.9136),
+                        ("Michigan", "MI", 26, 10254700, 181.37, 10, 0.0296, 56539.0, 289, 0.7082),
+                        ("New Jersey", "NJ", 34, 9743271, 1324.89, 11, 0.0281, 7354.0, 38, 5.1732),
+                        ("Virginia", "VA", 51, 8964220, 226.99, 12, 0.0259, 39490.0, 371, 0.8863),
+                        ("Washington", "WA", 53, 8159900, 122.78, 13, 0.0235, 66456.0, 362, 0.4794),
+                        ("Arizona", "AZ", 4, 7801100, 68.67, 14, 0.0225, 113594.0, 278, 0.2681),
+                        ("Tennessee", "TN", 47, 7386640, 179.13, 15, 0.0213, 41235.0, 214, 0.6994),
+                        ("Massachusetts", "MA", 25, 7275380, 932.74, 16, 0.0210, 7799.0, 52, 3.6420),
+                        ("Indiana", "IN", 18, 7012560, 195.73, 17, 0.0202, 35826.0, 184, 0.7643),
+                        ("Maryland", "MD", 24, 6355540, 654.73, 18, 0.0183, 9707.0, 56, 2.5565),
+                        ("Missouri", "MO", 29, 6320320, 91.94, 19, 0.0182, 68742.0, 243, 0.3590),
+                        ("Colorado", "CO", 8, 6069800, 58.56, 20, 0.0175, 103642.0, 413, 0.2287),
+                        ("Wisconsin", "WI", 55, 6022120, 111.19, 21, 0.0174, 54158.0, 191, 0.4342),
+                        ("Minnesota", "MN", 27, 5873360, 73.76, 22, 0.0169, 79627.0, 281, 0.2880),
+                        ("South Carolina", "SC", 45, 5660830, 188.31, 23, 0.0163, 30061.0, 610, 0.7353),
+                        ("Alabama", "AL", 1, 5237750, 103.42, 24, 0.0151, 50645.0, 217, 0.4038),
+                        ("Kentucky", "KY", 21, 4663930, 118.11, 25, 0.0134, 39486.0, 131, 0.4612),
+                        ("Louisiana", "LA", 22, 4617080, 106.86, 26, 0.0133, 43204.0, 111, 0.4173),
+                        ("Oregon", "OR", 41, 4309810, 44.89, 27, 0.0124, 95988.0, 313, 0.1753),
+                        ("Oklahoma", "OK", 40, 4158420, 60.62, 28, 0.0120, 68595.0, 162, 0.2367),
+                        ("Connecticut", "CT", 9, 3739160, 772.23, 29, 0.0108, 4842.0, 71, 3.0153),
+                        ("Utah", "UT", 49, 3624400, 44.1, 30, 0.0104, 82170.0, 129, 0.1722),
+                        ("Nevada", "NV", 32, 3373680, 30.73, 31, 0.0097, 109781.0, 393, 0.1200),
+                        ("Iowa", "IA", 19, 3287640, 58.85, 32, 0.0095, 55857.0, 177, 0.2298),
+                        ("Arkansas", "AR", 5, 3126140, 60.07, 33, 0.0090, 52035.0, 318, 0.2346),
+                        ("Kansas", "KS", 20, 3008820, 36.8, 34, 0.0086, 81759.0, 104, 0.1437),
+                        ("Mississippi", "MS", 28, 2942790, 62.71, 35, 0.0085, 46923.0, 166, 0.2449),
+                        ("New Mexico", "NM", 35, 2148440, 17.71, 36, 0.0062, 121298.0, 534, 0.0692),
+                        ("Idaho", "ID", 16, 2062610, 24.95, 37, 0.0059, 82643.0, 292, 0.0975),
+                        ("Nebraska", "NE", 31, 2040670, 26.56, 38, 0.0058, 76824.0, 271, 0.1037),
+                        ("West Virginia", "WV", 54, 1768950, 73.58, 39, 0.0051, 24038.0, 88, 0.2873),
+                        ("Hawaii", "HI", 15, 1455660, 226.63, 40, 0.0042, 6423.0, 33, 0.8849),
+                        ("New Hampshire", "NH", 33, 1422700, 158.9, 41, 0.0041, 8953.0, 31, 0.6205),
+                        ("Maine", "ME", 23, 1415740, 45.9, 42, 0.0040, 30843.0, 204, 0.1792),
+                        ("Montana", "MT", 30, 1149100, 7.89, 43, 0.0033, 145546.0, 514, 0.0308),
+                        ("Rhode Island", "RI", 44, 1130070, 1092.91, 44, 0.0032, 1034.0, 6, 4.2674),
+                        ("Delaware", "DE", 10, 1082900, 555.61, 45, 0.0031, 1949.0, 19, 2.1695),
+                        ("South Dakota", "SD", 46, 937397, 12.36, 46, 0.0027, 75811.0, 26, 0.0483),
+                        ("North Dakota", "ND", 38, 811610, 11.76, 47, 0.0023, 70001.0, 24, 0.0459),
+                        ("Alaska", "AK", 2, 747379, 1.3, 48, 0.0021, 570640.0, 201, 0.0051),
+                        ("Vermont", "VT", 50, 648063, 70.31, 49, 0.0018, 9217.0, 3, 0.2745),
+                        ("Wyoming", "WY", 56, 592720, 6.1, 50, 0.0017, 97093.0, 34, 0.0238),
+                        ("District of Columbia", "DC", 11, 715000, 11280.0, 51, 0.0021, 68.3, 1, 40.8)
                     ]
                     
-                    ad_types = [
-                        "Leaderboard (728x90)", "Skyscraper (160x600)", "Medium Rectangle (300x250)", 
-                        "Mobile Leaderboard (320x50)", "Email Newsletter (600x200)"
-                    ]
-                    
-                    new_entries = []
-                    # Create default entries for US
-                    for ind in industries:
-                        for ad in ad_types:
-                            # We only need one entry per ind/ad combo to show up in admin
-                            new_entries.append(models.PricingMatrix(
-                                industry_type=ind,
-                                advert_type=ad,
-                                coverage_type=models.CoverageType.RADIUS_30,
-                                base_rate=150.0 if "Leaderboard" in ad else 100.0,
-                                multiplier=1.0,
-                                country_id="US"
-                            ))
-                    
-                    # Also keep legacy ones for compatibility if needed, but the list above is primary
-                    db.add_all(new_entries)
+                    for name, code, fips, pop, dens_mi, rank, pct, area, radius_count, mult in us_states_data:
+                        existing = db.query(models.GeoData).filter(
+                            models.GeoData.country_code == "US",
+                            models.GeoData.state_code == code
+                        ).first()
+                        
+                        area_km = area * 2.58999
+                        
+                        if existing:
+                            existing.state_name = name
+                            existing.population = pop
+                            existing.land_area_sq_km = area_km
+                            existing.radius_areas_count = radius_count
+                            existing.density_multiplier = mult
+                            existing.fips = fips
+                            existing.density_mi = dens_mi
+                            existing.rank = rank
+                            existing.population_percent = pct
+                        else:
+                            new_geo = models.GeoData(
+                                country_code="US", state_code=code, state_name=name,
+                                population=pop, land_area_sq_km=area_km, 
+                                radius_areas_count=radius_count, density_multiplier=mult,
+                                fips=fips, density_mi=dens_mi, rank=rank, population_percent=pct
+                            )
+                            db.add(new_geo)
                     db.commit()
-                    logger.info(f"✅ Seeding complete: {len(new_entries)} entries added.")
-                    
-                # Check if GeoData is empty
-                try:
-                    count = db.query(models.GeoData).count()
-                except Exception:
-                    count = 0
-                    
-                if count == 0:
-                    logger.info("📦 Seeding default GeoData (US & UK)...")
-                    # US Data
-                    ca_geo = models.GeoData(state_name="California", country_code="US", state_code="CA", land_area_sq_km=423970, population=39538223, density_multiplier=1.5)
-                    db.add(ca_geo)
-                    
-                    # UK Data (Major Regions)
+                    logger.info("✅ US Geodata synchronized (51 records)")
+
+                # Also seed UK data if missing
+                gb_count = db.query(models.GeoData).filter(models.GeoData.country_code == "GB").count()
+                if gb_count < 10:
+                    logger.info("📦 Seeding missing UK Geodata...")
                     uk_regions = [
                         ("London", "GB", "LDN", 1572, 8982000, 2.5),
                         ("South East", "GB", "SE", 19095, 9180000, 1.2),
@@ -651,22 +687,52 @@ async def startup_event():
                         ("East Midlands", "GB", "EM", 15627, 4836000, 0.9),
                         ("Yorkshire", "GB", "YKH", 11903, 5500000, 1.0)
                     ]
-                    
                     for name, country, code, area, pop, dens in uk_regions:
-                        db.add(models.GeoData(
-                            state_name=name, 
-                            country_code=country, 
-                            state_code=code, 
-                            land_area_sq_km=area, 
-                            population=pop, 
-                            density_multiplier=dens
-                        ))
-                        
+                        if not db.query(models.GeoData).filter(models.GeoData.state_code == code).first():
+                            db.add(models.GeoData(
+                                state_name=name, country_code=country, state_code=code, 
+                                land_area_sq_km=area, population=pop, density_multiplier=dens
+                            ))
                     db.commit()
-                    logger.info("✅ Default US & UK GeoData seeded")
+                    logger.info("✅ UK Geodata synchronized")
+                
+                # Check for Pricing Matrix Synchronization
+                if db.query(models.PricingMatrix).count() < 10:
+                    logger.info("📦 Synchronizing Pricing Matrix Defaults...")
+                    industries = [
+                        "Tyres And Wheels", "Vehicle Servicing And Maintenance", "Panel Beating And Smash Repairs",
+                        "Automotive Finance Solutions", "Vehicle Insurance Products", "Auto Parts Tools And Accessories",
+                        "Fleet Management Tools", "Workshop Technology And Equipment", "Telematics Systems And Vehicle Tracking Solutions",
+                        "Fuel Cards And Fuel Management Services", "Vehicle Cleaning And Detailing Services", "Logistics And Scheduling Software",
+                        "Safety And Compliance Solutions", "Driver Training And Induction Programs", "Roadside Assistance Programs",
+                        "Gps Navigation And Route Optimisation Tools", "Ev Charging Infrastructure And Electric Vehicle Solutions",
+                        "Mobile Device Integration And Communications Equipment", "Asset Recovery And Anti Theft Technologies"
+                    ]
+                    ad_types = [
+                        ("Leaderboard (728x90)", 150.0), ("Skyscraper (160x600)", 180.0), 
+                        ("Medium Rectangle (300x250)", 200.0), ("Mobile Leaderboard (320x50)", 100.0), 
+                        ("Email Newsletter (600x200)", 250.0)
+                    ]
+                    
+                    for ind in industries:
+                        for ad_name, ad_rate in ad_types:
+                            if not db.query(models.PricingMatrix).filter(
+                                models.PricingMatrix.industry_type == ind,
+                                models.PricingMatrix.advert_type == ad_name
+                            ).first():
+                                db.add(models.PricingMatrix(
+                                    industry_type=ind, advert_type=ad_name, 
+                                    coverage_type=models.CoverageType.RADIUS_30,
+                                    base_rate=ad_rate, multiplier=1.0, 
+                                    state_discount=0.15, national_discount=0.30, 
+                                    country_id="US"
+                                ))
+                    db.commit()
+                    logger.info("✅ Pricing Matrix synchronized")
                     
             except Exception as e:
-                logger.error(f"❌ Error during auto-seeding pricing/geo: {e}")
+                logger.error(f"❌ Error during sync: {e}")
+                db.rollback()
             finally:
                 db.close()
         except Exception as e:
@@ -681,34 +747,33 @@ async def startup_event():
                 admin = db.query(models.User).filter(models.User.email == "admin@adplatform.com").first()
                 if not admin:
                     logger.info("📦 Seeding essential admin user...")
-                    # Pre-calculated hash for 'admin123' to bypass passlib Windows issues
+                    # Pre-calculated hash for 'admin123'
                     admin_user = models.User(
                         name="Admin User",
                         email="admin@adplatform.com",
-                        password_hash="$2b$12$6uXoTqO9M9R9PqR9PqR9Pu6uXoTqO9M9R9PqR9PqR9PqR9PqR9PqR", # Dummy but structured
+                        password_hash="$2b$12$6uXoTqO9M9R9PqR9PqR9Pu6uXoTqO9M9R9PqR9PqR9PqR9PqR9PqR",
                         role=models.UserRole.ADMIN,
                         country="US"
                     )
                     db.add(admin_user)
                     db.commit()
-                    # Re-hash correctly if possible, otherwise use the structured stub
                     try:
                         admin_user.password_hash = auth.get_password_hash("admin123")
                         db.commit()
                     except: pass
-                    logger.info("✅ Admin user created: admin@adplatform.com")
                 else:
-                    # FORCE RESET ROLE to ensure access
                     admin.role = models.UserRole.ADMIN
                     try:
-                        admin.password_hash = auth.get_password_hash("admin123")
+                        # Only reset password if it looks like a stub or requested
+                        if not admin.password_hash or len(admin.password_hash) < 20:
+                            admin.password_hash = auth.get_password_hash("admin123")
                         db.commit()
                     except: pass
-                    logger.info("✅ Admin user updated: Role=ADMIN")
             except Exception as e:
-                logger.error(f"❌ Error during auto-seeding: {e}")
+                logger.error(f"❌ Error during admin sync: {e}")
             finally:
                 db.close()
+
         except Exception as e:
             logger.error(f"⚠️ Admin creation failed: {e}")
         

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { MapPin, Globe, Layout, Building2, ChevronRight, Info, ChevronDown } from 'lucide-react';
+import { MapPin, Globe, Layout, Building2, ChevronRight, Info, ChevronDown, Navigation } from 'lucide-react';
 import { PaymentModal } from '../components/PaymentCheckout';
 import { useNavigate } from 'react-router-dom';
 
@@ -98,37 +98,37 @@ const Pricing = () => {
         }
     }, [country, pricingData.states.length]);
 
-    // Handle Country/State/Coverage sync from Global Geo Settings
+    // Track initialization to avoid aggressive re-syncing
+    const isInitialized = React.useRef(false);
+
+    // Handle Country/State/Coverage sync from Global Geo Settings - ONLY ON MOUNT
     React.useEffect(() => {
-        // 1. Sync Coverage Area
-        if (geoSettings?.coverageArea) {
-            setCoverageArea(geoSettings.coverageArea);
-        }
+        if (!isInitialized.current && pricingData?.states?.length > 0) {
+            // 1. Sync Coverage Area
+            if (geoSettings?.coverageArea) {
+                setCoverageArea(geoSettings.coverageArea);
+            }
 
-        // 2. Sync Postcode
-        if (geoSettings?.postcode) {
-            setPostcode(geoSettings.postcode);
-        }
+            // 2. Sync Postcode
+            if (geoSettings?.postcode) {
+                setPostcode(geoSettings.postcode);
+            }
 
-        // 3. Sync State Selection
-        const countryStates = (pricingData?.states || []).filter(s => s.countryCode === country);
+            // 3. Sync State Selection
+            const countryStates = (pricingData?.states || []).filter(s => s.countryCode === country);
 
-        if (geoSettings?.coverageArea === 'state' && geoSettings?.targetState) {
-            const target = countryStates.find(s => s.name === geoSettings.targetState);
-            if (target) {
-                setSelectedState(target);
+            if (geoSettings?.coverageArea === 'state' && geoSettings?.targetState) {
+                const target = countryStates.find(s => s.name === geoSettings.targetState);
+                if (target) {
+                    setSelectedState(target);
+                } else if (countryStates.length > 0) {
+                    setSelectedState(countryStates[0]);
+                }
             } else if (countryStates.length > 0) {
-                // If the target state isn't found in current country, default to first available
                 setSelectedState(countryStates[0]);
             }
-        } else if (countryStates.length > 0) {
-            // Default to first state if none selected or invalid
-            const isCurrentValid = countryStates.find(s => s.name === selectedState.name);
-            if (!isCurrentValid || selectedState.name === 'Select Region') {
-                setSelectedState(countryStates[0]);
-            }
-        } else {
-            setSelectedState({ name: t('common.no_regions') || 'No Regions Available', landMass: 0, densityMultiplier: 1.0 });
+
+            isInitialized.current = true;
         }
     }, [geoSettings, country, pricingData?.states]);
 
@@ -253,28 +253,45 @@ const Pricing = () => {
                     </div>
 
                     <div className="glass-panel p-8 rounded-[2rem] relative z-10">
-                        <h3 className="text-xl font-bold text-white flex items-center gap-3 mb-8"><MapPin size={24} className="text-primary" />{t('pricing.reach')}</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
-                            {[{ id: 'radius', label: `${geoSettings?.radius || 30} Mile Radius`, icon: MapPin }, { id: 'national', label: t('campaign.national'), icon: Globe }].map(opt => (
-                                <button key={opt.id} onClick={() => setCoverageArea(opt.id)} className={`p-6 rounded-2xl text-left border-2 transition-all flex flex-col gap-3 ${coverageArea === opt.id ? 'bg-primary/10 border-primary text-white shadow-lg' : 'bg-slate-900/40 border-slate-800 text-slate-500'}`}>
-                                    <opt.icon size={28} className={coverageArea === opt.id ? 'text-primary' : 'text-slate-600'} />
-                                    <span className="font-bold text-sm uppercase tracking-wider">{opt.label}</span>
-                                </button>
-                            ))}
+                        <div className="flex justify-between items-center mb-8">
+                            <h3 className="text-xl font-bold text-white flex items-center gap-3"><MapPin size={24} className="text-primary" />{t('pricing.reach')}</h3>
+                            <button
+                                onClick={() => navigate('/geo-targeting')}
+                                className="px-4 py-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-xl text-[10px] font-black uppercase tracking-widest text-primary transition-all flex items-center gap-2 group"
+                            >
+                                <Navigation size={12} className="group-hover:translate-x-0.5 transition-transform" />
+                                Customize Reach
+                            </button>
                         </div>
 
-                        {coverageArea === 'radius' && (
-                            <input type="text" className="w-full sm:w-72 bg-slate-900 border border-white/5 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-2 focus:ring-primary/50" placeholder={t('campaign.postcode_placeholder')} value={postcode} onChange={(e) => setPostcode(e.target.value)} />
-                        )}
-
-
+                        <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-8 flex flex-col md:flex-row gap-8 items-center justify-between group hover:border-primary/30 transition-all duration-500">
+                            <div className="flex gap-6 items-center">
+                                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 group-hover:scale-110 transition-transform duration-500">
+                                    {coverageArea === 'radius' ? <MapPin size={32} className="text-primary" /> :
+                                        coverageArea === 'state' ? <Building2 size={32} className="text-primary" /> :
+                                            <Globe size={32} className="text-primary" />}
+                                </div>
+                                <div>
+                                    <h4 className="font-black text-white text-lg uppercase tracking-tighter italic">
+                                        {coverageArea === 'radius' ? `${geoSettings?.radius || 30} Mile Radius` :
+                                            coverageArea === 'state' ? `State Wide: ${selectedState?.name || 'Region'}` :
+                                                'National Coverage'}
+                                    </h4>
+                                    <p className="text-sm text-slate-500 font-medium">
+                                        {coverageArea === 'radius' ? `Targeting ${postcode || 'selected area'}` :
+                                            coverageArea === 'state' ? `Full coverage of ${selectedState?.name}` :
+                                                'Total country-wide market penetration'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
 
                         {coverageArea === 'national' && (
-                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-3xl p-8 flex gap-6 items-center">
-                                <Globe size={48} className="text-emerald-400" />
+                            <div className="mt-6 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 flex gap-4 items-center animate-in fade-in slide-in-from-top-2">
+                                <Globe size={32} className="text-emerald-400" />
                                 <div>
-                                    <h4 className="font-black text-emerald-400 text-lg uppercase">{t('pricing.national_bulk_discount', { discount: (pricingData.discounts?.national * 100).toFixed(0) })}</h4>
-                                    <p className="text-sm text-slate-400 font-medium">Maximum efficiency pricing for country-wide market penetration.</p>
+                                    <h4 className="font-black text-emerald-400 text-sm uppercase">{t('pricing.national_bulk_discount', { discount: (pricingData.discounts?.national * 100).toFixed(0) })}</h4>
+                                    <p className="text-xs text-slate-400 font-medium italic">Applied automatically for full nationwide reach.</p>
                                 </div>
                             </div>
                         )}

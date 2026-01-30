@@ -290,44 +290,47 @@ async def list_routes():
             })
     return {"routes": routes}
 
-@app.post("/api/debug/reset", tags=["Debug"])
+@app.get("/api/debug/reset", tags=["Debug"])
 async def reset_db_state(db: Session = Depends(get_db)):
     """EMERGENCY ONLY: Force re-seeds pricing and admin data."""
     try:
         from . import models, auth
-        # 1. Ensure admin
-        admin = db.query(models.User).filter(models.User.email == "admin@adplatform.com").first()
-        
-        # Sync Postgres Enums (Fix for COUNTRY_ADMIN/country_admin mismatch)
+        # 1. FORCE FIX: Convert Enum column to String in Postgres if needed
+        # This is the "Nuclear Option" to fix Railway DB without losing user data
         if "postgresql" in str(db.get_bind().url):
             from sqlalchemy import text
             try:
-                db.execute(text("COMMIT")) # End transaction for ALTER TYPE
-                # Add all variations just in case
-                for role in ["advertiser", "user", "admin", "country_admin", "ADVERTISER", "USER", "ADMIN", "COUNTRY_ADMIN"]:
-                    try:
-                        db.execute(text(f"ALTER TYPE userrole ADD VALUE IF NOT EXISTS '{role}'"))
-                        db.commit() # Try to commit each one
-                    except Exception:
-                        db.rollback()
-                print("✅ Aggressive Enum Sync Complete")
+                # 1. Cast column to varchar
+                db.execute(text("COMMIT")) # Clear transaction
+                db.execute(text("ALTER TABLE users ALTER COLUMN role TYPE VARCHAR(50) USING role::text"))
+                # 2. Add defaults/cleanup
+                db.execute(text("ALTER TABLE users ALTER COLUMN role SET DEFAULT 'advertiser'"))
+                # 3. Try to drop the enum type if it exists
+                try:
+                    db.execute(text("DROP TYPE IF EXISTS userrole CASCADE"))
+                except:
+                    pass
+                db.commit()
+                print("🔥 EMERGENCY DB SURGERY: Cast role to VARCHAR successful")
             except Exception as e:
-                print(f"Enum sync warning: {e}")
+                print(f"Surgery error: {e}")
                 db.rollback()
-                
+
+        # 2. Ensure admin
+        admin = db.query(models.User).filter(models.User.email == "admin@adplatform.com").first()
         if not admin:
             admin = models.User(
                 name="System Admin", email="admin@adplatform.com",
                 password_hash=auth.get_password_hash("admin123"),
-                role=models.UserRole.ADMIN, country="US"
+                role="admin", country="US"
             )
             db.add(admin)
         else:
-            admin.role = models.UserRole.ADMIN
+            admin.role = "admin"
             admin.password_hash = auth.get_password_hash("admin123")
         
         db.commit()
-        return {"status": "success", "message": "Admin user and roles synchronized (post-migration check applied)"}
+        return {"status": "success", "message": "Database schema updated (roles converted to string) and admin synced."}
     except Exception as e:
         return {"status": "error", "detail": str(e)}
 

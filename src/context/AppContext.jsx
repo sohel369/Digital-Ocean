@@ -27,11 +27,17 @@ export const AppProvider = ({ children }) => {
     const [campaigns, setCampaigns] = useState([]);
     const [notifications, setNotifications] = useState([]);
     const [pricingData, setPricingData] = useState({
-        industries: [],
-        adTypes: [],
+        industries: [
+            { name: 'Retail', displayName: 'Retail', multiplier: 1.2 },
+            { name: 'Healthcare', displayName: 'Healthcare', multiplier: 1.5 },
+            { name: 'Technology', displayName: 'Technology', multiplier: 1.0 }
+        ],
+        adTypes: [
+            { name: 'Display', baseRate: 100.0 }
+        ],
         states: [],
         discounts: { state: 0.15, national: 0.30 },
-        currency: 'USD' // Base currency of the pricing attributes
+        currency: 'USD'
     });
 
     const [paymentConfig, setPaymentConfig] = useState({
@@ -394,6 +400,11 @@ export const AppProvider = ({ children }) => {
                 setPaymentConfig(await paymentRes.json());
             }
 
+            // Ensure we at least have dummy data if pricing fails
+            if (!pricingRes.ok) {
+                console.warn("⚠️ Using fallback pricing data due to API failure.");
+            }
+
             // 2. Fetch Sensitive Data ONLY if we have a real token
             if (hasAuth && !isMock) {
                 const [statsRes, campaignsRes, notifRes] = await Promise.all([
@@ -428,6 +439,8 @@ export const AppProvider = ({ children }) => {
 
         } catch (error) {
             console.error("🌐 Global Data Fetch Error:", error);
+            // Ensure we clear loading states even on failure
+            setIsGeoLoading(false);
         }
     };
 

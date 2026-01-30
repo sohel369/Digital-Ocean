@@ -7,7 +7,7 @@ const AdminPricing = () => {
     const {
         pricingData, savePricingConfig, CONSTANTS, t,
         formatIndustryName, currency, country,
-        isGeoLoading, loadRegionsForCountry
+        isGeoLoading, loadRegionsForCountry, user
     } = useApp();
     const [localPricing, setLocalPricing] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -79,12 +79,17 @@ const AdminPricing = () => {
     // Load country specific data when selectedCountry changes
     React.useEffect(() => {
         if (selectedCountry) {
-            // We no longer clear states here as it overwrites imports/local edits.
-            // loadRegionsForCountry will fetch the base data and update pricingData,
-            // which will sync to localPricing if lastLoadedCountry !== selectedCountry.
+            // Force managed country for Country Admins
+            if (user?.role?.toLowerCase() === 'country_admin' && user?.managed_country) {
+                const managed = user.managed_country.toUpperCase();
+                if (selectedCountry !== managed) {
+                    setSelectedCountry(managed);
+                    return;
+                }
+            }
             loadRegionsForCountry(selectedCountry);
         }
-    }, [selectedCountry, loadRegionsForCountry]);
+    }, [selectedCountry, loadRegionsForCountry, user]);
 
     // Early return if data is not loaded yet
     if (!localPricing || !localPricing.industries || localPricing.industries.length === 0) {
@@ -220,6 +225,14 @@ const AdminPricing = () => {
                     <p className="text-slate-400 text-sm sm:text-base font-medium mt-1">
                         {pricingData.description || 'Global configuration for industry multipliers and base rates.'}
                     </p>
+                    {user?.role?.toLowerCase() === 'country_admin' && (
+                        <div className="mt-4 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl inline-flex items-center gap-3">
+                            <Shield className="text-amber-500" size={16} />
+                            <span className="text-xs font-black text-amber-500 uppercase tracking-widest">
+                                Managed Country Focus: {CONSTANTS.COUNTRIES.find(c => c.code === user.managed_country?.toUpperCase())?.name || user.managed_country}
+                            </span>
+                        </div>
+                    )}
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                     <button
@@ -373,14 +386,16 @@ const AdminPricing = () => {
 
                     <div className="relative min-w-[250px]">
                         <button
-                            onClick={() => setIsCountryOpen(!isCountryOpen)}
-                            className="w-full flex items-center justify-between bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 font-bold text-sm outline-none hover:border-primary transition-all duration-200 shadow-sm"
+                            onClick={() => user?.role?.toLowerCase() !== 'country_admin' && setIsCountryOpen(!isCountryOpen)}
+                            className={`w-full flex items-center justify-between bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 font-bold text-sm outline-none transition-all duration-200 shadow-sm ${user?.role?.toLowerCase() === 'country_admin' ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary'}`}
                         >
                             <span className="flex items-center gap-2">
                                 <span>{CONSTANTS.COUNTRIES.find(c => c.code === selectedCountry)?.flag}</span>
                                 <span>{CONSTANTS.COUNTRIES.find(c => c.code === selectedCountry)?.name}</span>
                             </span>
-                            <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${isCountryOpen ? 'rotate-180' : ''}`} />
+                            {user?.role !== 'country_admin' && (
+                                <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${isCountryOpen ? 'rotate-180' : ''}`} />
+                            )}
                         </button>
 
                         {isCountryOpen && (

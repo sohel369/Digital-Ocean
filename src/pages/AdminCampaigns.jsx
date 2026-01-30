@@ -123,7 +123,8 @@ const AdminCampaigns = () => {
     };
 
     useEffect(() => {
-        if (user?.role === 'admin') {
+        const isAdmin = user?.role === 'admin' || user?.role === 'country_admin';
+        if (isAdmin) {
             fetchPendingCampaigns();
         }
     }, [user]);
@@ -191,7 +192,8 @@ const AdminCampaigns = () => {
         c.advertiser_email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    if (user?.role !== 'admin') {
+    const isAdmin = user?.role === 'admin' || user?.role === 'country_admin';
+    if (!isAdmin) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">

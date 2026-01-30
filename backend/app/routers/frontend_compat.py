@@ -115,8 +115,20 @@ async def list_campaigns_compat(
     try:
         query = db.query(models.Campaign)
         
-        # Role-based filtering
-        if current_user.role != models.UserRole.ADMIN:
+        # Role-based & Geo-based filtering
+        if current_user.role == models.UserRole.ADMIN:
+            # Super Admin sees everything
+            pass
+        elif current_user.role == models.UserRole.COUNTRY_ADMIN:
+            # Country Admin sees campaigns in their managed country
+            managed = (current_user.managed_country or "").upper()
+            if managed:
+                query = query.filter(models.Campaign.target_country == managed)
+            else:
+                # If no managed country, they see nothing
+                return []
+        else:
+            # Advertiser only sees their own campaigns
             query = query.filter(models.Campaign.advertiser_id == current_user.id)
             
         campaigns = query.order_by(models.Campaign.created_at.desc()).limit(50).all()

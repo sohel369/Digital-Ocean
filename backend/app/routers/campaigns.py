@@ -103,7 +103,17 @@ async def list_campaigns(
     query = db.query(models.Campaign)
     
     # Role-based & Geo-based filtering
-    if current_user.role != models.UserRole.ADMIN:
+    if current_user.role == models.UserRole.ADMIN:
+        # Super Admin sees everything
+        pass
+    elif current_user.role == models.UserRole.COUNTRY_ADMIN:
+        # Country Admin sees campaigns in their managed country
+        if current_user.managed_country:
+            query = query.filter(models.Campaign.target_country == current_user.managed_country)
+        else:
+            return []
+    else:
+        # Advertiser only sees their own campaigns in their verified country
         query = query.filter(
             models.Campaign.advertiser_id == current_user.id,
             models.Campaign.target_country == verified_country
@@ -147,8 +157,12 @@ async def get_campaign(
             detail="Campaign not found"
         )
     
-    # Check ownership
-    if current_user.role != models.UserRole.ADMIN and campaign.advertiser_id != current_user.id:
+    # Check ownership/access
+    is_admin = current_user.role == models.UserRole.ADMIN
+    is_country_admin = current_user.role == models.UserRole.COUNTRY_ADMIN and campaign.target_country == current_user.managed_country
+    is_owner = campaign.advertiser_id == current_user.id
+
+    if not (is_admin or is_country_admin or is_owner):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to access this campaign"
@@ -179,8 +193,12 @@ async def update_campaign(
             detail="Campaign not found"
         )
     
-    # Check ownership
-    if current_user.role != models.UserRole.ADMIN and campaign.advertiser_id != current_user.id:
+    # Check ownership/access
+    is_admin = current_user.role == models.UserRole.ADMIN
+    is_country_admin = current_user.role == models.UserRole.COUNTRY_ADMIN and campaign.target_country == current_user.managed_country
+    is_owner = campaign.advertiser_id == current_user.id
+
+    if not (is_admin or is_country_admin or is_owner):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to update this campaign"
@@ -252,8 +270,12 @@ async def delete_campaign(
             detail="Campaign not found"
         )
     
-    # Check ownership
-    if current_user.role != models.UserRole.ADMIN and campaign.advertiser_id != current_user.id:
+    # Check ownership/access
+    is_admin = current_user.role == models.UserRole.ADMIN
+    is_country_admin = current_user.role == models.UserRole.COUNTRY_ADMIN and campaign.target_country == current_user.managed_country
+    is_owner = campaign.advertiser_id == current_user.id
+
+    if not (is_admin or is_country_admin or is_owner):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete this campaign"

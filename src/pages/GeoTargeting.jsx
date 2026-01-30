@@ -213,7 +213,6 @@ const GeoTargeting = () => {
 
     const coverageOptions = [
         { id: 'radius', label: 'Custom / Radius', icon: MapPin },
-        { id: 'state', label: t('campaign.state_wide'), icon: Building2 },
         { id: 'national', label: t('campaign.national'), icon: Globe }
     ];
 
@@ -310,25 +309,7 @@ const GeoTargeting = () => {
                         </div>
                     </div>
 
-                    {/* 3. State selector (Only if state mode) */}
-                    <div className={`space-y-4 transition-all duration-300 ${settings.coverageArea !== 'state' ? 'hidden' : 'animate-in slide-in-from-top-2'}`}>
-                        <h2 className="text-sm font-bold text-white flex items-center gap-2 italic uppercase tracking-tight">
-                            <Building2 size={16} className="text-emerald-500" />
-                            Select a State
-                        </h2>
 
-                        <Dropdown
-                            label="Choose your region..."
-                            options={filteredStates.map(s => ({
-                                value: s.name,
-                                label: s.name
-                            }))}
-                            value={settings.targetState}
-                            onChange={(val) => setSettings(p => ({ ...p, targetState: val }))}
-                            className="w-full relative z-[50]"
-                            menuWidth="w-full"
-                        />
-                    </div>
 
                     {/* Stats Result (Reach/Population) */}
                     <div className="bg-slate-900/50 border border-slate-700/50 rounded-2xl p-6 text-white text-center space-y-4 relative overflow-hidden group">

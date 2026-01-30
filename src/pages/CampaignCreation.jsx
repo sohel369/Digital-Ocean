@@ -242,7 +242,6 @@ const CampaignCreation = () => {
 
     const coverageOptions = [
         { id: 'radius', label: t('sidebar.geo_targeting'), icon: MapPin },
-        { id: 'state', label: t('campaign.state_wide'), icon: Building2 },
         { id: 'national', label: t('campaign.national'), icon: Globe }
     ];
 

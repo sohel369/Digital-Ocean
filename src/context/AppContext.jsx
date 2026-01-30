@@ -343,91 +343,21 @@ export const AppProvider = ({ children }) => {
 
     const fetchData = async () => {
         try {
-            const hasAuth = !!localStorage.getItem('access_token');
-            const isMock = localStorage.getItem('access_token')?.includes('mock_');
+            const token = localStorage.getItem('access_token');
+            const hasAuth = !!token && token !== 'null' && token !== 'undefined';
+            const isMock = token?.includes('mock_');
 
-            // Skip authenticated calls if using a mock token to avoid 401 loops
-            if (isMock && hasAuth) {
-                console.warn("Using mock token, skipping sensitive data fetch");
-                return;
-            }
-
-            // Fetch basic data in parallel
-            const [statsRes, campaignsRes, notifRes, pricingRes, paymentRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/stats`, {
-                    headers: { ...getAuthHeaders() },
-                    credentials: 'include'
-                }),
-                fetch(`${API_BASE_URL}/campaigns`, {
-                    headers: { ...getAuthHeaders() },
-                    credentials: 'include'
-                }),
-                fetch(`${API_BASE_URL}/notifications`, {
-                    headers: { ...getAuthHeaders() },
-                    credentials: 'include'
-                }),
-                fetch(`${API_BASE_URL}/pricing/config?country_code=${country}`, {
-                    headers: { ...getAuthHeaders() },
-                    credentials: 'include'
-                }),
-                fetch(`${API_BASE_URL}/payment/config`, {
-                    headers: { ...getAuthHeaders() },
-                    credentials: 'include'
-                })
+            // 1. Fetch Shared/Public Data first (Pricing, Payment Config)
+            // pricing/config handles optional auth internally to return contextual data
+            const pricingUrl = `${API_BASE_URL}/pricing/config?country_code=${country}`;
+            const [pricingRes, paymentRes] = await Promise.all([
+                fetch(pricingUrl, { headers: { ...getAuthHeaders() }, credentials: 'include' }),
+                fetch(`${API_BASE_URL}/payment/config`, { headers: { ...getAuthHeaders() }, credentials: 'include' })
             ]);
 
-
-
-            // Handle 401 Unauthorized globally
-            if (statsRes.status === 401 || campaignsRes.status === 401 || pricingRes.status === 401) {
-                console.warn("⚠️ API returned 401 Unauthorized. Session might be invalid.");
-                const token = localStorage.getItem('access_token');
-
-                // If we have a REAL token but got 401, it's definitely expired/invalid or JWT_SECRET changed
-                if (token && !token.includes('mock_')) {
-                    console.warn("Session invalid or expired. Clearing local user data.");
-                    localStorage.removeItem('user');
-                    localStorage.removeItem('access_token');
-                    localStorage.removeItem('refresh_token');
-                    setUser(null);
-                    setAuthLoading(false);
-
-                    // Only redirect if we are not already on the login page or landing page
-                    if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
-                        toast.error("Session Expired", { description: "Your session has expired or is invalid. Please login again." });
-                        window.location.href = '/login';
-                    }
-                    return;
-                }
-            }
-
-            if (statsRes.ok) {
-                setStats(await statsRes.json());
-            }
-
-            if (campaignsRes.ok) {
-                const campaignsData = await campaignsRes.json();
-                const formattedCampaigns = campaignsData.map(c => ({
-                    ...c,
-                    startDate: c.start_date || '2024-12-01'
-                }));
-                setCampaigns(formattedCampaigns.reverse());
-            }
-
-            if (notifRes.ok) {
-                setNotifications(await notifRes.json());
-            }
-
-            if (paymentRes && paymentRes.ok) {
-                const payCfg = await paymentRes.json();
-                setPaymentConfig(payCfg);
-            }
-
-            if (pricingRes && pricingRes.ok) {
+            // Handle Pricing Data
+            if (pricingRes.ok) {
                 const rawPricing = await pricingRes.json();
-                console.log("Pricing Config received:", rawPricing);
-
-                // Transform to frontend format with formatting and strict null-safety
                 const freshPricing = {
                     industries: (rawPricing.industries || []).map(i => ({
                         name: i?.name || 'Unknown',
@@ -454,90 +384,53 @@ export const AppProvider = ({ children }) => {
                     discounts: rawPricing.discounts || { state: 0.15, national: 0.30 },
                     currency: rawPricing.currency || 'USD'
                 };
-
-                // Fallback if data is empty despite ok response
-                if (freshPricing.industries.length === 0) {
-                    freshPricing.industries = [
-                        "Tyres And Wheels", "Vehicle Servicing And Maintenance", "Panel Beating And Smash Repairs",
-                        "Automotive Finance Solutions", "Vehicle Insurance Products", "Auto Parts Tools And Accessories",
-                        "Fleet Management Tools", "Workshop Technology And Equipment", "Telematics Systems And Vehicle Tracking Solutions",
-                        "Fuel Cards And Fuel Management Services", "Vehicle Cleaning And Detailing Services", "Logistics And Scheduling Software",
-                        "Safety And Compliance Solutions", "Driver Training And Induction Programs", "Roadside Assistance Programs",
-                        "Gps Navigation And Route Optimisation Tools", "Ev Charging Infrastructure And Electric Vehicle Solutions",
-                        "Mobile Device Integration And Communications Equipment", "Asset Recovery And Anti Theft Technologies"
-                    ].map(name => ({ name, multiplier: 1.0, displayName: formatIndustryName(name) }));
-                }
-                if (freshPricing.adTypes.length === 0) {
-                    freshPricing.adTypes = [
-                        { name: 'Leaderboard (728x90)', baseRate: 150.0 },
-                        { name: 'Skyscraper (160x600)', baseRate: 180.0 },
-                        { name: 'Medium Rectangle (300x250)', baseRate: 200.0 },
-                        { name: 'Mobile Leaderboard (320x50)', baseRate: 100.0 },
-                        { name: 'Email Newsletter (600x200)', baseRate: 250.0 }
-                    ];
-                }
-
                 setPricingData(freshPricing);
                 // Immediately load regions to ensure we have the full list
                 // Use silent: true for background poll to avoid disruptive UI loaders
                 await loadRegionsForCountry(country, freshPricing, true);
-
-            } else {
-                console.warn("Pricing metadata fetch failed or unauthorized, using internal fallbacks.");
-                setPricingData({
-                    industries: [
-                        "Tyres And Wheels", "Vehicle Servicing And Maintenance", "Panel Beating And Smash Repairs",
-                        "Automotive Finance Solutions", "Vehicle Insurance Products", "Auto Parts Tools And Accessories",
-                        "Fleet Management Tools", "Workshop Technology And Equipment", "Telematics Systems And Vehicle Tracking Solutions",
-                        "Fuel Cards And Fuel Management Services", "Vehicle Cleaning And Detailing Services", "Logistics And Scheduling Software",
-                        "Safety And Compliance Solutions", "Driver Training And Induction Programs", "Roadside Assistance Programs",
-                        "Gps Navigation And Route Optimisation Tools", "Ev Charging Infrastructure And Electric Vehicle Solutions",
-                        "Mobile Device Integration And Communications Equipment", "Asset Recovery And Anti Theft Technologies"
-                    ].map(i => ({ name: i, multiplier: 1.0, displayName: formatIndustryName(i) })),
-                    adTypes: [
-                        { name: 'Leaderboard (728x90)', baseRate: 150.0 },
-                        { name: 'Skyscraper (160x600)', baseRate: 180.0 },
-                        { name: 'Medium Rectangle (300x250)', baseRate: 200.0 },
-                        { name: 'Mobile Leaderboard (320x50)', baseRate: 100.0 },
-                        { name: 'Email Newsletter (600x200)', baseRate: 250.0 }
-                    ],
-                    states: [
-                        { name: 'California', landMass: 423970, densityMultiplier: 1.5, population: 39538223, stateCode: 'CA', countryCode: 'US' }
-                    ],
-                    discounts: { state: 0.15, national: 0.30 }
-                });
             }
 
+            if (paymentRes.ok) {
+                setPaymentConfig(await paymentRes.json());
+            }
+
+            // 2. Fetch Sensitive Data ONLY if we have a real token
+            if (hasAuth && !isMock) {
+                const [statsRes, campaignsRes, notifRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/stats`, { headers: { ...getAuthHeaders() }, credentials: 'include' }),
+                    fetch(`${API_BASE_URL}/campaigns`, { headers: { ...getAuthHeaders() }, credentials: 'include' }),
+                    fetch(`${API_BASE_URL}/notifications`, { headers: { ...getAuthHeaders() }, credentials: 'include' })
+                ]);
+
+                if (statsRes.status === 401 || campaignsRes.status === 401) {
+                    console.warn("🛡️ Auth expired or invalid detected in sensitive fetch.");
+                    // Only clear and redirect if we are not on login/landing
+                    if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+                        localStorage.removeItem('user');
+                        localStorage.removeItem('access_token');
+                        localStorage.removeItem('refresh_token');
+                        setUser(null);
+                        setAuthLoading(false);
+                        window.location.href = '/login';
+                        return;
+                    }
+                }
+
+                if (statsRes.ok) setStats(await statsRes.json());
+                if (campaignsRes.ok) {
+                    const campaignsData = await campaignsRes.json();
+                    setCampaigns(campaignsData.reverse());
+                }
+                if (notifRes.ok) setNotifications(await notifRes.json());
+            } else if (isMock) {
+                console.info("🎭 Mock session: Sensitive API calls skipped.");
+            }
 
         } catch (error) {
-            console.error("🌐 Failed to fetch data from API:", error);
-            console.warn("Using internal fallback data due to connection error.");
-
-            // Apply emergency fallbacks so the UI doesn't hang at "Loading..."
-            setPricingData(prev => prev.industries.length > 0 ? prev : {
-                industries: [
-                    "Tyres And Wheels", "Vehicle Servicing And Maintenance", "Panel Beating And Smash Repairs",
-                    "Automotive Finance Solutions", "Vehicle Insurance Products", "Auto Parts Tools And Accessories"
-                ].map(name => ({ name, multiplier: 1.0, displayName: name })),
-                adTypes: [
-                    { name: 'Leaderboard (728x90)', baseRate: 150.0 }
-                ],
-                states: [
-                    { name: 'California', landMass: 423970, densityMultiplier: 1.5, population: 39538223, stateCode: 'CA', countryCode: 'US' },
-                    { name: 'New York', landMass: 141300, densityMultiplier: 2.0, population: 19450000, stateCode: 'NY', countryCode: 'US' },
-                    { name: 'Texas', landMass: 695662, densityMultiplier: 1.2, population: 29140000, stateCode: 'TX', countryCode: 'US' },
-                    { name: 'Florida', landMass: 170312, densityMultiplier: 1.4, population: 21540000, stateCode: 'FL', countryCode: 'US' },
-                    { name: 'Illinois', landMass: 149995, densityMultiplier: 1.3, population: 12810000, stateCode: 'IL', countryCode: 'US' },
-                    { name: 'Pennsylvania', landMass: 119283, densityMultiplier: 1.3, population: 12800000, stateCode: 'PA', countryCode: 'US' },
-                    { name: 'Ohio', landMass: 116096, densityMultiplier: 1.2, population: 11690000, stateCode: 'OH', countryCode: 'US' },
-                    { name: 'Georgia', landMass: 153910, densityMultiplier: 1.1, population: 10620000, stateCode: 'GA', countryCode: 'US' },
-                    { name: 'North Carolina', landMass: 139391, densityMultiplier: 1.1, population: 10490000, stateCode: 'NC', countryCode: 'US' },
-                    { name: 'Michigan', landMass: 250487, densityMultiplier: 1.1, population: 9990000, stateCode: 'MI', countryCode: 'US' }
-                ],
-                discounts: { state: 0.15, national: 0.30 }
-            });
+            console.error("🌐 Global Data Fetch Error:", error);
         }
     };
+
 
     // Sync active country with user profile when user state changes
     useEffect(() => {

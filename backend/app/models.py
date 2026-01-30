@@ -20,6 +20,14 @@ class UserRole(str, enum.Enum):
     ADMIN = "admin"
     COUNTRY_ADMIN = "country_admin"
 
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            for member in cls:
+                if member.value == value.lower():
+                    return member
+        return None
+
 
 class CampaignStatus(str, enum.Enum):
     """Campaign status enumeration."""
@@ -58,7 +66,7 @@ class User(Base):
     name = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=True)  # Nullable for OAuth users
-    role = Column(Enum(UserRole), default=UserRole.ADVERTISER, nullable=False)
+    role = Column(Enum(UserRole, native_enum=False, name="user_role_enum"), default=UserRole.ADVERTISER, nullable=False)
     country = Column(String(100), nullable=True)
     industry = Column(String(255), nullable=True)
     managed_country = Column(String(10), nullable=True) # ISO code for country admins

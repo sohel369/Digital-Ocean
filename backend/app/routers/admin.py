@@ -20,11 +20,11 @@ async def get_all_users(
     role: Optional[str] = Query(None, description="Filter by user role"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
-    current_user: models.User = Depends(auth.get_current_admin_user),
+    current_user: models.User = Depends(auth.get_any_admin_user),
     db: Session = Depends(get_db)
 ):
     """
-    Get all users (Admin only).
+    Get all users (Admin/Country Admin).
     
     - **role**: Filter by role ('advertiser' or 'admin')
     - **skip**: Pagination offset
@@ -32,6 +32,14 @@ async def get_all_users(
     """
     query = db.query(models.User)
     
+    # If Country Admin, only show users from their managed country
+    if current_user.role == models.UserRole.COUNTRY_ADMIN:
+        if current_user.managed_country:
+            query = query.filter(models.User.country == current_user.managed_country)
+        else:
+            # If they don't have a managed country assigned, they see no one
+            return []
+
     if role:
         try:
             role_enum = models.UserRole(role)
@@ -50,13 +58,21 @@ async def get_all_users(
 @router.get("/users/count")
 async def get_user_count(
     role: Optional[str] = Query(None, description="Filter by user role"),
-    current_user: models.User = Depends(auth.get_current_admin_user),
+    current_user: models.User = Depends(auth.get_any_admin_user),
     db: Session = Depends(get_db)
 ):
     """
-    Get the total count of users (Admin only).
+    Get the total count of users (Admin/Country Admin).
     """
     query = db.query(func.count(models.User.id))
+    
+    # If Country Admin, only count users from their managed country
+    if current_user.role == models.UserRole.COUNTRY_ADMIN:
+        if current_user.managed_country:
+            query = query.filter(models.User.country == current_user.managed_country)
+        else:
+            return {"count": 0}
+
     if role:
         try:
             role_enum = models.UserRole(role)
@@ -118,7 +134,12 @@ async def update_user(
     # Update fields
     update_data = user_update.dict(exclude_unset=True)
     for field, value in update_data.items():
-        setattr(user, field, value)
+        # Ensure role is always persisted as its lowercase value
+        if field == 'role' and value:
+            role_val = value.value if hasattr(value, 'value') else str(value).lower()
+            setattr(user, field, role_val)
+        else:
+            setattr(user, field, value)
     
     db.commit()
     db.refresh(user)

@@ -254,8 +254,8 @@ const Pricing = () => {
 
                     <div className="glass-panel p-8 rounded-[2rem] relative z-10">
                         <h3 className="text-xl font-bold text-white flex items-center gap-3 mb-8"><MapPin size={24} className="text-primary" />{t('pricing.reach')}</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-                            {[{ id: 'radius', label: `${geoSettings?.radius || 30} Mile Radius`, icon: MapPin }, { id: 'state', label: t('campaign.state_wide'), icon: Building2 }, { id: 'national', label: t('campaign.national'), icon: Globe }].map(opt => (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+                            {[{ id: 'radius', label: `${geoSettings?.radius || 30} Mile Radius`, icon: MapPin }, { id: 'national', label: t('campaign.national'), icon: Globe }].map(opt => (
                                 <button key={opt.id} onClick={() => setCoverageArea(opt.id)} className={`p-6 rounded-2xl text-left border-2 transition-all flex flex-col gap-3 ${coverageArea === opt.id ? 'bg-primary/10 border-primary text-white shadow-lg' : 'bg-slate-900/40 border-slate-800 text-slate-500'}`}>
                                     <opt.icon size={28} className={coverageArea === opt.id ? 'text-primary' : 'text-slate-600'} />
                                     <span className="font-bold text-sm uppercase tracking-wider">{opt.label}</span>
@@ -267,37 +267,7 @@ const Pricing = () => {
                             <input type="text" className="w-full sm:w-72 bg-slate-900 border border-white/5 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-2 focus:ring-primary/50" placeholder={t('campaign.postcode_placeholder')} value={postcode} onChange={(e) => setPostcode(e.target.value)} />
                         )}
 
-                        {coverageArea === 'state' && (
-                            <>
-                                <div className="p-4 bg-slate-900 border border-slate-700 rounded-2xl flex items-center justify-between">
-                                    <div>
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Targeting Region</p>
-                                        <p className="text-white font-bold text-lg">{selectedState.name}</p>
-                                    </div>
-                                    <button
-                                        onClick={() => navigate('/geo-targeting')}
-                                        className="text-[10px] bg-slate-800 text-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-700 font-bold uppercase tracking-wide border border-white/5"
-                                    >
-                                        Change Region
-                                    </button>
-                                </div>
-                                <div className="mt-4 flex items-center gap-3 px-4 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl">
-                                    <Info size={16} className="text-emerald-400 shrink-0" />
-                                    <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase tracking-wider">
-                                        Location and radius are managed in the Geo Targeting tab.
-                                    </p>
-                                </div>
-                                {(pricingData.discounts?.state > 0) && (
-                                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-3xl p-6 flex gap-5 items-center mt-6">
-                                        <Layout size={32} className="text-blue-400" />
-                                        <div>
-                                            <h4 className="font-black text-blue-400 text-base uppercase">{t('pricing.state_bulk_discount', { discount: (pricingData.discounts.state * 100).toFixed(0) })} - {t('pricing.bulk_savings') || 'Bulk Savings Applied'}</h4>
-                                            <p className="text-xs text-slate-400 font-medium">Regional coverage discount applied automatically.</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </>
-                        )}
+
 
                         {coverageArea === 'national' && (
                             <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-3xl p-8 flex gap-6 items-center">

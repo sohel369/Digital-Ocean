@@ -287,21 +287,7 @@ export const GEO_DATA = {
         postcodeRegex: /^\d{4}$/,
         postcodeFormat: "1000"
     },
-    BD: {
-        name: 'Bangladesh',
-        regions: [
-            { name: 'Dhaka', code: 'DHA', population: 23623000, land_area: 1461, density: 16169 },
-            { name: 'Chattogram', code: 'CTG', population: 9381000, land_area: 5283, density: 1775 },
-            { name: 'Khulna', code: 'KHU', population: 2611000, land_area: 22274, density: 117 },
-            { name: 'Rajshahi', code: 'RAJ', population: 2110000, land_area: 18174, density: 116 },
-            { name: 'Sylhet', code: 'SYL', population: 1100000, land_area: 12595, density: 87 },
-            { name: 'Barishal', code: 'BAR', population: 980000, land_area: 13225, density: 74 },
-            { name: 'Rangpur', code: 'RAN', population: 850000, land_area: 16184, density: 52 },
-            { name: 'Mymensingh', code: 'MYM', population: 760000, land_area: 10584, density: 72 }
-        ],
-        postcodeRegex: /^\d{4}$/,
-        postcodeFormat: "1000"
-    }
+
 };
 
 export const getGeoConfig = (countryCode) => {

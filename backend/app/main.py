@@ -8,7 +8,6 @@ import time
 from .config import settings
 
 # Configure logging at the very top
-# Configure logging at the very top
 import sys
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL, logging.INFO),
@@ -18,9 +17,7 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
-print("🚀 STARTING ADVERTISING BACKEND VERSION: 1.0.3-reset 🚀")
-print("🚀 STARTING ADVERTISING BACKEND VERSION: 1.0.3-reset 🚀")
-print("🚀 STARTING ADVERTISING BACKEND VERSION: 1.0.3-reset 🚀")
+print("🚀 STARTING ADVERTISING BACKEND VERSION: 1.0.4-role-support 🚀")
 
 from fastapi import FastAPI, Request, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -300,6 +297,24 @@ async def reset_db_state(db: Session = Depends(get_db)):
         from . import models, auth
         # 1. Ensure admin
         admin = db.query(models.User).filter(models.User.email == "admin@adplatform.com").first()
+        
+        # Sync Postgres Enums (Fix for COUNTRY_ADMIN/country_admin mismatch)
+        if "postgresql" in str(db.get_bind().url):
+            from sqlalchemy import text
+            try:
+                db.execute(text("COMMIT")) # End transaction for ALTER TYPE
+                # Add all variations just in case
+                for role in ["advertiser", "user", "admin", "country_admin", "ADVERTISER", "USER", "ADMIN", "COUNTRY_ADMIN"]:
+                    try:
+                        db.execute(text(f"ALTER TYPE userrole ADD VALUE IF NOT EXISTS '{role}'"))
+                        db.commit() # Try to commit each one
+                    except Exception:
+                        db.rollback()
+                print("✅ Aggressive Enum Sync Complete")
+            except Exception as e:
+                print(f"Enum sync warning: {e}")
+                db.rollback()
+                
         if not admin:
             admin = models.User(
                 name="System Admin", email="admin@adplatform.com",
@@ -311,14 +326,8 @@ async def reset_db_state(db: Session = Depends(get_db)):
             admin.role = models.UserRole.ADMIN
             admin.password_hash = auth.get_password_hash("admin123")
         
-        # 2. Reset Pricing if empty
-        if db.query(models.PricingMatrix).count() == 0:
-            logger.info("Reset: Seeding pricing matrix...")
-            # ... seeding logic ...
-            # (Simplified for brevity, the startup_event handles the full list)
-        
         db.commit()
-        return {"status": "success", "message": "Admin user and roles synchronized"}
+        return {"status": "success", "message": "Admin user and roles synchronized (post-migration check applied)"}
     except Exception as e:
         return {"status": "error", "detail": str(e)}
 
@@ -419,13 +428,23 @@ async def startup_event():
             try:
                 from sqlalchemy import text
                 with engine.connect() as conn:
-                    # Check if column exists first (Postgres specific check for safety)
-                    check_query = text(f"""
-                        SELECT count(*) 
-                        FROM information_schema.columns 
-                        WHERE table_name = '{table_name}' AND column_name = '{col_name}'
-                    """)
-                    exists = conn.execute(check_query).scalar()
+                    if engine.name == 'postgresql':
+                        check_query = text(f"""
+                            SELECT count(*) 
+                            FROM information_schema.columns 
+                            WHERE table_name = '{table_name}' AND column_name = '{col_name}'
+                        """)
+                    else:
+                        # SQLite check
+                        check_query = text(f"PRAGMA table_info({table_name})")
+                        
+                    result = conn.execute(check_query)
+                    if engine.name == 'postgresql':
+                        exists = result.scalar()
+                    else:
+                        # For SQLite, result is rows of column info
+                        cols = [r[1] for r in result.fetchall()]
+                        exists = col_name in cols
                     
                     if not exists:
                         logger.info(f"➕ Adding column {col_name} to {table_name}...")

@@ -10,9 +10,19 @@ from enum import Enum
 
 # ==================== Enums ====================
 class UserRole(str, Enum):
+    """User role enumeration."""
     ADVERTISER = "advertiser"
     USER = "user"
     ADMIN = "admin"
+    COUNTRY_ADMIN = "country_admin"
+
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            for member in cls:
+                if member.value == value.lower():
+                    return member
+        return None
 
 
 
@@ -50,6 +60,12 @@ class UserSignup(BaseModel):
     country: Optional[str] = None
     industry: str = Field(..., description="Industry from fixed list")
     role: UserRole = UserRole.ADVERTISER
+    
+    @validator('role', pre=True)
+    def normalize_role(cls, v):
+        if isinstance(v, str):
+            return v.lower()
+        return v
 
 
 class UserLogin(BaseModel):
@@ -90,9 +106,18 @@ class UserResponse(BaseModel):
     name: str
     email: EmailStr
     role: UserRole
+    
+    @validator('role', pre=True)
+    def normalize_role(cls, v):
+        if isinstance(v, str):
+            return v.lower()
+        if hasattr(v, 'name'): # If it's an enum object, return its value
+            return v.value.lower()
+        return v
     country: Optional[str]
     industry: Optional[str]
     profile_picture: Optional[str]
+    managed_country: Optional[str]
     created_at: datetime
     last_login: Optional[datetime]
     
@@ -359,6 +384,14 @@ class AdminUserUpdate(BaseModel):
     name: Optional[str] = None
     role: Optional[UserRole] = None
     country: Optional[str] = None
+    managed_country: Optional[str] = None
+    
+    @validator('role', pre=True)
+    def normalize_role(cls, v):
+        if isinstance(v, str):
+            return v.lower()
+        return v
+
 
 
 class GeoDataCreate(BaseModel):

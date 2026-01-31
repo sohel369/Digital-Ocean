@@ -264,6 +264,31 @@ const Pricing = () => {
                             </button>
                         </div>
 
+                        {/* Target Reach Selector */}
+                        <div className="mb-6 space-y-3">
+                            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest px-1">Target Reach</label>
+                            <div className="grid grid-cols-3 gap-3">
+                                {[
+                                    { id: 'radius', label: 'Radius', icon: MapPin, desc: `${geoSettings?.radius || 30} miles` },
+                                    { id: 'state', label: 'State Wide', icon: Building2, desc: 'Regional' },
+                                    { id: 'national', label: 'National', icon: Globe, desc: 'Full country' }
+                                ].map(opt => (
+                                    <button
+                                        key={opt.id}
+                                        onClick={() => setCoverageArea(opt.id)}
+                                        className={`group relative py-4 px-3 rounded-xl text-sm font-bold border transition-all ${coverageArea === opt.id ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' : 'bg-slate-900 border-white/5 text-slate-400 hover:bg-white/5 hover:border-primary/20'}`}
+                                    >
+                                        <div className="flex flex-col items-center gap-2">
+                                            <opt.icon size={20} className={coverageArea === opt.id ? 'text-white' : 'text-slate-500'} />
+                                            <span className="block">{opt.label}</span>
+                                            <span className={`block text-[10px] ${coverageArea === opt.id ? 'text-white/70' : 'text-slate-600'}`}>{opt.desc}</span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Coverage Details Display */}
                         <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-8 flex flex-col md:flex-row gap-8 items-center justify-between group hover:border-primary/30 transition-all duration-500">
                             <div className="flex gap-6 items-center">
                                 <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 group-hover:scale-110 transition-transform duration-500">
@@ -285,6 +310,7 @@ const Pricing = () => {
                                 </div>
                             </div>
                         </div>
+
 
                         {coverageArea === 'national' && (
                             <div className="mt-6 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 flex gap-4 items-center animate-in fade-in slide-in-from-top-2">

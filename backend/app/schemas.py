@@ -6,6 +6,7 @@ from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional, List
 from datetime import datetime, date
 from enum import Enum
+import re
 
 
 # ==================== Enums ====================
@@ -19,7 +20,7 @@ class UserRole(str, Enum):
     @classmethod
     def _missing_(cls, value):
         if isinstance(value, str):
-            v_lower = value.lower().replace(" ", "")
+            v_lower = value.lower().replace(" ", "").replace("_", "")
             if v_lower in ["admin", "superadmin"]:
                 return cls.ADMIN
             if v_lower in ["countryadmin"]:
@@ -27,7 +28,7 @@ class UserRole(str, Enum):
             if v_lower in ["advertiser"]:
                 return cls.ADVERTISER
             for member in cls:
-                if member.value == v_lower:
+                if member.value.replace("_", "") == v_lower:
                     return member
         return None
 
@@ -364,9 +365,9 @@ class IndustryConfig(BaseModel):
     def clean_multiplier(cls, v):
         if isinstance(v, str):
             try:
-                # Remove any %, commas, etc.
-                clean_v = v.replace('%', '').replace(',', '').strip()
-                return float(clean_v)
+                # Remove any %, commas, currency symbols, etc. leaving only digits and dot
+                clean_v = re.sub(r'[^\d.]', '', v)
+                return float(clean_v) if clean_v else 1.0
             except: return 1.0
         return v
 
@@ -378,9 +379,9 @@ class AdTypeConfig(BaseModel):
     def clean_base_rate(cls, v):
         if isinstance(v, str):
             try:
-                # Remove currency symbols and commas
-                clean_v = v.replace('$', '').replace(',', '').strip()
-                return float(clean_v)
+                # Remove currency symbols (like $, ৳) and commas
+                clean_v = re.sub(r'[^\d.]', '', v)
+                return float(clean_v) if clean_v else 100.0
             except: return 100.0
         return v
 

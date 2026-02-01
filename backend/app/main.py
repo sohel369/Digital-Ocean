@@ -102,6 +102,14 @@ async def fix_database():
             # Critical migrations
             for c, t in [("role", "VARCHAR(50)"), ("country", "VARCHAR(100)"), ("industry", "VARCHAR(255)"), ("managed_country", "VARCHAR(10)"), ("last_login", "TIMESTAMP")]:
                 migrate("users", c, t)
+            
+            # FORCE FIX for Postgres ENUM issues: Convert role to VARCHAR if it's restricted
+            try:
+                logger.info("🛠️ Force matching user roles to VARCHAR...")
+                conn.execute(text("ALTER TABLE users ALTER COLUMN role TYPE VARCHAR(50) USING role::text"))
+            except Exception as e:
+                logger.debug(f"ℹ️ Role column already plain text or migration skipped: {e}")
+
             for c, t in [("budget", "FLOAT DEFAULT 0"), ("headline", "VARCHAR(500)"), ("landing_page_url", "VARCHAR(500)"), ("ad_format", "VARCHAR(100)"), ("reviewed_at", "TIMESTAMP")]:
                 migrate("campaigns", c, t)
             for c, t in [("radius_areas_count", "INTEGER DEFAULT 1"), ("fips", "INTEGER"), ("density_mi", "FLOAT")]:

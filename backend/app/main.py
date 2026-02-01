@@ -6,6 +6,7 @@ import logging
 import time
 import sys
 import os
+import asyncio
 
 from .config import settings
 
@@ -119,20 +120,21 @@ async def fix_database():
         logger.error(f"❌ Migration failed: {e}")
         return {"status": "error", "detail": str(e)}
 
-# --- 6. STARTUP EVENT ---
-@app.on_event("startup")
-async def startup_event():
-    """Minimal blocking startup."""
-    logger.info(f"🚀 App starting (Ver {settings.APP_VERSION})...")
+# --- 6. STARTUP LOGIC ---
+async def sync_admin_account():
+    """Background task to sync admin account without blocking startup."""
+    # Wait a tiny bit to let the server start accepting requests first
+    await asyncio.sleep(1)
+    logger.info("📦 Syncing admin account in background...")
     try:
-        # We only do admin sync if possible, skip full init if it hangs
-        db = SessionLocal()
+        from .database import SessionLocal
         from sqlalchemy import func
+        db = SessionLocal()
         admin_email = "admin@adplatform.com"
         admin = db.query(models.User).filter(func.lower(models.User.email) == admin_email.lower()).first()
         
         if not admin:
-            logger.info("📦 Creating default admin account...")
+            logger.info("➕ Creating default admin account...")
             new_admin = models.User(
                 name="System Admin", 
                 email=admin_email,
@@ -143,13 +145,30 @@ async def startup_event():
             db.commit()
             logger.info("✅ Default admin created.")
         else:
-            admin.role = "admin"
-            db.commit()
-            logger.info("✅ Admin synced.")
+            if admin.role != "admin":
+                admin.role = "admin"
+                db.commit()
+                logger.info("✅ Admin role synced.")
+            else:
+                logger.info("✅ Admin already exists and is valid.")
         db.close()
     except Exception as e:
-        logger.warning(f"⚠️ Startup warning (usually fine): {e}")
-    logger.info("✅ Startup sequence complete")
+        logger.warning(f"⚠️ Background sync warning: {e}")
+
+@app.on_event("startup")
+async def startup_event():
+    """Ultra-minimal non-blocking startup."""
+    logger.info(f"🚀 App starting (Ver {settings.APP_VERSION})...")
+    
+    # Sanity check for JWT_SECRET
+    if settings.SECRET_KEY == "dev_secret_key_change_me_in_production":
+        logger.warning("⚠️ SECURITY: Using default development JWT_SECRET. NOT RECOMMENDED FOR PRODUCTION!")
+    else:
+        logger.info(f"🔑 SECURITY: Custom JWT_SECRET detected (Length: {len(settings.SECRET_KEY)})")
+        
+    # Start DB sync in background so it doesn't block Railway healthchecks
+    asyncio.create_task(sync_admin_account())
+    logger.info("✅ Startup sequence initiated (background tasks running)")
 
 if __name__ == "__main__":
     import uvicorn

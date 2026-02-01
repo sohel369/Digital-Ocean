@@ -3,9 +3,9 @@ builder = "dockerfile"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "sh -c 'cd backend && /opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}'"
+startCommand = "sh -c 'cd backend && python scripts/init_db.py && /opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}'"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
-# Deployment version: 2.2.0 - Using Dockerfile to avoid Nixpacks ENV errors
+# Deployment version: 2.3.0 - Added DB init to startCommand for Railway stability
 

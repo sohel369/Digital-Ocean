@@ -2,7 +2,7 @@
 Configuration settings for the application.
 Loads environment variables and provides typed configuration.
 """
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
 from typing import List, Any, Union, Optional
 import os
@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     
     # Application
     APP_NAME: str = "Advertiser Dashboard API"
-    APP_VERSION: str = "1.1.5-final-fix"
+    APP_VERSION: str = "1.1.6-final-railway"
     DEBUG: bool = True
     
     # Database
@@ -71,10 +71,11 @@ class Settings(BaseSettings):
     EMAILS_FROM_EMAIL: str = os.environ.get("EMAILS_FROM_EMAIL", "support@adplatform.com")
     EMAILS_FROM_NAME: str = os.environ.get("EMAILS_FROM_NAME", "AdPlatform Support")
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-        extra = "allow"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+        extra="allow"
+    )
 
     @property
     def cors_origins_list(self) -> List[str]:

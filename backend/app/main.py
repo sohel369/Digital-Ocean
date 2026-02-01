@@ -6,7 +6,6 @@ import logging
 import time
 import sys
 import os
-import traceback
 
 from .config import settings
 
@@ -37,17 +36,10 @@ app = FastAPI(
     debug=settings.DEBUG
 )
 
-# ULTRA-ROBUST CORS Configuration
+# Robust CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        settings.FRONTEND_URL,
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://digital-ocean-production-01ee.up.railway.app",
-        "https://balanced-wholeness-production-ca00.up.railway.app"
-    ],
-    allow_origin_regex=r"https://.*\.railway\.app", # Using raw string for regex
+    allow_origins=["*"], # Simplest for Railway healthcheck success
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -63,7 +55,7 @@ async def log_requests(request: Request, call_next):
         logger.error(f"🔥 [CRASH] {str(exc)}", exc_info=True)
         return JSONResponse(status_code=500, content={"error": "Internal server error", "detail": str(exc)})
 
-# Standard Routers
+# Router Inclusions
 app.include_router(auth_router.router, prefix="/api")
 app.include_router(campaigns.router, prefix="/api")
 app.include_router(media.router, prefix="/api")
@@ -73,18 +65,17 @@ app.include_router(analytics.router, prefix="/api")
 app.include_router(debug.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(geo.router, prefix="/api")
-app.include_router(campaign_approval.router, prefix="/api") # Added back
-
-# Compatibility Router (Handles /api prefix internally)
-app.include_router(frontend_compat.router)
+app.include_router(campaign_approval.router, prefix="/api")
+app.include_router(frontend_compat.router) # Prefix handled internally
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy", "version": settings.APP_VERSION, "db": str(engine.url.drivername)}
+    """Ultra-simple health check for Railway."""
+    return {"status": "healthy", "version": settings.APP_VERSION}
 
 @app.get("/api/admin/fix-db")
 async def fix_database():
-    """Emergency endpoint to run migrations and fix missing columns."""
+    """Emergency migration endpoint."""
     try:
         from sqlalchemy import text, inspect
         init_db()
@@ -103,17 +94,13 @@ async def fix_database():
             for c, t in [("role", "VARCHAR(50)"), ("country", "VARCHAR(100)"), ("industry", "VARCHAR(255)"), ("managed_country", "VARCHAR(10)"), ("last_login", "TIMESTAMP")]:
                 migrate("users", c, t)
             
-            # FORCE FIX for Postgres ENUM issues: Convert role to VARCHAR if it's restricted
+            # Special fix for ENUM type issue on Postgres
             try:
-                logger.info("🛠️ Force matching user roles to VARCHAR...")
                 conn.execute(text("ALTER TABLE users ALTER COLUMN role TYPE VARCHAR(50) USING role::text"))
-            except Exception as e:
-                logger.debug(f"ℹ️ Role column already plain text or migration skipped: {e}")
+            except: pass
 
             for c, t in [("budget", "FLOAT DEFAULT 0"), ("headline", "VARCHAR(500)"), ("landing_page_url", "VARCHAR(500)"), ("ad_format", "VARCHAR(100)"), ("reviewed_at", "TIMESTAMP")]:
                 migrate("campaigns", c, t)
-            for c, t in [("radius_areas_count", "INTEGER DEFAULT 1"), ("fips", "INTEGER"), ("density_mi", "FLOAT")]:
-                migrate("geodata", c, t)
         
         return {"status": "success", "message": "Database migrations applied."}
     except Exception as e:
@@ -122,12 +109,10 @@ async def fix_database():
 
 @app.on_event("startup")
 async def startup_event():
+    """Startup initialization."""
     logger.info(f"🚀 App starting (Ver {settings.APP_VERSION})...")
     try:
-        # 1. Initialize Tables
-        init_db()
-        
-        # 2. Sync Admin User
+        # Fast initialization
         db = SessionLocal()
         from sqlalchemy import func
         admin_email = "admin@adplatform.com"
@@ -145,14 +130,13 @@ async def startup_event():
             db.commit()
             logger.info("✅ Default admin created.")
         else:
-            # Re-verify critical fields
             admin.role = "admin"
             db.commit()
-            logger.info("✅ Admin state synchronized.")
+            logger.info("✅ Admin synced.")
         db.close()
     except Exception as e:
-        logger.warning(f"⚠️ Startup sequence warning: {e}")
-    logger.info("✅ Startup sequence complete")
+        logger.warning(f"⚠️ Startup warning: {e}")
+    logger.info("✅ Startup complete")
 
 if __name__ == "__main__":
     import uvicorn

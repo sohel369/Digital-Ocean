@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional
+import logging
 
 from ..database import get_db
 from .. import models, schemas, auth

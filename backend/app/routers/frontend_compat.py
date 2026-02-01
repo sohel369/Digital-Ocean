@@ -351,7 +351,7 @@ async def create_campaign_compat(
             "spend": new_campaign.calculated_price,
             "start_date": str(new_campaign.start_date),
             "end_date": str(new_campaign.end_date),
-            "status": new_campaign.status.value.lower(),
+            "status": new_campaign.status.value.lower() if hasattr(new_campaign.status, 'value') else str(new_campaign.status).lower(),
             "impressions": new_campaign.impressions,
             "clicks": new_campaign.clicks,
             "ctr": new_campaign.ctr
@@ -486,7 +486,7 @@ async def google_auth_sync(request: Request, db: Session = Depends(get_db)):
             "username": user.name,
             "email": user.email,
             "avatar": user.profile_picture,
-            "role": user.role.value,
+            "role": user.role.value if hasattr(user.role, 'value') else user.role,
             "country": user.country,
             "industry": user.industry
         }

@@ -46,18 +46,23 @@ const AdminUsers = () => {
 
         try {
             setIsSaving(true);
+            setIsSaving(true);
+
+            // Sanitize payload: valid strings or null (not empty strings)
+            const payload = {
+                name: selectedUser.name,
+                role: selectedUser.role,
+                country: selectedUser.country?.trim() || null,
+                managed_country: selectedUser.managed_country?.trim() || null
+            };
+
             const response = await fetch(`${API_BASE_URL}/admin/users/${selectedUser.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     ...getAuthHeaders()
                 },
-                body: JSON.stringify({
-                    name: selectedUser.name,
-                    role: selectedUser.role,
-                    country: selectedUser.country,
-                    managed_country: selectedUser.managed_country
-                })
+                body: JSON.stringify(payload)
             });
 
             if (response.ok) {
@@ -66,9 +71,11 @@ const AdminUsers = () => {
                 fetchUsers();
             } else {
                 const error = await response.json();
-                toast.error(error.detail || "Failed to update user");
+                console.error("Update user error:", error);
+                toast.error(error.detail || "Failed to update user. Please check your inputs.");
             }
         } catch (error) {
+            console.error("Update request failed:", error);
             toast.error("An error occurred during update");
         } finally {
             setIsSaving(false);

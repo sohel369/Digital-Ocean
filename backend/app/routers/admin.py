@@ -328,6 +328,42 @@ async def delete_geodata(
     return schemas.MessageResponse(message="Geographic data deleted successfully")
 
 
+@router.post("/seed/bd-data", response_model=schemas.MessageResponse, status_code=status.HTTP_201_CREATED)
+async def seed_bd_data(
+    current_user: models.User = Depends(auth.get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Manually seed Bangladesh geographic data (Admin only).
+    Useful for fixing missing data in production.
+    """
+    try:
+        # Delete existing BD data to prevent duplicates
+        db.query(models.GeoData).filter(models.GeoData.country_code == "BD").delete()
+        
+        # Insert fresh BD data
+        entries = [
+            models.GeoData(country_code="BD", state_code="DHK", state_name="Dhaka", land_area_sq_km=1463, population=21000000, density_multiplier=5.0),
+            models.GeoData(country_code="BD", state_code="CTG", state_name="Chittagong", land_area_sq_km=168, population=9000000, density_multiplier=3.5),
+            models.GeoData(country_code="BD", state_code="SYL", state_name="Sylhet", land_area_sq_km=12000, population=4000000, density_multiplier=2.0),
+            models.GeoData(country_code="BD", state_code="RAJ", state_name="Rajshahi", land_area_sq_km=18000, population=6000000, density_multiplier=1.8),
+        ]
+        
+        db.add_all(entries)
+        db.commit()
+        
+        return schemas.MessageResponse(
+            message="Bangladesh data seeded successfully",
+            detail=f"Added {len(entries)} regions: {', '.join([e.state_name for e in entries])}"
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to seed BD data: {str(e)}"
+        )
+
+
 # ==================== System Statistics ====================
 
 @router.get("/stats")

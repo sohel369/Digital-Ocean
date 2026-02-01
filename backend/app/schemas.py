@@ -114,12 +114,12 @@ class UserResponse(BaseModel):
         if hasattr(v, 'name'): # If it's an enum object, return its value
             return v.value.lower()
         return v
-    country: Optional[str]
-    industry: Optional[str]
-    profile_picture: Optional[str]
-    managed_country: Optional[str]
-    created_at: datetime
-    last_login: Optional[datetime]
+    country: Optional[str] = "US"
+    industry: Optional[str] = "General"
+    profile_picture: Optional[str] = None
+    managed_country: Optional[str] = None
+    created_at: Optional[datetime] = None
+    last_login: Optional[datetime] = None
     
     class Config:
         from_attributes = True
@@ -355,10 +355,10 @@ class AdTypeConfig(BaseModel):
 class StateConfig(BaseModel):
     name: str
     land_area: float
-    population: int
+    population: int = 0
     radius_areas_count: Optional[int] = 1
-    density_multiplier: float
-    state_code: Optional[str] = None
+    density_multiplier: float = 1.0
+    state_code: Optional[str] = "UNK"
     country_code: str = "US"
     fips: Optional[int] = None
     density_mi: Optional[float] = None
@@ -366,8 +366,8 @@ class StateConfig(BaseModel):
     population_percent: Optional[float] = None
 
 class DiscountConfig(BaseModel):
-    state: float
-    national: float
+    state: float = 0.15
+    national: float = 0.30
 
 class GlobalPricingConfig(BaseModel):
     industries: List[IndustryConfig]

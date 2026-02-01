@@ -263,28 +263,35 @@ async def debug_db():
         }
 
 @app.get("/api/debug/schema", tags=["Debug"])
-async def debug_schema():
-    """Diagnostic: List all columns in the campaigns table."""
+async def debug_schema(table_name: str = "campaigns"):
+    """Diagnostic: List all columns in the specified table."""
     from sqlalchemy import inspect
     try:
         inspector = inspect(engine)
-        columns = inspector.get_columns('campaigns')
-        column_list = [{"name": c['name'], "type": str(c['type'])} for c in columns]
+        if table_name not in inspector.get_table_names():
+            return {"error": f"Table '{table_name}' not found", "available_tables": inspector.get_table_names()}
+            
+        columns = inspector.get_columns(table_name)
+        column_list = [{"name": c['name'], "type": str(c['type']), "nullable": c['nullable']} for c in columns]
         
         # Also check enums if postgres
         enums = {}
         if engine.name == 'postgresql':
             from sqlalchemy import text
             with engine.connect() as conn:
-                result = conn.execute(text("SELECT t.typname, e.enumlabel FROM pg_type t JOIN pg_enum e ON t.oid = e.enumtypid"))
-                for row in result:
-                    if row[0] not in enums: enums[row[0]] = []
-                    enums[row[0]].append(row[1])
+                try:
+                    result = conn.execute(text("SELECT t.typname, e.enumlabel FROM pg_type t JOIN pg_enum e ON t.oid = e.enumtypid"))
+                    for row in result:
+                        if row[0] not in enums: enums[row[0]] = []
+                        if row[1] not in enums[row[0]]: enums[row[0]].append(row[1])
+                except Exception as enum_err:
+                    enums = {"error": str(enum_err)}
         
         return {
-            "table": "campaigns",
+            "table": table_name,
             "columns": column_list,
-            "enums": enums
+            "enums": enums,
+            "all_tables": inspector.get_table_names()
         }
     except Exception as e:
         return {"error": str(e)}

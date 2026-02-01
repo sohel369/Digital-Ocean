@@ -222,7 +222,8 @@ async def get_global_pricing_config(
             # For each industry, find the effective multiplier for this country
             entries, _ = get_matrix_entries({"industry_type": ind_name})
             # Use max multiplier to be safe/conservative if duplicates exist
-            mult = max([e.multiplier for e in entries]) if entries else 1.0
+            mult_list = [e.multiplier for e in entries if e.multiplier is not None]
+            mult = max(mult_list) if mult_list else 1.0
             industries.append(schemas.IndustryConfig(name=ind_name, multiplier=mult))
     
     # Ensure we always have at least some industries if DB is fresh
@@ -257,7 +258,8 @@ async def get_global_pricing_config(
     if all_ad_types:
         for (ad_name,) in all_ad_types:
             entries, _ = get_matrix_entries({"advert_type": ad_name})
-            rate = max([e.base_rate for e in entries]) if entries else 100.0
+            rate_list = [e.base_rate for e in entries if e.base_rate is not None]
+            rate = max(rate_list) if rate_list else 100.0
             ad_types.append(schemas.AdTypeConfig(name=ad_name, base_rate=rate))
         
     if not ad_types:
@@ -303,9 +305,21 @@ async def get_global_pricing_config(
     # 4. Discounts (Country specific or default)
     disc_entries, _ = get_matrix_entries({}) # Just get any for this country
     
+    # Safely pick first valid discount or use defaults
+    s_discount = 0.15
+    n_discount = 0.30
+    
+    if disc_entries:
+        # Filter out Nones
+        states_d = [e.state_discount for e in disc_entries if e.state_discount is not None]
+        nats_d = [e.national_discount for e in disc_entries if e.national_discount is not None]
+        
+        if states_d: s_discount = states_d[0]
+        if nats_d: n_discount = nats_d[0]
+    
     discounts = schemas.DiscountConfig(
-        state=disc_entries[0].state_discount if disc_entries else 0.15,
-        national=disc_entries[0].national_discount if disc_entries else 0.30
+        state=s_discount,
+        national=n_discount
     )
 
     # Determine currency based on context

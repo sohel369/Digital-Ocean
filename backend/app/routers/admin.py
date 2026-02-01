@@ -53,7 +53,20 @@ async def get_all_users(
     
     users = query.order_by(models.User.created_at.desc()).offset(skip).limit(limit).all()
     
-    return users
+    # Debug: Check for potential serialization issues
+    result = []
+    for u in users:
+        try:
+            # Manually trigger validation for each user to catch errors
+            schemas.UserResponse.from_orm(u)
+            result.append(u)
+        except Exception as e:
+            logging.getLogger(__name__).error(f"❌ User Serialization failed for ID {u.id}: {e}")
+            # Still append it, but the error model might catch it. 
+            # Or skip it to let the rest load
+            continue
+            
+    return result
 
 
 @router.get("/users/count")

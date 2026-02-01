@@ -32,8 +32,8 @@ async def create_campaign(
     - Campaign duration
     - Geographic location (verified via IP)
     """
-    # Enforce verified country for non-admins
-    if current_user.role != models.UserRole.ADMIN:
+    role = str(current_user.role).lower() if current_user.role else ""
+    if role != "admin":
         campaign_data.target_country = verified_country
     # Calculate end_date if duration is provided
     if campaign_data.duration and not campaign_data.end_date:
@@ -103,10 +103,11 @@ async def list_campaigns(
     query = db.query(models.Campaign)
     
     # Role-based & Geo-based filtering
-    if current_user.role == models.UserRole.ADMIN:
+    role = str(current_user.role).lower() if current_user.role else ""
+    if role == "admin":
         # Super Admin sees everything
         pass
-    elif current_user.role == models.UserRole.COUNTRY_ADMIN:
+    elif role == "country_admin":
         # Country Admin sees campaigns in their managed country
         if current_user.managed_country:
             query = query.filter(models.Campaign.target_country == current_user.managed_country)
@@ -158,8 +159,9 @@ async def get_campaign(
         )
     
     # Check ownership/access
-    is_admin = current_user.role == models.UserRole.ADMIN
-    is_country_admin = current_user.role == models.UserRole.COUNTRY_ADMIN and campaign.target_country == current_user.managed_country
+    role = str(current_user.role).lower() if current_user.role else ""
+    is_admin = role == "admin"
+    is_country_admin = role == "country_admin" and campaign.target_country == current_user.managed_country
     is_owner = campaign.advertiser_id == current_user.id
 
     if not (is_admin or is_country_admin or is_owner):
@@ -194,8 +196,9 @@ async def update_campaign(
         )
     
     # Check ownership/access
-    is_admin = current_user.role == models.UserRole.ADMIN
-    is_country_admin = current_user.role == models.UserRole.COUNTRY_ADMIN and campaign.target_country == current_user.managed_country
+    role = str(current_user.role).lower() if current_user.role else ""
+    is_admin = role == "admin"
+    is_country_admin = role == "country_admin" and campaign.target_country == current_user.managed_country
     is_owner = campaign.advertiser_id == current_user.id
 
     if not (is_admin or is_country_admin or is_owner):
@@ -205,7 +208,7 @@ async def update_campaign(
         )
     
     # Restrict updates based on status (Production-ready logic)
-    if current_user.role != models.UserRole.ADMIN:
+    if role != "admin":
         if campaign.status not in [models.CampaignStatus.DRAFT, models.CampaignStatus.CHANGES_REQUIRED, models.CampaignStatus.REJECTED]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -271,8 +274,9 @@ async def delete_campaign(
         )
     
     # Check ownership/access
-    is_admin = current_user.role == models.UserRole.ADMIN
-    is_country_admin = current_user.role == models.UserRole.COUNTRY_ADMIN and campaign.target_country == current_user.managed_country
+    role = str(current_user.role).lower() if current_user.role else ""
+    is_admin = role == "admin"
+    is_country_admin = role == "country_admin" and campaign.target_country == current_user.managed_country
     is_owner = campaign.advertiser_id == current_user.id
 
     if not (is_admin or is_country_admin or is_owner):

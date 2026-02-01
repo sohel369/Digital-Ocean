@@ -36,7 +36,8 @@ async def get_campaign_analytics(
         )
     
     # Check ownership
-    if current_user.role != models.UserRole.ADMIN and campaign.advertiser_id != current_user.id:
+    role = str(current_user.role).lower() if current_user.role else ""
+    if role != "admin" and campaign.advertiser_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to view analytics for this campaign"

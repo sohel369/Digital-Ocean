@@ -33,7 +33,8 @@ async def get_all_users(
     query = db.query(models.User)
     
     # If Country Admin, only show users from their managed country
-    if current_user.role == models.UserRole.COUNTRY_ADMIN:
+    role = str(current_user.role).lower() if current_user.role else ""
+    if role == "country_admin":
         if current_user.managed_country:
             query = query.filter(models.User.country == current_user.managed_country)
         else:
@@ -67,7 +68,8 @@ async def get_user_count(
     query = db.query(func.count(models.User.id))
     
     # If Country Admin, only count users from their managed country
-    if current_user.role == models.UserRole.COUNTRY_ADMIN:
+    role = str(current_user.role).lower() if current_user.role else ""
+    if role == "country_admin":
         if current_user.managed_country:
             query = query.filter(models.User.country == current_user.managed_country)
         else:

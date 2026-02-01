@@ -19,7 +19,8 @@ router = APIRouter(prefix="/campaigns/approval", tags=["Campaign Approval"])
 
 def require_admin(current_user: models.User = Depends(auth.get_current_active_user)):
     """Dependency to ensure only admin users can access."""
-    if current_user.role != models.UserRole.ADMIN:
+    role = str(current_user.role).lower() if current_user.role else ""
+    if role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"

@@ -40,7 +40,8 @@ async def upload_media(
         )
     
     # Check ownership
-    if current_user.role != models.UserRole.ADMIN and campaign.advertiser_id != current_user.id:
+    role = str(current_user.role).lower() if current_user.role else ""
+    if role != "admin" and campaign.advertiser_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to upload media for this campaign"
@@ -89,11 +90,31 @@ async def get_campaign_media(
             detail="Campaign not found"
         )
     
-    # Check ownership
-    if current_user.role != models.UserRole.ADMIN and campaign.advertiser_id != current_user.id:
+    # Role-based & Geo-based filtering for access to campaign media
+    role = str(current_user.role).lower() if current_user.role else ""
+    
+    if role == "admin":
+        # Admin can view media for any campaign
+        pass
+    elif role == "country_admin":
+        # Country Admin can view media for campaigns in their managed country
+        if not current_user.managed_country or campaign.target_country != current_user.managed_country:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to view media for campaigns outside your managed country"
+            )
+    elif role == "advertiser":
+        # Advertiser can only view media for their own campaigns
+        if campaign.advertiser_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to view media for this campaign"
+            )
+    else:
+        # Default to denying access for unknown roles
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view media for this campaign"
+            detail="Unauthorized role to view media"
         )
     
     media_files = db.query(models.Media).filter(models.Media.campaign_id == campaign_id).all()
@@ -126,7 +147,8 @@ async def delete_media(
     campaign = db.query(models.Campaign).filter(models.Campaign.id == media.campaign_id).first()
     
     # Check ownership
-    if current_user.role != models.UserRole.ADMIN and campaign.advertiser_id != current_user.id:
+    role = str(current_user.role).lower() if current_user.role else ""
+    if role != "admin" and campaign.advertiser_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete this media"

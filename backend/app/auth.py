@@ -278,7 +278,8 @@ async def get_current_admin_user(
     Raises:
         HTTPException: If user is not an admin
     """
-    if current_user.role != models.UserRole.ADMIN:
+    role = str(current_user.role).lower() if current_user.role else ""
+    if role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
@@ -293,7 +294,8 @@ async def get_any_admin_user(
     Get current user and verify they have SOME admin role.
     Allows Super Admin and Country Admin.
     """
-    if current_user.role not in [models.UserRole.ADMIN, models.UserRole.COUNTRY_ADMIN]:
+    role = str(current_user.role).lower() if current_user.role else ""
+    if role not in ["admin", "country_admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Administrative access required"
@@ -308,7 +310,8 @@ async def get_current_pricing_admin_user(
     Get current user and verify they can manage pricing.
     Allows Super Admin and Country Admin.
     """
-    if current_user.role not in [models.UserRole.ADMIN, models.UserRole.COUNTRY_ADMIN]:
+    role = str(current_user.role).lower() if current_user.role else ""
+    if role not in ["admin", "country_admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Pricing administrative access required"
@@ -331,7 +334,8 @@ async def verify_geo_access(
         The verified country code.
     """
     # 1. Admins bypass geo-blocking
-    if current_user.role == models.UserRole.ADMIN:
+    role = str(current_user.role).lower() if current_user.role else ""
+    if role == "admin":
         return current_user.country or "US"
 
     # 2. Detect country from IP

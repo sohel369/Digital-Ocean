@@ -48,7 +48,8 @@ async def get_stats(
     """
     try:
         # If admin or country_admin
-        if current_user.role in [models.UserRole.ADMIN, models.UserRole.COUNTRY_ADMIN]:
+        role = str(current_user.role).lower() if current_user.role else ""
+        if role in ["admin", "country_admin"]:
             from sqlalchemy import func
             
             spend_query = db.query(func.sum(models.Campaign.calculated_price)).filter(
@@ -58,7 +59,7 @@ async def get_stats(
             clicks_query = db.query(func.sum(models.Campaign.clicks))
             
             # Filter by managed country if Country Admin
-            if current_user.role == models.UserRole.COUNTRY_ADMIN:
+            if role == "country_admin":
                 managed = (current_user.managed_country or "").upper()
                 if managed:
                     spend_query = spend_query.filter(models.Campaign.target_country == managed)
@@ -116,10 +117,11 @@ async def list_campaigns_compat(
         query = db.query(models.Campaign)
         
         # Role-based & Geo-based filtering
-        if current_user.role == models.UserRole.ADMIN:
+        role = str(current_user.role).lower() if current_user.role else ""
+        if role == "admin":
             # Super Admin sees everything
             pass
-        elif current_user.role == models.UserRole.COUNTRY_ADMIN:
+        elif role == "country_admin":
             # Country Admin sees campaigns in their managed country
             managed = (current_user.managed_country or "").upper()
             if managed:
@@ -223,7 +225,8 @@ async def create_campaign_compat(
         industry_val = data.get("industry") or meta.get("industry") or "General"
         
         # Enforce registered industry for non-admins
-        if current_user.role != models.UserRole.ADMIN and current_user.industry:
+        role = str(current_user.role).lower() if current_user.role else ""
+        if role != "admin" and current_user.industry:
              industry_val = current_user.industry
              
         coverage_val = data.get("coverage") or meta.get("coverage", "radius")

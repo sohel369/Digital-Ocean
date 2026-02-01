@@ -97,17 +97,17 @@ async def get_regions(country_code: str, db: Session = Depends(get_db)):
     if db_regions:
         return [
             Region(
-                name=r.state_name, 
-                code=r.state_code, 
+                name=r.state_name or r.state_code or code or "Unknown", 
+                code=r.state_code or "UNKNOWN", 
                 country_code=code,
-                population=r.population,
-                land_area=r.land_area_sq_km,
-                density_multiplier=r.density_multiplier,
+                population=r.population or 0,
+                land_area=r.land_area_sq_km or 0.0,
+                density_multiplier=r.density_multiplier or 1.0,
                 fips=r.fips,
                 density_mi=r.density_mi,
                 rank=r.rank,
                 population_percent=r.population_percent,
-                radius_areas_count=r.radius_areas_count
+                radius_areas_count=r.radius_areas_count or 1
             ) for r in db_regions
         ]
     

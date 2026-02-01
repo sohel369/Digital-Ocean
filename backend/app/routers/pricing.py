@@ -284,13 +284,13 @@ async def get_global_pricing_config(
     states_data = geo_query.all()
     states = [
         schemas.StateConfig(
-            name=row.state_name or row.country_code,
-            land_area=row.land_area_sq_km,
-            population=row.population,
-            radius_areas_count=row.radius_areas_count,
-            density_multiplier=row.density_multiplier,
-            state_code=row.state_code,
-            country_code=row.country_code
+            name=row.state_name or row.state_code or row.country_code or "Unknown",
+            land_area=row.land_area_sq_km or 0.0,
+            population=row.population or 0,
+            radius_areas_count=row.radius_areas_count or 1,
+            density_multiplier=row.density_multiplier or 1.0,
+            state_code=row.state_code or "UNKNOWN",
+            country_code=row.country_code or target_country
         )
         for row in states_data
     ]

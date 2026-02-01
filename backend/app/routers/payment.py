@@ -79,10 +79,17 @@ async def create_checkout_session(
         logger.error(f"❌ [SESSION] Campaign {campaign_id} not found")
         raise HTTPException(status_code=404, detail="Campaign not found")
     
-    # Check ownership
-    if current_user.role != models.UserRole.ADMIN and campaign.advertiser_id != current_user.id:
+    # Owner or Admin/CountryAdmin for the campaign's country
+    role = str(current_user.role).lower() if current_user.role else ""
+    is_admin = role == "admin"
+    is_country_admin = role == "country_admin" and campaign.target_country == current_user.managed_country
+    
+    if not (campaign.advertiser_id == current_user.id or is_admin or is_country_admin):
         logger.error(f"❌ [SESSION] Unauthorized access for user {current_user.id} on campaign {campaign_id}")
-        raise HTTPException(status_code=403, detail="Not authorized to pay for this campaign")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to pay for this campaign"
+        )
     
     # Check if campaign already has a successful payment
     existing_payment = db.query(models.PaymentTransaction).filter(

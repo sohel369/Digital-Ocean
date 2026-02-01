@@ -37,23 +37,18 @@ app = FastAPI(
     debug=settings.DEBUG
 )
 
-# Robust CORS Configuration for Railway Production
-cors_origins = [
-    settings.FRONTEND_URL,
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "https://digital-ocean-production-01ee.up.railway.app",  # Main Prod
-    "https://digital-ocean-production-01ee.up.railway.app/", # Main Prod Slash
-    "https://balanced-wholeness-production-ca00.up.railway.app" # Backend itself
-]
-
-# Add railway deployment URL to CORS just in case
-if os.environ.get("RAILWAY_STATIC_URL"):
-    cors_origins.append(f"https://{os.environ.get('RAILWAY_STATIC_URL')}")
-
+# ULTRA-ROBUST CORS Configuration
+# We will use allow_origin_regex to handle all possible railway and local scenarios
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o for o in cors_origins if o],
+    allow_origins=[
+        settings.FRONTEND_URL,
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://digital-ocean-production-01ee.up.railway.app",
+        "https://balanced-wholeness-production-ca00.up.railway.app"
+    ],
+    allow_origin_regex="https://.*\.railway\.app", # Critical for Railway subdomains
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -79,11 +74,13 @@ app.include_router(analytics.router, prefix="/api")
 app.include_router(debug.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(geo.router, prefix="/api")
-app.include_router(frontend_compat.router) # Now prefixing /api is inside it
+
+# Compatibility Router (Handles /api prefix internally)
+app.include_router(frontend_compat.router)
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy", "version": settings.APP_VERSION}
+    return {"status": "healthy", "version": settings.APP_VERSION, "db": str(engine.url.drivername)}
 
 @app.get("/api/admin/fix-db")
 async def fix_database():
@@ -95,28 +92,31 @@ async def fix_database():
             inspector = inspect(engine)
             def migrate(table, col, dtype):
                 try:
-                    if col not in [c['name'] for c in inspector.get_columns(table)]:
+                    cols = [c['name'] for c in inspector.get_columns(table)]
+                    if col not in cols:
                         logger.info(f"➕ Adding {table}.{col}...")
                         conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {dtype}"))
-                except: pass
+                except Exception as e:
+                    logger.warning(f"⚠️ Could not migrate {table}.{col}: {e}")
             
             # Critical migrations
-            for c, t in [("role", "VARCHAR(50)"), ("country", "VARCHAR(100)"), ("industry", "VARCHAR(255)"), ("managed_country", "VARCHAR(10)")]:
+            for c, t in [("role", "VARCHAR(50)"), ("country", "VARCHAR(100)"), ("industry", "VARCHAR(255)"), ("managed_country", "VARCHAR(10)"), ("last_login", "TIMESTAMP")]:
                 migrate("users", c, t)
-            for c, t in [("budget", "FLOAT DEFAULT 0"), ("headline", "VARCHAR(500)"), ("landing_page_url", "VARCHAR(500)"), ("ad_format", "VARCHAR(100)")]:
+            for c, t in [("budget", "FLOAT DEFAULT 0"), ("headline", "VARCHAR(500)"), ("landing_page_url", "VARCHAR(500)"), ("ad_format", "VARCHAR(100)"), ("reviewed_at", "TIMESTAMP")]:
                 migrate("campaigns", c, t)
             for c, t in [("radius_areas_count", "INTEGER DEFAULT 1"), ("fips", "INTEGER"), ("density_mi", "FLOAT")]:
                 migrate("geodata", c, t)
         
         return {"status": "success", "message": "Database migrations applied."}
     except Exception as e:
+        logger.error(f"❌ Migration failed: {e}")
         return {"status": "error", "detail": str(e)}
 
 @app.on_event("startup")
 async def startup_event():
-    logger.info("🚀 App starting (Ver 1.1.3 - Persistence fix)...")
+    logger.info(f"🚀 App starting (Ver {settings.APP_VERSION})...")
     try:
-        # 1. Initialize Tables (Non-destructive)
+        # 1. Initialize Tables
         init_db()
         
         # 2. Sync Admin User
@@ -143,7 +143,7 @@ async def startup_event():
             logger.info("✅ Admin state synchronized.")
         db.close()
     except Exception as e:
-        logger.warning(f"⚠️ Startup sync logic: {e}")
+        logger.warning(f"⚠️ Startup sequence warning: {e}")
     logger.info("✅ Startup sequence complete")
 
 if __name__ == "__main__":

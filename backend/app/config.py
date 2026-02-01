@@ -14,11 +14,18 @@ class Settings(BaseSettings):
     
     # Application
     APP_NAME: str = "Advertiser Dashboard API"
-    APP_VERSION: str = "1.1.0-fix-all"
+    APP_VERSION: str = "1.1.4-postgres-fix"
     DEBUG: bool = True
     
     # Database
-    DATABASE_URL: str = "sqlite:///./app.db"
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./app.db")
+    
+    @validator("DATABASE_URL", pre=True)
+    def fix_database_url(cls, v):
+        if v and v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql://", 1)
+        return v
+    
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 0
     

@@ -30,12 +30,44 @@ async def api_root():
     return {
         "message": "Advertiser Dashboard API - Compatibility Layer",
         "endpoints": [
+            "/api/login",
             "/api/stats",
             "/api/campaigns",
-            "/api/pricing/admin/config",
-            "/api/notifications"
+            "/api/pricing/admin/config"
         ]
     }
+
+@router.post("/login", response_model=schemas.Token)
+@router.post("/login/json", response_model=schemas.Token)
+async def compatibility_login(
+    user_credentials: schemas.UserLogin, 
+    db: Session = Depends(get_db)
+):
+    """
+    Direct login endpoint for frontend compatibility. 
+    Matches both /api/login and /api/login/json.
+    """
+    username = user_credentials.email
+    password = user_credentials.password
+    
+    user = auth.authenticate_user(db, username, password)
+    
+    if not user:
+        from fastapi import HTTPException, status
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Update last login
+    try:
+        user.last_login = datetime.utcnow()
+        db.commit()
+    except:
+        db.rollback()
+        
+    return auth.create_user_tokens(user)
 
 
 @router.get("/stats")

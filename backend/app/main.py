@@ -460,9 +460,16 @@ async def startup_event():
         logger.info("="*80)
 
         # COMPREHENSIVE SCHEMA MIGRATION (Ensures Railway DB matches local models)
-        # COMPREHENSIVE SCHEMA MIGRATION (Ensures Railway DB matches local models)
         logger.info("🔧 Starting Database Synchronization...")
         
+        # 0. Initialize missing tables first
+        try:
+            from .database import init_db, engine
+            init_db()
+            logger.info("✅ Database tables initialized (if not exists)")
+        except Exception as init_err:
+            logger.error(f"❌ Table Initialization Failed: {init_err}")
+
         # helper for individual column migrations
         def add_column_safely(table_name, col_name, col_type):
             try:
@@ -545,18 +552,6 @@ async def startup_event():
             ]
             for name, dtype in geodata_cols:
                 add_column_safely("geodata", name, dtype)
-
-            # 2c. Users table migrations
-            user_cols = [
-                ("managed_country", "VARCHAR(10)"),
-                ("industry", "VARCHAR(255)"),
-                ("profile_picture", "VARCHAR(500)"),
-                ("oauth_provider", "VARCHAR(50)"),
-                ("oauth_id", "VARCHAR(255)"),
-                ("last_login", "TIMESTAMP WITH TIME ZONE")
-            ]
-            for name, dtype in user_cols:
-                add_column_safely("users", name, dtype)
 
             # 3. Handle Notifications table correctly
             try:

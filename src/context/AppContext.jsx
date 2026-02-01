@@ -968,7 +968,14 @@ export const AppProvider = ({ children }) => {
             }
 
             if (!response.ok) {
-                throw new Error(responseData.error || responseData.detail || 'Failed to create campaign');
+                let errMsg = responseData.detail || responseData.error || 'Failed to create campaign';
+                if (Array.isArray(errMsg)) {
+                    errMsg = errMsg.map(e => {
+                        const field = e.loc ? e.loc[e.loc.length - 1] : 'Field';
+                        return `${field}: ${e.msg}`;
+                    }).join(', ');
+                }
+                throw new Error(errMsg);
             }
 
             toast.success('Campaign Created', { description: `"${campaign.name}" submitted for review.` });

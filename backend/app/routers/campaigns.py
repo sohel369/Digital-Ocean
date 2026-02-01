@@ -26,64 +26,85 @@ async def create_campaign(
 ):
     """
     Create a new advertising campaign.
-    
-    The pricing will be automatically calculated based on:
-    - Industry type
-    - Coverage area
-    - Campaign duration
-    - Geographic location (verified via IP)
     """
-    role = str(current_user.role).lower() if current_user.role else ""
-    if role != "admin":
-        campaign_data.target_country = verified_country
-    # Calculate end_date if duration is provided
-    if campaign_data.duration and not campaign_data.end_date:
-        campaign_data.end_date = campaign_data.start_date + relativedelta(months=campaign_data.duration)
-    elif not campaign_data.end_date:
-        # Fallback default if nothing provided (though schema validator should catch this)
-        campaign_data.end_date = campaign_data.start_date + relativedelta(months=1)
+    try:
+        from .. import models
+        from datetime import datetime
+        import logging
+        logger = logging.getLogger(__name__)
 
-    # Calculate campaign duration in days for pricing
-    duration_days = (campaign_data.end_date - campaign_data.start_date).days
-    
-    # Calculate pricing
-    pricing_result = pricing_engine.calculate_price(
-        industry_type=campaign_data.industry_type,
-        advert_type="display",  # Default advert type
-        coverage_type=campaign_data.coverage_type,
-        duration_days=duration_days,
-        target_postcode=campaign_data.target_postcode,
-        target_state=campaign_data.target_state,
-        target_country=campaign_data.target_country
-    )
-    
-    # Create campaign
-    target_status = campaign_data.status or models.CampaignStatus.PENDING_REVIEW
-    
-    new_campaign = models.Campaign(
-        advertiser_id=current_user.id,
-        name=campaign_data.name,
-        industry_type=campaign_data.industry_type,
-        start_date=campaign_data.start_date,
-        end_date=campaign_data.end_date,
-        budget=campaign_data.budget,
-        calculated_price=campaign_data.budget, # Trusting the frontend explicitly per user request "selected price will be cost no other"
-        status=target_status,
-        submitted_at=datetime.utcnow() if target_status == models.CampaignStatus.PENDING_REVIEW else None,
-        coverage_type=campaign_data.coverage_type,
-        coverage_area=pricing_result.breakdown['coverage_area_description'],
-        target_postcode=campaign_data.target_postcode,
-        target_state=campaign_data.target_state,
-        target_country=campaign_data.target_country,
-        description=campaign_data.description,
-        tags=campaign_data.tags
-    )
-    
-    db.add(new_campaign)
-    db.commit()
-    db.refresh(new_campaign)
-    
-    return new_campaign
+        role = str(current_user.role).lower() if current_user.role else ""
+        if role != "admin":
+            campaign_data.target_country = verified_country
+
+        # 1. Handle dates logic robustly
+        if campaign_data.duration and not campaign_data.end_date:
+            campaign_data.end_date = campaign_data.start_date + relativedelta(months=campaign_data.duration)
+        elif not campaign_data.end_date:
+            campaign_data.end_date = campaign_data.start_date + relativedelta(months=1)
+
+        # Ensure end_date is after start_date
+        duration_delta = campaign_data.end_date - campaign_data.start_date
+        duration_days = max(duration_delta.days, 1) # Minimum 1 day to avoid 0/negative division
+        
+        # 2. Calculate pricing with fallback
+        try:
+            pricing_result = pricing_engine.calculate_price(
+                industry_type=campaign_data.industry_type,
+                advert_type="display",
+                coverage_type=campaign_data.coverage_type,
+                duration_days=duration_days,
+                target_postcode=campaign_data.target_postcode,
+                target_state=campaign_data.target_state,
+                target_country=campaign_data.target_country
+            )
+            coverage_area_desc = pricing_result.breakdown.get('coverage_area_description', 'Specified Coverage Area')
+        except Exception as pe:
+            logger.error(f"⚠️ Pricing engine error: {pe}")
+            coverage_area_desc = f"{campaign_data.coverage_type} coverage"
+
+        # 3. Create campaign object
+        target_status = campaign_data.status or models.CampaignStatus.PENDING_REVIEW
+        
+        # Convert status string to enum if it's coming as string from Pydantic
+        if isinstance(target_status, str):
+            target_status = models.CampaignStatus(target_status.upper())
+
+        new_campaign = models.Campaign(
+            advertiser_id=current_user.id,
+            name=campaign_data.name,
+            industry_type=campaign_data.industry_type,
+            start_date=campaign_data.start_date,
+            end_date=campaign_data.end_date,
+            budget=campaign_data.budget,
+            calculated_price=campaign_data.budget, 
+            status=target_status,
+            submitted_at=datetime.utcnow() if target_status == models.CampaignStatus.PENDING_REVIEW else None,
+            coverage_type=campaign_data.coverage_type,
+            coverage_area=coverage_area_desc,
+            target_postcode=campaign_data.target_postcode,
+            target_state=campaign_data.target_state,
+            target_country=campaign_data.target_country,
+            description=campaign_data.description,
+            headline=campaign_data.headline,
+            landing_page_url=campaign_data.landing_page_url,
+            ad_format=campaign_data.ad_format,
+            tags=campaign_data.tags
+        )
+        
+        db.add(new_campaign)
+        db.commit()
+        db.refresh(new_campaign)
+        
+        return new_campaign
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"🔥 CRITICAL ERROR in create_campaign: {e}\n{error_trace}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Campaign creation failed: {str(e)}"
+        )
 
 
 @router.get("/list", response_model=List[schemas.CampaignResponse])

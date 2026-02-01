@@ -127,7 +127,7 @@ const AdminCampaigns = () => {
         if (isAdmin) {
             fetchPendingCampaigns();
         }
-    }, [user]);
+    }, [user?.role]); // Only re-run when role changes, not when entire user object updates
 
     const handleAction = async () => {
         if (!actionModal.campaign || !actionModal.action) return;

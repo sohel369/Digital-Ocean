@@ -197,18 +197,23 @@ const CampaignCreation = () => {
         }
 
         const config = {
-            id: id ? parseInt(id) : undefined,
             name: formData.name,
-            budget: parseFloat(formData.budget),
-            startDate: formData.startDate,
-            endDate: formData.endDate,
-            // If it's a draft, keep it as draft. If it was rejected and we're submitting, set to pending_review.
-            status: isDraft ? 'draft' : 'pending_review',
+            industry_type: formData.industry,
+            start_date: formData.startDate,
+            end_date: formData.endDate || null,
+            duration: parseInt(formData.duration || '3'),
+            budget: parseFloat(String(formData.budget).replace(/,/g, '')),
+            coverage_type: formData.coverageArea === 'radius' ? '30-mile' : (formData.coverageArea === 'national' ? 'country' : 'state'),
+            target_state: formData.coverageArea === 'state' ? formData.targetState : null,
+            target_postcode: formData.coverageArea === 'radius' ? formData.postcode : null,
+            target_country: country,
+            status: isDraft ? 'DRAFT' : 'PENDING_REVIEW',
             ad_format: formData.format,
             headline: formData.headline,
             description: formData.description,
-            image: formData.image,
             landing_page_url: formData.landingPageUrl,
+            tags: [],
+            // We keep these for frontend state persistence if needed
             meta: {
                 industry: formData.industry,
                 coverage: formData.coverageArea,
@@ -218,6 +223,15 @@ const CampaignCreation = () => {
                 radius: formData.radius
             }
         };
+
+        // If editing, we add the ID for the AppContext update helper, 
+        // but note that the actual request will use it from the URL.
+        if (id) {
+            config.id = parseInt(id);
+        }
+
+        // Image handled as part of creative upload usually, but if the form has it:
+        if (formData.image) config.image_base64 = formData.image;
 
         try {
             let savedCampaign;

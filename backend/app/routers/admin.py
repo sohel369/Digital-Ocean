@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional
 import logging
+logger = logging.getLogger(__name__)
 
 from ..database import get_db
 from .. import models, schemas, auth
@@ -34,40 +35,40 @@ async def get_all_users(
     query = db.query(models.User)
     
     # If Country Admin, only show users from their managed country
-    role = str(current_user.role).lower() if current_user.role else ""
-    if role == "country_admin":
+    user_role = str(current_user.role).lower() if current_user.role else ""
+    if user_role == "country_admin":
         if current_user.managed_country:
             query = query.filter(models.User.country == current_user.managed_country)
         else:
-            # If they don't have a managed country assigned, they see no one
             return []
 
+    # Apply filter if provided in query parameter
     if role:
         try:
-            role_enum = models.UserRole(role)
+            # Check if role is valid enum value
+            role_enum = models.UserRole(role.lower())
             query = query.filter(models.User.role == role_enum)
-        except ValueError:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid role: {role}"
+        except (ValueError, AttributeError):
+            # If invalid role requested, just don't filter or return error
+            pass
+    
+    try:
+        # Fetch users
+        users = query.order_by(models.User.created_at.desc()).offset(skip).limit(limit).all()
+        
+        # Log success
+        logger.info(f"✅ Fetched {len(users)} users for admin {current_user.email}")
+        
+        return users
+    except Exception as e:
+        logger.error(f"❌ User Directory Error: {str(e)}")
+        # If columns are missing, this will fail. Suggest running fix-db.
+        if "column" in str(e).lower() or "no such column" in str(e).lower():
+             raise HTTPException(
+                status_code=500,
+                detail=f"Database schema mismatch. Please visit /api/admin/fix-db to update tables. Error: {str(e)}"
             )
-    
-    users = query.order_by(models.User.created_at.desc()).offset(skip).limit(limit).all()
-    
-    # Debug: Check for potential serialization issues
-    result = []
-    for u in users:
-        try:
-            # Manually trigger validation for each user to catch errors
-            schemas.UserResponse.from_orm(u)
-            result.append(u)
-        except Exception as e:
-            logging.getLogger(__name__).error(f"❌ User Serialization failed for ID {u.id}: {e}")
-            # Still append it, but the error model might catch it. 
-            # Or skip it to let the rest load
-            continue
-            
-    return result
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/users/count")
@@ -82,18 +83,19 @@ async def get_user_count(
     query = db.query(func.count(models.User.id))
     
     # If Country Admin, only count users from their managed country
-    role = str(current_user.role).lower() if current_user.role else ""
-    if role == "country_admin":
+    user_role = str(current_user.role).lower() if current_user.role else ""
+    if user_role == "country_admin":
         if current_user.managed_country:
             query = query.filter(models.User.country == current_user.managed_country)
         else:
             return {"count": 0}
 
+    # Apply filter if provided
     if role:
         try:
-            role_enum = models.UserRole(role)
+            role_enum = models.UserRole(role.lower())
             query = query.filter(models.User.role == role_enum)
-        except ValueError:
+        except (ValueError, AttributeError):
             pass
             
     count = query.scalar()

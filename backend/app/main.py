@@ -262,6 +262,33 @@ async def debug_db():
             "traceback": traceback.format_exc()
         }
 
+@app.get("/api/debug/schema", tags=["Debug"])
+async def debug_schema():
+    """Diagnostic: List all columns in the campaigns table."""
+    from sqlalchemy import inspect
+    try:
+        inspector = inspect(engine)
+        columns = inspector.get_columns('campaigns')
+        column_list = [{"name": c['name'], "type": str(c['type'])} for c in columns]
+        
+        # Also check enums if postgres
+        enums = {}
+        if engine.name == 'postgresql':
+            from sqlalchemy import text
+            with engine.connect() as conn:
+                result = conn.execute(text("SELECT t.typname, e.enumlabel FROM pg_type t JOIN pg_enum e ON t.oid = e.enumtypid"))
+                for row in result:
+                    if row[0] not in enums: enums[row[0]] = []
+                    enums[row[0]].append(row[1])
+        
+        return {
+            "table": "campaigns",
+            "columns": column_list,
+            "enums": enums
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/api/debug/env", tags=["Debug"])
 async def debug_env():
     import os
@@ -491,7 +518,8 @@ async def startup_event():
                 ("clicks", "INTEGER DEFAULT 0"),
                 ("target_postcode", "VARCHAR(20)"),
                 ("target_state", "VARCHAR(100)"),
-                ("target_country", "VARCHAR(100)")
+                ("target_country", "VARCHAR(100)"),
+                ("budget", "FLOAT DEFAULT 0")
             ]
             for name, dtype in campaign_cols:
                 add_column_safely("campaigns", name, dtype)
@@ -534,6 +562,15 @@ async def startup_event():
                             logger.info(f"💾 Added Enum Value: {val} to campaignstatus type")
                         except Exception:
                             # Most likely already exists, ignore
+                            pass
+                    
+                    # 4b. Sync CoverageType Enum
+                    coverage_values = ["30-mile", "state", "country"]
+                    for val in coverage_values:
+                        try:
+                            conn.execute(text(f"ALTER TYPE coveragetype ADD VALUE '{val}'"))
+                            logger.info(f"💾 Added Enum Value: {val} to coveragetype type")
+                        except Exception:
                             pass
             except Exception as enum_err:
                 logger.warning(f"⚠️ Enum synchronization skipped: {enum_err}")
@@ -724,6 +761,25 @@ async def startup_event():
                             ))
                     db.commit()
                     logger.info("✅ UK Geodata synchronized")
+
+                # Seed Bangladesh data
+                bd_count = db.query(models.GeoData).filter(models.GeoData.country_code == "BD").count()
+                if bd_count < 4:
+                    logger.info("📦 Seeding Bangladesh Geodata...")
+                    bd_regions = [
+                        ("Dhaka", "BD", "DHK", 1463, 21000000, 5.0),
+                        ("Chittagong", "BD", "CTG", 168, 9000000, 3.5),
+                        ("Sylhet", "BD", "SYL", 12000, 4000000, 2.0),
+                        ("Rajshahi", "BD", "RAJ", 18000, 6000000, 1.8),
+                    ]
+                    for name, country, code, area, pop, dens in bd_regions:
+                        if not db.query(models.GeoData).filter(models.GeoData.state_code == code, models.GeoData.country_code == "BD").first():
+                            db.add(models.GeoData(
+                                state_name=name, country_code=country, state_code=code, 
+                                land_area_sq_km=area, population=pop, density_multiplier=dens
+                            ))
+                    db.commit()
+                    logger.info("✅ Bangladesh Geodata synchronized")
                 
                 # Check for Pricing Matrix Synchronization
                 if db.query(models.PricingMatrix).count() < 10:

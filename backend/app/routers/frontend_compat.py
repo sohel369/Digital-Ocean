@@ -305,14 +305,27 @@ async def create_campaign_compat(
             else:
                 target_status = models.CampaignStatus.PENDING_REVIEW
 
+            # Robust numeric parsing for budget (handle strings with commas)
+            try:
+                raw_budget = data.get("budget", 0)
+                if isinstance(raw_budget, str):
+                    # Remove currency symbols and commas
+                    clean_budget = raw_budget.replace("$", "").replace(",", "").strip()
+                    budget_val = float(clean_budget)
+                else:
+                    budget_val = float(raw_budget)
+            except (ValueError, TypeError):
+                logger.warning(f"⚠️ Could not parse budget '{data.get('budget')}', defaulting to 0")
+                budget_val = 0.0
+
             new_campaign = models.Campaign(
                 advertiser_id=user.id,
                 name=data.get("name", "Untitled Campaign"),
                 industry_type=industry_val,
                 start_date=s_date,
                 end_date=e_date,
-                budget=float(data.get("budget", 0)),
-                calculated_price=calculated_price,
+                budget=budget_val,
+                calculated_price=calculated_price or budget_val, # Fallback
                 status=target_status,
                 submitted_at=dt.utcnow() if target_status == models.CampaignStatus.PENDING_REVIEW else None,
                 coverage_type=coverage_type,
@@ -334,13 +347,17 @@ async def create_campaign_compat(
             db.rollback()
             logger.error(f"❌ DB Save failed: {str(dbe)}")
             import traceback
-            logger.error(f"Traceback: {traceback.format_exc()}")
+            error_trace = traceback.format_exc()
+            logger.error(f"Traceback: {error_trace}")
+            
+            # Send the actual error message back so we can see it in frontend console
             return JSONResponse(
                 status_code=500, 
                 content={
                     "error": "Database error", 
                     "detail": str(dbe),
-                    "type": type(dbe).__name__
+                    "type": type(dbe).__name__,
+                    "trace": error_trace if settings.DEBUG else "Check logs"
                 }
             )
         

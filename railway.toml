@@ -3,9 +3,9 @@ builder = "dockerfile"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "sh -c 'cd backend && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}'"
+startCommand = "/opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --app-dir backend"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
-# Deployment version: 2.4.0 - Simplified startCommand for instant healthchecks
+# Deployment version: 2.5.0 - Using absolute uvicorn path and --app-dir
 

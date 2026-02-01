@@ -1,45 +1,38 @@
-"""
-FastAPI Application - Advertiser Dashboard Backend
-Main application entry point with router configuration and middleware.
-"""
+# Configure logging immediately at the top
 import logging
-import time
 import sys
 import os
+import time
 import asyncio
 
-from .config import settings
-
-# Configure logging
 logging.basicConfig(
-    level=getattr(logging, settings.LOG_LEVEL, logging.INFO),
+    level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     handlers=[logging.StreamHandler(sys.stdout)]
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("startup")
+logger.info("🔥 [BOOT] Backend process starting...")
+print("🔥 [STDOUT] Backend process starting...", flush=True)
 
-from fastapi import FastAPI, Request, status, Depends
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-# Create FastAPI instance
-app = FastAPI(
-    title=settings.APP_NAME,
-    version=settings.APP_VERSION,
-    debug=settings.DEBUG
-)
+# Create FastAPI instance with early health check
+app = FastAPI(title="Advertiser Dashboard API")
 
-# --- 1. HEALTH CHECK (ULTRA-FAST & FIRST) ---
 @app.get("/api/health")
 @app.get("/")
 async def health_check():
-    """Ultra-simple health check for Railway. Must be registered first."""
-    return {"status": "healthy", "version": settings.APP_VERSION, "timestamp": time.time()}
+    """Ultra-fast health check to satisfy Railway immediately."""
+    return {"status": "healthy", "timestamp": time.time()}
 
-# --- 2. MIDDLEWARE ---
+logger.info("✅ [BOOT] Health check route registered.")
+
+# --- MIDDLEWARE ---
+from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Robust for Railway stability
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -57,29 +50,35 @@ async def log_requests(request: Request, call_next):
             content={"error": "Internal server error", "detail": str(exc)}
         )
 
-# --- 3. LATE IMPORTS TO AVOID BLOCKING STARTUP ---
-from .database import engine, Base, init_db, SessionLocal
-from . import models, auth
+from .config import settings
 
-# Import routers
-from .routers import (
-    auth as auth_router, campaigns, media, pricing,
-    analytics, admin, payment, frontend_compat,
-    geo, campaign_approval, debug
-)
-
-# --- 4. ROUTER INCLUSIONS ---
-app.include_router(auth_router.router, prefix="/api")
-app.include_router(campaigns.router, prefix="/api")
-app.include_router(media.router, prefix="/api")
-app.include_router(pricing.router, prefix="/api")
-app.include_router(payment.router, prefix="/api")
-app.include_router(analytics.router, prefix="/api")
-app.include_router(debug.router, prefix="/api")
-app.include_router(admin.router, prefix="/api")
-app.include_router(geo.router, prefix="/api")
-app.include_router(campaign_approval.router, prefix="/api")
-app.include_router(frontend_compat.router) # Prefix handled internally in frontend_compat (/api)
+# --- 3. LATE IMPORTS ---
+try:
+    from .database import engine, Base, init_db, SessionLocal
+    from . import models, auth
+    
+    # Import routers
+    from .routers import (
+        auth as auth_router, campaigns, media, pricing,
+        analytics, admin, payment, frontend_compat,
+        geo, campaign_approval, debug
+    )
+    
+    # Include Routers
+    app.include_router(auth_router.router, prefix="/api")
+    app.include_router(campaigns.router, prefix="/api")
+    app.include_router(media.router, prefix="/api")
+    app.include_router(pricing.router, prefix="/api")
+    app.include_router(payment.router, prefix="/api")
+    app.include_router(analytics.router, prefix="/api")
+    app.include_router(debug.router, prefix="/api")
+    app.include_router(admin.router, prefix="/api")
+    app.include_router(geo.router, prefix="/api")
+    app.include_router(campaign_approval.router, prefix="/api")
+    app.include_router(frontend_compat.router)
+    logger.info("✅ [BOOT] All routers included.")
+except Exception as e:
+    logger.error(f"❌ [CRASH] Failed to load modules/routers: {e}", exc_info=True)
 
 # --- 5. EMERGENCY ENDPOINTS ---
 @app.get("/api/admin/fix-db")

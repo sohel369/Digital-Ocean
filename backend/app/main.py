@@ -543,6 +543,18 @@ async def startup_event():
             for name, dtype in geodata_cols:
                 add_column_safely("geodata", name, dtype)
 
+            # 2c. Users table migrations
+            user_cols = [
+                ("managed_country", "VARCHAR(10)"),
+                ("industry", "VARCHAR(255)"),
+                ("profile_picture", "VARCHAR(500)"),
+                ("oauth_provider", "VARCHAR(50)"),
+                ("oauth_id", "VARCHAR(255)"),
+                ("last_login", "TIMESTAMP WITH TIME ZONE")
+            ]
+            for name, dtype in user_cols:
+                add_column_safely("users", name, dtype)
+
             # 3. Handle Notifications table correctly
             try:
                 from sqlalchemy import text

@@ -3,9 +3,9 @@ builder = "dockerfile"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "/opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --app-dir backend"
+startCommand = "sh -c 'PYTHONPATH=$PYTHONPATH:$(pwd)/backend /opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --app-dir backend --log-level debug'"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
-# Deployment version: 2.5.0 - Using absolute uvicorn path and --app-dir
+# Final Version: 3.0.0 - Enhanced path and port handling
 

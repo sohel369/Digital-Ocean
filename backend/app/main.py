@@ -38,7 +38,6 @@ app = FastAPI(
 )
 
 # ULTRA-ROBUST CORS Configuration
-# We will use allow_origin_regex to handle all possible railway and local scenarios
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -48,7 +47,7 @@ app.add_middleware(
         "https://digital-ocean-production-01ee.up.railway.app",
         "https://balanced-wholeness-production-ca00.up.railway.app"
     ],
-    allow_origin_regex="https://.*\.railway\.app", # Critical for Railway subdomains
+    allow_origin_regex=r"https://.*\.railway\.app", # Using raw string for regex
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -74,6 +73,7 @@ app.include_router(analytics.router, prefix="/api")
 app.include_router(debug.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(geo.router, prefix="/api")
+app.include_router(campaign_approval.router, prefix="/api") # Added back
 
 # Compatibility Router (Handles /api prefix internally)
 app.include_router(frontend_compat.router)

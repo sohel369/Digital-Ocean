@@ -4,7 +4,7 @@ Loads environment variables and provides typed configuration.
 """
 from pydantic_settings import BaseSettings
 from pydantic import field_validator
-from typing import List, Any, Union
+from typing import List, Any, Union, Optional
 import os
 import json
 
@@ -14,15 +14,16 @@ class Settings(BaseSettings):
     
     # Application
     APP_NAME: str = "Advertiser Dashboard API"
-    APP_VERSION: str = "1.1.4-postgres-fix"
+    APP_VERSION: str = "1.1.5-final-fix"
     DEBUG: bool = True
     
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./app.db")
     
-    @validator("DATABASE_URL", pre=True)
-    def fix_database_url(cls, v):
-        if v and v.startswith("postgres://"):
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def fix_database_url(cls, v: Any) -> Any:
+        if isinstance(v, str) and v.startswith("postgres://"):
             return v.replace("postgres://", "postgresql://", 1)
         return v
     
@@ -36,32 +37,28 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.environ.get("REFRESH_TOKEN_EXPIRE_DAYS", "30"))  # 30 days default
     
     # OAuth (Optional)
-    GOOGLE_CLIENT_ID: str = ""
-    GOOGLE_CLIENT_SECRET: str = ""
-    GOOGLE_REDIRECT_URI: str = ""
+    GOOGLE_CLIENT_ID: str = os.environ.get("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_SECRET: str = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+    GOOGLE_REDIRECT_URI: str = os.environ.get("GOOGLE_REDIRECT_URI", "")
     
     # File Upload
     UPLOAD_DIR: str = "./uploads"
     MAX_FILE_SIZE: int = 10485760  # 10MB
-    ALLOWED_EXTENSIONS: str = "jpg,jpeg,png,gif,mp4,mov,avi,pdf"
+    ALLOWED_EXTENSIONS: str = "jpg,jpeg,png,mp4,csv"
     
     # AWS S3 (Optional)
-    AWS_ACCESS_KEY_ID: str = ""
-    AWS_SECRET_ACCESS_KEY: str = ""
-    AWS_REGION: str = "us-east-1"
-    S3_BUCKET_NAME: str = ""
-    USE_S3: bool = False
+    AWS_ACCESS_KEY_ID: str = os.environ.get("AWS_ACCESS_KEY_ID", "")
+    AWS_SECRET_ACCESS_KEY: str = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
+    AWS_S3_BUCKET: str = os.environ.get("AWS_S3_BUCKET", "")
+    AWS_REGION: str = os.environ.get("AWS_REGION", "us-east-1")
     
     # Stripe (Optional)
-    STRIPE_SECRET_KEY: str = ""
-    STRIPE_PUBLISHABLE_KEY: str = ""
-    STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_API_KEY: str = os.environ.get("STRIPE_API_KEY", "")
+    STRIPE_WEBHOOK_SECRET: str = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
     
-    # CORS - Default to allow all origins for production
-    CORS_ORIGINS: Any = ["*"]
-    
-    # Security
-    RATE_LIMIT_PER_MINUTE: int = 100
+    # CORS
+    BACKEND_URL: str = os.environ.get("BACKEND_URL", "http://localhost:8000")
+    FRONTEND_URL: str = os.environ.get("FRONTEND_URL", "http://localhost:5173")
     
     # Logging
     LOG_LEVEL: str = "INFO"
@@ -70,56 +67,32 @@ class Settings(BaseSettings):
     SMTP_HOST: str = os.environ.get("SMTP_HOST", "")
     SMTP_PORT: int = int(os.environ.get("SMTP_PORT", "587"))
     SMTP_USER: str = os.environ.get("SMTP_USER", "")
-    SMTP_PASSWORD: str = os.environ.get("SMTP_PASSWORD", "")
-    FROM_EMAIL: str = os.environ.get("FROM_EMAIL", "noreply@adplatform.com")
-    FRONTEND_URL: str = os.environ.get("FRONTEND_URL", "http://localhost:5173")
-    
+    SMTP_PASS: str = os.environ.get("SMTP_PASS", "")
+    EMAILS_FROM_EMAIL: str = os.environ.get("EMAILS_FROM_EMAIL", "support@adplatform.com")
+    EMAILS_FROM_NAME: str = os.environ.get("EMAILS_FROM_NAME", "AdPlatform Support")
+
     class Config:
         env_file = ".env"
         case_sensitive = True
-        extra = "ignore"
+        extra = "allow"
 
-    @field_validator("CORS_ORIGINS", mode="before")
-    @classmethod
-    def assemble_cors_origins(cls, v: Any) -> List[str]:
-        if isinstance(v, str):
-            if v.startswith("[") and v.endswith("]"):
-                try:
-                    return json.loads(v)
-                except:
-                    # If JSON parsing fails, treat it as a raw string and split
-                    v = v.strip("[]").replace("'", "").replace('"', "")
-            
-            if v == "*" or v == "":
-                return ["*"]
-            
-            return [i.strip() for i in v.split(",") if i.strip()]
-        elif isinstance(v, list):
-            return v
-        return ["*"] # Fallback to allow all
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # Fix for SQLAlchemy requiring postgresql:// instead of postgres://
-        if self.DATABASE_URL and self.DATABASE_URL.startswith("postgres://"):
-            self.DATABASE_URL = self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    @property
+    def cors_origins_list(self) -> List[str]:
+        """Parse CORS origins from string or return defaults."""
+        origins = [self.FRONTEND_URL, "http://localhost:5173", "http://localhost:3000"]
+        return [o for o in origins if o]
 
     @property
     def allowed_extensions_list(self) -> List[str]:
         """Get allowed file extensions as a list."""
         return [ext.strip() for ext in self.ALLOWED_EXTENSIONS.split(",")]
 
-
-# Global settings instance
+# Create settings instance
 settings = Settings()
 
 # Ensure upload directory exists
-os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-
-# Compatibility warning
-if "postgres://" in settings.DATABASE_URL:
-    settings.DATABASE_URL = settings.DATABASE_URL.replace("postgres://", "postgresql://")
-
-if settings.DATABASE_URL.startswith("sqlite"):
-    print("⚠️  WARNING: Running with SQLite database. This is not recommended for production on Railway.")
-
+if not os.path.exists(settings.UPLOAD_DIR):
+    try:
+        os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    except Exception as e:
+        print(f"Warning: Could not create upload directory {settings.UPLOAD_DIR}: {e}")

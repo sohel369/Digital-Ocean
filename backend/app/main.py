@@ -69,9 +69,6 @@ async def log_requests(request: Request, call_next):
         logger.error(f"🔥 [CRASH] {str(exc)}", exc_info=True)
         return JSONResponse(status_code=500, content={"error": "Internal server error", "detail": str(exc)})
 
-# Routers - IMPORTANT: frontend_compat must be at ROOT because it carries its own /api prefix
-app.include_router(frontend_compat.router)
-
 # Standard Routers
 app.include_router(auth_router.router, prefix="/api")
 app.include_router(campaigns.router, prefix="/api")
@@ -82,7 +79,7 @@ app.include_router(analytics.router, prefix="/api")
 app.include_router(debug.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(geo.router, prefix="/api")
-app.include_router(campaign_approval.router, prefix="/api")
+app.include_router(frontend_compat.router) # Now prefixing /api is inside it
 
 @app.get("/api/health")
 async def health_check():
@@ -117,31 +114,36 @@ async def fix_database():
 
 @app.on_event("startup")
 async def startup_event():
-    logger.info("🚀 App starting (Ver 1.1.1)...")
+    logger.info("🚀 App starting (Ver 1.1.3 - Persistence fix)...")
     try:
+        # 1. Initialize Tables (Non-destructive)
+        init_db()
+        
+        # 2. Sync Admin User
         db = SessionLocal()
-        # Find admin by case-insensitive email
         from sqlalchemy import func
-        admin = db.query(models.User).filter(func.lower(models.User.email) == "admin@adplatform.com").first()
+        admin_email = "admin@adplatform.com"
+        admin = db.query(models.User).filter(func.lower(models.User.email) == admin_email.lower()).first()
+        
         if not admin:
-            logger.info("📦 Creating default admin account...")
+            logger.info(f"📦 Creating default admin account: {admin_email}")
             new_admin = models.User(
                 name="System Admin", 
-                email="admin@adplatform.com",
+                email=admin_email,
                 password_hash=auth.get_password_hash("admin123"),
                 role="admin"
             )
             db.add(new_admin)
             db.commit()
-            logger.info("✅ Default admin created (admin@adplatform.com / admin123)")
+            logger.info("✅ Default admin created.")
         else:
-            # Ensure role is 'admin' even if it was something else
-            if str(admin.role).lower() != "admin":
-                admin.role = "admin"
-                db.commit()
+            # Re-verify critical fields
+            admin.role = "admin"
+            db.commit()
+            logger.info("✅ Admin state synchronized.")
         db.close()
     except Exception as e:
-        logger.warning(f"⚠️ Startup admin sync skipped: {e}")
+        logger.warning(f"⚠️ Startup sync logic: {e}")
     logger.info("✅ Startup sequence complete")
 
 if __name__ == "__main__":

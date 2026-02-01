@@ -19,8 +19,15 @@ class UserRole(str, Enum):
     @classmethod
     def _missing_(cls, value):
         if isinstance(value, str):
+            v_lower = value.lower().replace(" ", "")
+            if v_lower in ["admin", "superadmin"]:
+                return cls.ADMIN
+            if v_lower in ["countryadmin"]:
+                return cls.COUNTRY_ADMIN
+            if v_lower in ["advertiser"]:
+                return cls.ADVERTISER
             for member in cls:
-                if member.value == value.lower():
+                if member.value == v_lower:
                     return member
         return None
 
@@ -109,9 +116,14 @@ class UserResponse(BaseModel):
     
     @validator('role', pre=True)
     def normalize_role(cls, v):
+        if v is None:
+            return UserRole.ADVERTISER
         if isinstance(v, str):
-            return v.lower()
-        if hasattr(v, 'name'): # If it's an enum object, return its value
+            v_low = v.lower()
+            # Try to match enum
+            try: return UserRole(v_low)
+            except: return UserRole.ADVERTISER
+        if hasattr(v, 'name'):
             return v.value.lower()
         return v
     country: Optional[str] = "US"
@@ -347,10 +359,30 @@ class CampaignAnalytics(BaseModel):
 class IndustryConfig(BaseModel):
     name: str
     multiplier: float
+    
+    @validator('multiplier', pre=True)
+    def clean_multiplier(cls, v):
+        if isinstance(v, str):
+            try:
+                # Remove any %, commas, etc.
+                clean_v = v.replace('%', '').replace(',', '').strip()
+                return float(clean_v)
+            except: return 1.0
+        return v
 
 class AdTypeConfig(BaseModel):
     name: str
     base_rate: float
+    
+    @validator('base_rate', pre=True)
+    def clean_base_rate(cls, v):
+        if isinstance(v, str):
+            try:
+                # Remove currency symbols and commas
+                clean_v = v.replace('$', '').replace(',', '').strip()
+                return float(clean_v)
+            except: return 100.0
+        return v
 
 class StateConfig(BaseModel):
     name: str
@@ -365,9 +397,43 @@ class StateConfig(BaseModel):
     rank: Optional[int] = None
     population_percent: Optional[float] = None
 
+    @validator('land_area', 'density_multiplier', 'density_mi', 'population_percent', pre=True)
+    def clean_floats(cls, v):
+        if v == "" or v is None: return 0.0
+        if isinstance(v, str):
+            try:
+                return float(v.replace(',', '').strip())
+            except: return 0.0
+        return v
+
+    @validator('population', 'radius_areas_count', 'fips', 'rank', pre=True)
+    def clean_ints(cls, v):
+        if v == "" or v is None: return 0
+        if isinstance(v, str):
+            try:
+                # Handle cases like "1,000,000"
+                clean_v = "".join(filter(str.isdigit, v))
+                return int(clean_v) if clean_v else 0
+            except: return 0
+        return v
+
 class DiscountConfig(BaseModel):
     state: float = 0.15
     national: float = 0.30
+    
+    @validator('state', 'national', pre=True)
+    def clean_discounts(cls, v):
+        if v == "" or v is None: return 0.0
+        if isinstance(v, str):
+            try:
+                val = float(v.replace('%', '').replace(',', '').strip())
+                # If they sent "15" instead of "0.15", convert to decimal
+                if val > 1.0: return val / 100.0
+                return val
+            except: return 0.0
+        if isinstance(v, (int, float)) and v > 1.0:
+            return v / 100.0
+        return v
 
 class GlobalPricingConfig(BaseModel):
     industries: List[IndustryConfig]

@@ -150,19 +150,31 @@ async def update_user(
         )
     
     # Update fields
-    update_data = user_update.dict(exclude_unset=True)
-    for field, value in update_data.items():
-        # Ensure role is always persisted as its lowercase value
-        if field == 'role' and value:
-            role_val = value.value if hasattr(value, 'value') else str(value).lower()
-            setattr(user, field, role_val)
-        else:
-            setattr(user, field, value)
-    
-    db.commit()
-    db.refresh(user)
-    
-    return user
+    try:
+        update_data = user_update.dict(exclude_unset=True)
+        for field, value in update_data.items():
+            if field == 'role' and value:
+                # Ensure we get the string value of the role
+                role_val = value.value if hasattr(value, 'value') else str(value).lower()
+                # Final safeguard mapping
+                if "admin" in role_val and "country" not in role_val:
+                    role_val = "admin"
+                setattr(user, field, role_val)
+            elif field == 'role' and value is None:
+                # Never allow role to be set to null
+                logger.warning(f"Attempted to set user {user.id}'s role to null by admin {current_user.email}. Ignoring.")
+                continue
+            else:
+                setattr(user, field, value)
+        
+        db.commit()
+        db.refresh(user)
+        logger.info(f"✅ User {user.email} (ID: {user.id}) updated by admin {current_user.email} (ID: {current_user.id})")
+        return user
+    except Exception as e:
+        db.rollback()
+        logger.error(f"❌ User Update Error for user {user_id} by admin {current_user.email}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.delete("/users/{user_id}", response_model=schemas.MessageResponse)

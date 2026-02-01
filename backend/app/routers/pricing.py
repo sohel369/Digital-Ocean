@@ -436,11 +436,15 @@ async def save_global_pricing_config(
             "national_discount": config.discounts.national
         }, synchronize_session=False)
         
-        # 4. Update Geo Data / Density Multipliers
+        # 4. Update Geo Data / Density Multipliers efficiently
+        # Pre-fetch all geo data to avoid N+1 queries
+        all_geo = db.query(models.GeoData).all()
+        geo_map = {g.state_name: g for g in all_geo if g.state_name}
+        
         for state in config.states:
-            existing_geo = db.query(models.GeoData).filter(
-                models.GeoData.state_name == state.name
-            ).first()
+            if not state.name: continue
+            
+            existing_geo = geo_map.get(state.name)
             
             if existing_geo:
                 existing_geo.density_multiplier = state.density_multiplier
@@ -448,12 +452,13 @@ async def save_global_pricing_config(
                 existing_geo.radius_areas_count = state.radius_areas_count
                 existing_geo.land_area_sq_km = state.land_area
                 existing_geo.state_code = state.state_code
-                existing_geo.country_code = state.country_code
+                # Ensure country code is set correctly
+                existing_geo.country_code = state.country_code or target_country
             else:
                 new_geo = models.GeoData(
                     state_name=state.name,
-                    country_code=state.country_code,
-                    state_code=state.state_code,
+                    country_code=state.country_code or target_country,
+                    state_code=state.state_code or "UNK",
                     land_area_sq_km=state.land_area,
                     population=state.population,
                     radius_areas_count=state.radius_areas_count,

@@ -102,8 +102,8 @@ async def login(
     except Exception as e:
         db.rollback()
         # Log error but don't fail authentication
-        from ..main import logger
-        logger.warning(f"⚠️ Failed to update last_login for {user.email}: {e}")
+        import logging
+        logging.getLogger(__name__).warning(f"⚠️ Failed to update last_login for {user.email}: {e}")
     
     # Generate tokens
     tokens = auth.create_user_tokens(user)
@@ -135,8 +135,8 @@ async def login_json(user_credentials: schemas.UserLogin, db: Session = Depends(
     except Exception as e:
         db.rollback()
         # Log error but don't fail authentication
-        from ..main import logger
-        logger.warning(f"⚠️ Failed to update last_login for {user.email}: {e}")
+        import logging
+        logging.getLogger(__name__).warning(f"⚠️ Failed to update last_login for {user.email}: {e}")
     
     # Generate tokens
     tokens = auth.create_user_tokens(user)

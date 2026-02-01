@@ -27,5 +27,5 @@ EXPOSE 8000
 
 # Health check managed by railway.toml
 
-# Start command
-CMD ["sh", "-c", "cd backend && python scripts/init_db.py && /opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Start command - Direct uvicorn without blocking init script
+CMD ["/opt/venv/bin/uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]

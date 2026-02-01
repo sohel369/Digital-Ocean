@@ -353,6 +353,7 @@ async def reset_db_state(db: Session = Depends(get_db)):
         # 2. Ensure admin
         admin = db.query(models.User).filter(models.User.email == "admin@adplatform.com").first()
         if not admin:
+            logger.info("🛠️ Creating default system admin...")
             admin = models.User(
                 name="System Admin", email="admin@adplatform.com",
                 password_hash=auth.get_password_hash("admin123"),
@@ -360,8 +361,10 @@ async def reset_db_state(db: Session = Depends(get_db)):
             )
             db.add(admin)
         else:
-            admin.role = "admin"
-            admin.password_hash = auth.get_password_hash("admin123")
+            # ONLY update if role is missing or needs correction, but DO NOT touch password
+            if not admin.role or admin.role == "":
+                admin.role = "admin"
+            logger.info(f"✅ Admin account found: {admin.email}")
         
         db.commit()
         return {"status": "success", "message": "Database schema updated (roles converted to string) and admin synced."}

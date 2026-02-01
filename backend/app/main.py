@@ -3,7 +3,6 @@ import logging
 import sys
 import os
 import time
-import asyncio
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("startup")
@@ -16,62 +15,71 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+# 2. LOAD ALL DEPENDENCIES FIRST (SYNCHRONOUS)
+logger.info("📦 Loading dependencies...")
+from .config import settings
+from .database import engine, Base, init_db, SessionLocal
+from . import models, auth
+from .routers import (
+    auth as auth_router, campaigns, media, pricing,
+    analytics, admin, payment, frontend_compat,
+    geo, campaign_approval, debug
+)
+
 app = FastAPI(title="AdPlatform API")
 
-# --- 2. CORS CONFIGURATION (CRITICAL) ---
+# --- 3. CORS CONFIGURATION (CRITICAL FOR RAILWAY) ---
+# Get allowed origins from environment or use defaults
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "").split(",") if os.environ.get("ALLOWED_ORIGINS") else [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://digital-ocean-production-01ee.up.railway.app",
+    "https://balanced-wholeness-production-ca00.up.railway.app"
+]
+
+# Clean up origins list
+ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS if origin.strip()]
+
+logger.info(f"🌐 CORS Allowed Origins: {ALLOWED_ORIGINS}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Allows your frontend to connect
+    allow_origins=ALLOWED_ORIGINS,  # Specific origins for credentials
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
-# 3. PRIORITY HEALTH CHECK (MUST BE FAST)
+# 4. PRIORITY HEALTH CHECK (MUST BE FAST)
 @app.get("/api/health")
 @app.get("/")
 async def health_check():
     return {"status": "healthy", "timestamp": time.time(), "env": "railway"}
 
-# 3. BACKGROUND INITIALIZATION (To avoid blocking startup)
-async def init_everything():
-    await asyncio.sleep(1) # Give server 1 second to breathe
-    logger.info("🚀 Starting async background initialization...")
-    try:
-        from .config import settings
-        from .database import engine, Base, init_db, SessionLocal
-        from . import models, auth
-        from .routers import (
-            auth as auth_router, campaigns, media, pricing,
-            analytics, admin, payment, frontend_compat,
-            geo, campaign_approval, debug
-        )
-        
-        # Init DB tables
-        logger.info("🗄️ Initializing DB tables...")
-        init_db()
-        
-        # Include Routers
-        app.include_router(auth_router.router, prefix="/api")
-        app.include_router(campaigns.router, prefix="/api")
-        app.include_router(media.router, prefix="/api")
-        app.include_router(pricing.router, prefix="/api")
-        app.include_router(payment.router, prefix="/api")
-        app.include_router(analytics.router, prefix="/api")
-        app.include_router(debug.router, prefix="/api")
-        app.include_router(admin.router, prefix="/api")
-        app.include_router(geo.router, prefix="/api")
-        app.include_router(campaign_approval.router, prefix="/api")
-        app.include_router(frontend_compat.router)
-        
-        logger.info("✅ All modules and routers loaded successfully.")
-    except Exception as e:
-        logger.error(f"❌ Initialization failed: {e}", exc_info=True)
+# 5. INITIALIZE DATABASE (SYNCHRONOUS - BEFORE STARTUP)
+logger.info("🗄️ Initializing database...")
+init_db()
+
+# 6. INCLUDE ALL ROUTERS (SYNCHRONOUS - CRITICAL FOR RAILWAY)
+logger.info("🔌 Registering API routers...")
+app.include_router(auth_router.router, prefix="/api")
+app.include_router(campaigns.router, prefix="/api")
+app.include_router(media.router, prefix="/api")
+app.include_router(pricing.router, prefix="/api")
+app.include_router(payment.router, prefix="/api")
+app.include_router(analytics.router, prefix="/api")
+app.include_router(debug.router, prefix="/api")
+app.include_router(admin.router, prefix="/api")
+app.include_router(geo.router, prefix="/api")
+app.include_router(campaign_approval.router, prefix="/api")
+app.include_router(frontend_compat.router)
+
+logger.info("✅ All routers registered successfully.")
 
 @app.on_event("startup")
 async def startup_event():
-    logger.info("🔥 Server has started and is listening. Starting background tasks...")
-    asyncio.create_task(init_everything())
+    logger.info("🚀 Server startup complete. All endpoints ready.")
 
 if __name__ == "__main__":
     import uvicorn

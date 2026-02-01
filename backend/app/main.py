@@ -121,14 +121,20 @@ async def fix_database():
         return {"status": "error", "detail": str(e)}
 
 # --- 6. STARTUP LOGIC ---
-async def sync_admin_account():
-    """Background task to sync admin account without blocking startup."""
+async def background_initialization():
+    """Background task to initialize DB and sync admin without blocking startup."""
     # Wait a tiny bit to let the server start accepting requests first
-    await asyncio.sleep(1)
-    logger.info("📦 Syncing admin account in background...")
+    await asyncio.sleep(2)
+    logger.info("📦 Running background initialization (DB & Admin)...")
     try:
-        from .database import SessionLocal
+        from .database import init_db, SessionLocal
         from sqlalchemy import func
+        
+        # 1. Initialize Tables (Safe to run multiple times)
+        logger.info("🗄️  Ensuring database tables...")
+        init_db()
+        
+        # 2. Sync Admin Account
         db = SessionLocal()
         admin_email = "admin@adplatform.com"
         admin = db.query(models.User).filter(func.lower(models.User.email) == admin_email.lower()).first()
@@ -152,8 +158,9 @@ async def sync_admin_account():
             else:
                 logger.info("✅ Admin already exists and is valid.")
         db.close()
+        logger.info("🎉 Background initialization complete!")
     except Exception as e:
-        logger.warning(f"⚠️ Background sync warning: {e}")
+        logger.error(f"❌ Background initialization failed: {e}")
 
 @app.on_event("startup")
 async def startup_event():
@@ -166,8 +173,8 @@ async def startup_event():
     else:
         logger.info(f"🔑 SECURITY: Custom JWT_SECRET detected (Length: {len(settings.SECRET_KEY)})")
         
-    # Start DB sync in background so it doesn't block Railway healthchecks
-    asyncio.create_task(sync_admin_account())
+    # Start DB init and sync in background so it doesn't block Railway healthchecks
+    asyncio.create_task(background_initialization())
     logger.info("✅ Startup sequence initiated (background tasks running)")
 
 if __name__ == "__main__":

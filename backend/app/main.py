@@ -13,11 +13,21 @@ print(f"🔥 [DEBUG] PYTHON PATH: {sys.path}", flush=True)
 print(f"🔥 [DEBUG] PORT: {os.environ.get('PORT', '8000')}", flush=True)
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 app = FastAPI(title="AdPlatform API")
 
-# 2. PRIORITY HEALTH CHECK (MUST BE FAST)
+# --- 2. CORS CONFIGURATION (CRITICAL) ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Allows your frontend to connect
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 3. PRIORITY HEALTH CHECK (MUST BE FAST)
 @app.get("/api/health")
 @app.get("/")
 async def health_check():

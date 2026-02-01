@@ -673,15 +673,9 @@ async def startup_event():
                 us_count = db.query(models.GeoData).filter(models.GeoData.country_code == "US").count()
                 dc_exists = db.query(models.GeoData).filter(models.GeoData.country_code == "US", models.GeoData.state_code == "DC").first()
                 
-                # If data is incomplete or corrupted (e.g. population 0), re-seed.
-                force_reseed = db.query(models.GeoData).filter(models.GeoData.country_code == "US", models.GeoData.population == 0).count() > 0
-                
-                if us_count < 51 or not dc_exists or force_reseed:
-                    logger.info(f"📦 Re-seeding US Geodata (Found {us_count}, needing 51, reseed_forced={force_reseed})...")
-                    # Clear incomplete US records to prevent duplicates or mix-ups
-                    db.query(models.GeoData).filter(models.GeoData.country_code == "US").delete()
-                    db.commit()
-                    
+                # If data is incomplete, seed but BE FAST
+                if us_count < 51 or not dc_exists:
+                    logger.info(f"📦 Synchronizing US Geodata (Found {us_count})...")
                     # Comprehensive US Data including DC
                     us_states_data = [
                         ("California", "CA", 6, 39896400, 256.1, 1, 0.1153, 155779.0, 297, 1.0000),
@@ -745,17 +739,7 @@ async def startup_event():
                         
                         area_km = area * 2.58999
                         
-                        if existing:
-                            existing.state_name = name
-                            existing.population = pop
-                            existing.land_area_sq_km = area_km
-                            existing.radius_areas_count = radius_count
-                            existing.density_multiplier = mult
-                            existing.fips = fips
-                            existing.density_mi = dens_mi
-                            existing.rank = rank
-                            existing.population_percent = pct
-                        else:
+                        if not existing:
                             new_geo = models.GeoData(
                                 country_code="US", state_code=code, state_name=name,
                                 population=pop, land_area_sq_km=area_km, 
@@ -763,8 +747,13 @@ async def startup_event():
                                 fips=fips, density_mi=dens_mi, rank=rank, population_percent=pct
                             )
                             db.add(new_geo)
+                        elif existing.population != pop:
+                            # Update if data is different
+                            existing.population = pop
+                            existing.density_multiplier = mult
+                            
                     db.commit()
-                    logger.info("✅ US Geodata synchronized (51 records)")
+                    logger.info("✅ US Geodata synchronized")
 
                 # Also seed UK data if missing
                 gb_count = db.query(models.GeoData).filter(models.GeoData.country_code == "GB").count()

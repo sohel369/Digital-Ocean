@@ -68,10 +68,10 @@ class User(Base):
     password_hash = Column(String(255), nullable=True)  # Nullable for OAuth users
     # Role is stored as a string to allow flexibility between different DB environments (SQLite/Postgres)
     # We use models.UserRole for logic within the app.
-    role = Column(String(50), default="advertiser", nullable=False)
-    country = Column(String(100), nullable=True)
+    role = Column(String(50), default="advertiser", nullable=False, index=True)
+    country = Column(String(100), nullable=True, index=True)
     industry = Column(String(255), nullable=True)
-    managed_country = Column(String(10), nullable=True) # ISO code for country admins
+    managed_country = Column(String(10), nullable=True, index=True) # ISO code for country admins
     
     # OAuth fields
     oauth_provider = Column(String(50), nullable=True)  # 'google', 'facebook', etc.
@@ -230,9 +230,9 @@ class GeoData(Base):
     id = Column(Integer, primary_key=True, index=True)
     
     # Location identifiers
-    country_code = Column(String(100), nullable=False)  # ISO code or Name
-    state_code = Column(String(100), nullable=True)  # State/province code or Name
-    state_name = Column(String(100), nullable=True)
+    country_code = Column(String(100), nullable=False, index=True)  # ISO code or Name
+    state_code = Column(String(100), nullable=True, index=True)  # State/province code or Name
+    state_name = Column(String(100), nullable=True, index=True)
     
     # Geographic metrics
     land_area_sq_km = Column(Float, nullable=False)  # Total area

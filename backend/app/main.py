@@ -44,6 +44,13 @@ app.add_middleware(
 async def health_check():
     return {"status": "healthy", "timestamp": time.time(), "env": "railway"}
 
+# Debug endpoint to check initialization status
+initialization_status = {"loaded": False, "error": None}
+
+@app.get("/api/debug/status")
+async def debug_status():
+    return initialization_status
+
 # 2. NOW load heavy dependencies (after health check is ready)
 logger.info("📦 Loading dependencies...")
 try:
@@ -79,11 +86,14 @@ try:
     app.include_router(frontend_compat.router)
     
     logger.info("✅ All routers registered successfully.")
+    initialization_status["loaded"] = True
 except Exception as e:
     logger.error(f"❌ Initialization error: {e}", exc_info=True)
     print(f"❌ FATAL ERROR: {e}", flush=True)
     import traceback
     traceback.print_exc()
+    initialization_status["error"] = str(e)
+    initialization_status["traceback"] = traceback.format_exc()
     # App will still respond to health checks even if initialization fails
 
 @app.on_event("startup")

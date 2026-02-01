@@ -10,6 +10,7 @@ logger = logging.getLogger("startup")
 print(f"🔥 [DEBUG] Starting process at {time.ctime()}", flush=True)
 print(f"🔥 [DEBUG] PYTHON PATH: {sys.path}", flush=True)
 print(f"🔥 [DEBUG] PORT: {os.environ.get('PORT', '8000')}", flush=True)
+print(f"🔥 [DEBUG] CWD: {os.getcwd()}", flush=True)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,6 +26,8 @@ ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "").split(",") if os.environ
     "https://balanced-wholeness-production-ca00.up.railway.app"
 ]
 ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS if origin.strip()]
+
+logger.info(f"🌐 CORS Allowed Origins: {ALLOWED_ORIGINS}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,18 +47,22 @@ async def health_check():
 # 2. NOW load heavy dependencies (after health check is ready)
 logger.info("📦 Loading dependencies...")
 try:
-    from .config import settings
-    from .database import engine, Base, init_db, SessionLocal
-    from . import models, auth
-    from .routers import (
+    # Use absolute imports for Railway compatibility
+    from app.config import settings
+    from app.database import engine, Base, init_db, SessionLocal
+    from app import models, auth
+    from app.routers import (
         auth as auth_router, campaigns, media, pricing,
         analytics, admin, payment, frontend_compat,
         geo, campaign_approval, debug
     )
     
+    logger.info("✅ Dependencies loaded successfully")
+    
     # 3. Initialize database
     logger.info("🗄️ Initializing database...")
     init_db()
+    logger.info("✅ Database initialized")
     
     # 4. Register routers
     logger.info("🔌 Registering API routers...")
@@ -74,6 +81,9 @@ try:
     logger.info("✅ All routers registered successfully.")
 except Exception as e:
     logger.error(f"❌ Initialization error: {e}", exc_info=True)
+    print(f"❌ FATAL ERROR: {e}", flush=True)
+    import traceback
+    traceback.print_exc()
     # App will still respond to health checks even if initialization fails
 
 @app.on_event("startup")

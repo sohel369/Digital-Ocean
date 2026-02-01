@@ -45,7 +45,7 @@ class FileUploadManager:
                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
                 region_name=settings.AWS_REGION
             )
-            self.bucket_name = settings.S3_BUCKET_NAME
+            self.bucket_name = settings.AWS_S3_BUCKET
     
     async def validate_file(self, file: UploadFile) -> Tuple[str, str]:
         """

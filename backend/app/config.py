@@ -47,10 +47,12 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: str = "jpg,jpeg,png,mp4,csv"
     
     # AWS S3 (Optional)
-    AWS_ACCESS_KEY_ID: str = os.environ.get("AWS_ACCESS_KEY_ID", "")
-    AWS_SECRET_ACCESS_KEY: str = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
-    AWS_S3_BUCKET: str = os.environ.get("AWS_S3_BUCKET", "")
-    AWS_REGION: str = os.environ.get("AWS_REGION", "us-east-1")
+    # AWS S3 (Optional)
+    USE_S3: bool = False
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
+    AWS_S3_BUCKET: str = ""
+    AWS_REGION: str = "us-east-1"
     
     # Stripe (Optional)
     STRIPE_API_KEY: str = os.environ.get("STRIPE_API_KEY", "")

@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     
     # Application
     APP_NAME: str = "Advertiser Dashboard API"
-    APP_VERSION: str = "1.0.8-deployment-fix"
+    APP_VERSION: str = "1.0.9-cors-fix"
     DEBUG: bool = True
     
     # Database

@@ -38,9 +38,22 @@ app = FastAPI(
 )
 
 # CORS Middleware
+# Note: allow_origins cannot be ["*"] when allow_credentials is True
+cors_origins = settings.CORS_ORIGINS
+if "*" in cors_origins and True: # allow_credentials=True is used below
+    # If wildcard is present but credentials are required, we must be more specific
+    # or handle it by allowing the requester's origin if it matches a pattern.
+    # For now, let's include the FRONTEND_URL and common dev origins.
+    cors_origins = [
+        settings.FRONTEND_URL,
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://digital-ocean-production-01ee.up.railway.app" # User's specific production frontend
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

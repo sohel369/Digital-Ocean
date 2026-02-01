@@ -462,156 +462,55 @@ async def startup_event():
         # COMPREHENSIVE SCHEMA MIGRATION (Ensures Railway DB matches local models)
         logger.info("🔧 Starting Database Synchronization...")
         
-        # 0. Initialize missing tables first
         try:
-            from .database import init_db, engine
+            from .database import init_db, engine, SessionLocal
+            from sqlalchemy import text, inspect
+            
+            # 0. Fast Track: Initialize tables if they don't exist
             init_db()
-            logger.info("✅ Database tables initialized (if not exists)")
-        except Exception as init_err:
-            logger.error(f"❌ Table Initialization Failed: {init_err}")
-
-        # helper for individual column migrations
-        def add_column_safely(table_name, col_name, col_type):
-            try:
-                from sqlalchemy import text
-                with engine.connect() as conn:
-                    if engine.name == 'postgresql':
-                        check_query = text(f"""
-                            SELECT count(*) 
-                            FROM information_schema.columns 
-                            WHERE table_name = '{table_name}' AND column_name = '{col_name}'
-                        """)
-                    else:
-                        # SQLite check
-                        check_query = text(f"PRAGMA table_info({table_name})")
-                        
-                    result = conn.execute(check_query)
-                    if engine.name == 'postgresql':
-                        exists = result.scalar()
-                    else:
-                        # For SQLite, result is rows of column info
-                        cols = [r[1] for r in result.fetchall()]
-                        exists = col_name in cols
-                    
-                    if not exists:
-                        logger.info(f"➕ Adding column {col_name} to {table_name}...")
+            
+            # Use ONE connection for all schema changes to avoid latency overhead
+            with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+                inspector = inspect(engine)
+                
+                # Helper to check and add column using existing connection
+                def migrate_column(table_name, col_name, col_type):
+                    existing_cols = [c['name'] for c in inspector.get_columns(table_name)]
+                    if col_name not in existing_cols:
+                        logger.info(f"➕ Adding {table_name}.{col_name}...")
                         conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_type}"))
-                        conn.commit()
-                        logger.info(f"✅ Added {col_name} to {table_name}")
-                    else:
-                        logger.debug(f"⏭️  Column {col_name} already exists in {table_name}")
-            except Exception as e:
-                logger.error(f"❌ Migration Error adding {col_name} to {table_name}: {e}")
+                
+                # 1. USERS Table
+                for col, dtype in [
+                    ("role", "VARCHAR(50) DEFAULT 'advertiser'"), ("country", "VARCHAR(100)"),
+                    ("industry", "VARCHAR(255)"), ("oauth_provider", "VARCHAR(50)"),
+                    ("oauth_id", "VARCHAR(255)"), ("profile_picture", "VARCHAR(500)"),
+                    ("last_login", "TIMESTAMP WITH TIME ZONE"), ("managed_country", "VARCHAR(10)")
+                ]:
+                    migrate_column("users", col, dtype)
 
-        try:
-            # 1. USERS Table Columns
-            user_cols = [
-                ("role", "VARCHAR(50) DEFAULT 'advertiser'"),
-                ("country", "VARCHAR(100)"),
-                ("industry", "VARCHAR(255)"),
-                ("oauth_provider", "VARCHAR(50)"),
-                ("oauth_id", "VARCHAR(255)"),
-                ("profile_picture", "VARCHAR(500)"),
-                ("last_login", "TIMESTAMP WITH TIME ZONE"),
-                ("managed_country", "VARCHAR(10)")
-            ]
-            for name, dtype in user_cols:
-                add_column_safely("users", name, dtype)
+                # 2. CAMPAIGNS Table
+                for col, dtype in [
+                    ("headline", "VARCHAR(500)"), ("landing_page_url", "VARCHAR(500)"),
+                    ("ad_format", "VARCHAR(100)"), ("budget", "FLOAT DEFAULT 0"),
+                    ("submitted_at", "TIMESTAMP WITH TIME ZONE"), ("admin_message", "TEXT")
+                ]:
+                    migrate_column("campaigns", col, dtype)
 
-            # 2. CAMPAIGNS Table Columns
-            campaign_cols = [
-                ("headline", "VARCHAR(500)"),
-                ("landing_page_url", "VARCHAR(500)"),
-                ("ad_format", "VARCHAR(100)"),
-                ("description", "TEXT"),
-                ("tags", "JSON"),
-                ("calculated_price", "FLOAT"),
-                ("coverage_area", "VARCHAR(255)"),
-                ("submitted_at", "TIMESTAMP WITH TIME ZONE"),
-                ("admin_message", "TEXT"),
-                ("reviewed_by", "INTEGER"),
-                ("reviewed_at", "TIMESTAMP WITH TIME ZONE"),
-                ("impressions", "INTEGER DEFAULT 0"),
-                ("clicks", "INTEGER DEFAULT 0"),
-                ("target_postcode", "VARCHAR(20)"),
-                ("target_state", "VARCHAR(100)"),
-                ("target_country", "VARCHAR(100)"),
-                ("budget", "FLOAT DEFAULT 0")
-            ]
-            for name, dtype in campaign_cols:
-                add_column_safely("campaigns", name, dtype)
+                # 3. GEODATA Table
+                for col, dtype in [
+                    ("radius_areas_count", "INTEGER DEFAULT 1"), ("fips", "INTEGER"),
+                    ("density_mi", "FLOAT"), ("rank", "INTEGER")
+                ]:
+                    migrate_column("geodata", col, dtype)
 
-            # 2b. Geodata table migrations
-            geodata_cols = [
-                ("radius_areas_count", "INTEGER DEFAULT 1"),
-                ("fips", "INTEGER"),
-                ("density_mi", "FLOAT"),
-                ("rank", "INTEGER"),
-                ("population_percent", "FLOAT"),
-                ("urban_percentage", "FLOAT")
-            ]
-            for name, dtype in geodata_cols:
-                add_column_safely("geodata", name, dtype)
-
-            # 3. Handle Notifications table correctly
-            try:
-                from sqlalchemy import text
-                with engine.connect() as conn:
-                    conn.execute(text("""
-                        CREATE TABLE IF NOT EXISTS notifications (
-                            id SERIAL PRIMARY KEY,
-                            user_id INTEGER NOT NULL REFERENCES users(id),
-                            campaign_id INTEGER REFERENCES campaigns(id),
-                            notification_type VARCHAR(50) NOT NULL,
-                            title VARCHAR(255) NOT NULL,
-                            message TEXT NOT NULL,
-                            is_read BOOLEAN DEFAULT FALSE,
-                            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                            read_at TIMESTAMP WITH TIME ZONE
-                        )
-                    """))
-                    conn.commit()
-                    logger.info("✅ Notifications table checked/created")
-            except Exception as e:
-                logger.error(f"⚠️ Notifications table check failed: {e}")
-
-            # 4. Sync Enums (Postgres specific)
-            try:
-                from sqlalchemy import text
-                # Use execution_options(isolation_level="AUTOCOMMIT") for ALTER TYPE
-                with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
-                    status_values = [
-                        "DRAFT", "SUBMITTED", "PENDING_REVIEW", "APPROVED", 
-                        "REJECTED", "CHANGES_REQUIRED", "ACTIVE", "PAUSED", 
-                        "COMPLETED", "PENDING"
-                    ]
-                    for val in status_values:
-                        try:
-                            conn.execute(text(f"ALTER TYPE campaignstatus ADD VALUE '{val}'"))
-                            logger.info(f"💾 Added Enum Value: {val} to campaignstatus type")
-                        except Exception:
-                            # Most likely already exists, ignore
-                            pass
-                    
-                    # 4b. Sync CoverageType Enum
-                    coverage_values = ["30-mile", "state", "country"]
-                    for val in coverage_values:
-                        try:
-                            conn.execute(text(f"ALTER TYPE coveragetype ADD VALUE '{val}'"))
-                            logger.info(f"💾 Added Enum Value: {val} to coveragetype type")
-                        except Exception:
-                            pass
-            except Exception as enum_err:
-                logger.warning(f"⚠️ Enum synchronization skipped: {enum_err}")
-
-            # 5. Fix Foreign Key Constraints (Cascade Delete)
-            try:
-                from sqlalchemy import text
-                with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
-                    # 5a. Notifications -> Campaigns Cascade
+                # 4. FK Fixes (Postgres Only)
+                if engine.name == 'postgresql':
+                    # Consolidate FK updates into one block
                     conn.execute(text("""
                         DO $$ 
                         BEGIN 
+                            -- Notifications FK
                             IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'notifications_campaign_id_fkey') THEN
                                 ALTER TABLE notifications DROP CONSTRAINT notifications_campaign_id_fkey;
                                 ALTER TABLE notifications ADD CONSTRAINT notifications_campaign_id_fkey 
@@ -619,30 +518,30 @@ async def startup_event():
                             END IF;
                         END $$;
                     """))
-                    
-                    # 5b. Payment Transactions -> Campaigns Cascade
-                    conn.execute(text("""
-                        DO $$ 
-                        BEGIN 
-                            IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'payment_transactions_campaign_id_fkey') THEN
-                                ALTER TABLE payment_transactions DROP CONSTRAINT payment_transactions_campaign_id_fkey;
-                                ALTER TABLE payment_transactions ADD CONSTRAINT payment_transactions_campaign_id_fkey 
-                                FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE;
-                            END IF;
-                        END $$;
-                    """))
-                    
-                    # 5c. Media -> Campaigns Cascade
-                    conn.execute(text("""
-                        DO $$ 
-                        BEGIN 
-                            IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'media_campaign_id_fkey') THEN
-                                ALTER TABLE media DROP CONSTRAINT media_campaign_id_fkey;
-                                ALTER TABLE media ADD CONSTRAINT media_campaign_id_fkey 
-                                FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE;
-                            END IF;
-                        END $$;
-                    """))
+            logger.info("✅ Database schema synchronized")
+        except Exception as mig_err:
+            logger.error(f"⚠️ Migration skipped/failed: {mig_err}")
+
+        # SEEDING (Only if DB is empty to stay under healthcheck limits)
+        try:
+            db = SessionLocal()
+            try:
+                if db.query(models.User).filter(models.User.email == "admin@adplatform.com").count() == 0:
+                    logger.info("📦 Seeding missing admin user...")
+                    admin_user = models.User(
+                        name="Admin User", email="admin@adplatform.com",
+                        password_hash=auth.get_password_hash("admin123"),
+                        role=models.UserRole.ADMIN, country="US"
+                    )
+                    db.add(admin_user)
+                    db.commit()
+
+                if db.query(models.GeoData).filter(models.GeoData.country_code == "US").count() < 50:
+                    logger.info("📦 Database is missing US states. Please visit /api/admin/seed-data to re-populate.")
+            finally:
+                db.close()
+        except Exception as seed_err:
+            logger.warning(f"⚠️ Seeding skipped: {seed_err}")
                     
                     logger.info("✅ All Campaign FKs updated to CASCADE")
             except Exception as fk_err:

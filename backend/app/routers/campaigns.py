@@ -15,6 +15,7 @@ from dateutil.relativedelta import relativedelta
 router = APIRouter(prefix="/campaigns", tags=["Campaigns"])
 
 
+@router.post("", response_model=schemas.CampaignResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/create", response_model=schemas.CampaignResponse, status_code=status.HTTP_201_CREATED)
 async def create_campaign(
     campaign_data: schemas.CampaignCreate,

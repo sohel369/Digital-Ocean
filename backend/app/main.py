@@ -37,23 +37,23 @@ app = FastAPI(
     debug=settings.DEBUG
 )
 
-# CORS Middleware
+# Robust CORS Configuration for Railway Production
 # Note: allow_origins cannot be ["*"] when allow_credentials is True
-cors_origins = settings.CORS_ORIGINS
-if "*" in cors_origins and True: # allow_credentials=True is used below
-    # If wildcard is present but credentials are required, we must be more specific
-    # or handle it by allowing the requester's origin if it matches a pattern.
-    # For now, let's include the FRONTEND_URL and common dev origins.
-    cors_origins = [
-        settings.FRONTEND_URL,
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://digital-ocean-production-01ee.up.railway.app" # User's specific production frontend
-    ]
+cors_origins = [
+    settings.FRONTEND_URL,
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://digital-ocean-production-01ee.up.railway.app",  # Production Frontend
+    "https://digital-ocean-production-01ee.up.railway.app/" # With trailing slash
+]
+
+# Add railway deployment URL to CORS just in case
+if os.environ.get("RAILWAY_STATIC_URL"):
+    cors_origins.append(f"https://{os.environ.get('RAILWAY_STATIC_URL')}")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=[o for o in cors_origins if o],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -69,7 +69,10 @@ async def log_requests(request: Request, call_next):
         logger.error(f"🔥 [CRASH] {str(exc)}", exc_info=True)
         return JSONResponse(status_code=500, content={"error": "Internal server error", "detail": str(exc)})
 
-# Routers
+# Routers - IMPORTANT: frontend_compat must be at ROOT because it carries its own /api prefix
+app.include_router(frontend_compat.router)
+
+# Standard Routers
 app.include_router(auth_router.router, prefix="/api")
 app.include_router(campaigns.router, prefix="/api")
 app.include_router(media.router, prefix="/api")
@@ -94,15 +97,18 @@ async def fix_database():
         with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
             inspector = inspect(engine)
             def migrate(table, col, dtype):
-                if col not in [c['name'] for c in inspector.get_columns(table)]:
-                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {dtype}"))
+                try:
+                    if col not in [c['name'] for c in inspector.get_columns(table)]:
+                        logger.info(f"➕ Adding {table}.{col}...")
+                        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {dtype}"))
+                except: pass
             
             # Critical migrations
-            for c, t in [("role", "VARCHAR(50)"), ("country", "VARCHAR(100)"), ("industry", "VARCHAR(255)")]:
+            for c, t in [("role", "VARCHAR(50)"), ("country", "VARCHAR(100)"), ("industry", "VARCHAR(255)"), ("managed_country", "VARCHAR(10)")]:
                 migrate("users", c, t)
-            for c, t in [("budget", "FLOAT DEFAULT 0"), ("headline", "VARCHAR(500)")]:
+            for c, t in [("budget", "FLOAT DEFAULT 0"), ("headline", "VARCHAR(500)"), ("landing_page_url", "VARCHAR(500)"), ("ad_format", "VARCHAR(100)")]:
                 migrate("campaigns", c, t)
-            for c, t in [("radius_areas_count", "INTEGER DEFAULT 1")]:
+            for c, t in [("radius_areas_count", "INTEGER DEFAULT 1"), ("fips", "INTEGER"), ("density_mi", "FLOAT")]:
                 migrate("geodata", c, t)
         
         return {"status": "success", "message": "Database migrations applied."}
@@ -112,9 +118,8 @@ async def fix_database():
 @app.on_event("startup")
 async def startup_event():
     logger.info("🚀 App starting...")
-    # Minimal startup to avoid railway timeout
     try:
-        # Create admin only if it doesn't exist
+        # Minimal startup to avoid railway timeout
         db = SessionLocal()
         admin = db.query(models.User).filter(models.User.email == "admin@adplatform.com").first()
         if not admin:

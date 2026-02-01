@@ -37,9 +37,9 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     
     # OAuth (Optional)
-    GOOGLE_CLIENT_ID: str = os.environ.get("GOOGLE_CLIENT_ID", "")
-    GOOGLE_CLIENT_SECRET: str = os.environ.get("GOOGLE_CLIENT_SECRET", "")
-    GOOGLE_REDIRECT_URI: str = os.environ.get("GOOGLE_REDIRECT_URI", "")
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = ""
     
     # File Upload
     UPLOAD_DIR: str = "./uploads"
@@ -55,29 +55,35 @@ class Settings(BaseSettings):
     AWS_REGION: str = "us-east-1"
     
     # Stripe (Optional)
-    STRIPE_API_KEY: str = os.environ.get("STRIPE_API_KEY", "")
-    STRIPE_WEBHOOK_SECRET: str = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_PUBLISHABLE_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
     
     # CORS
-    BACKEND_URL: str = os.environ.get("BACKEND_URL", "http://localhost:8000")
-    FRONTEND_URL: str = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+    BACKEND_URL: str = "http://localhost:8000"
+    FRONTEND_URL: str = "http://localhost:5173"
     
     # Logging
     LOG_LEVEL: str = "INFO"
     
     # SMTP Settings (Optional)
-    SMTP_HOST: str = os.environ.get("SMTP_HOST", "")
+    SMTP_HOST: str = ""
     SMTP_PORT: int = 587
-    SMTP_USER: str = os.environ.get("SMTP_USER", "")
-    SMTP_PASS: str = os.environ.get("SMTP_PASS", "")
-    EMAILS_FROM_EMAIL: str = os.environ.get("EMAILS_FROM_EMAIL", "support@adplatform.com")
-    EMAILS_FROM_NAME: str = os.environ.get("EMAILS_FROM_NAME", "AdPlatform Support")
+    SMTP_USER: str = ""
+    SMTP_PASS: str = ""
+    EMAILS_FROM_EMAIL: str = "support@adplatform.com"
+    EMAILS_FROM_NAME: str = "AdPlatform Support"
 
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=True,
         extra="allow"
     )
+
+    @property
+    def CORS_ORIGINS(self) -> List[str]:
+        """Backwards compatibility for auth.py"""
+        return self.cors_origins_list
 
     @property
     def cors_origins_list(self) -> List[str]:

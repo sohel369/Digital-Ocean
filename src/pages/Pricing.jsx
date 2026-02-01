@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { MapPin, Globe, Layout, Building2, ChevronRight, Info, ChevronDown, Navigation } from 'lucide-react';
 import { PaymentModal } from '../components/PaymentCheckout';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 const CustomSelect = ({ value, options, onChange, formatName, t, type, placeholder }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -200,6 +201,10 @@ const Pricing = () => {
             }
         } catch (error) {
             console.error("Quick Launch Failure:", error);
+            // Ensure error is visible if not already handled by addCampaign
+            if (!error.message?.includes('Session Expired')) {
+                toast.error("Setup Failed", { description: "Could not create campaign draft. Please try again." });
+            }
         } finally {
             setIsCreating(false);
         }

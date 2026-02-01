@@ -366,7 +366,7 @@ def create_user_tokens(user: models.User) -> schemas.Token:
         data={
             "sub": str(user.id),
             "email": user.email,
-            "role": user.role.value
+            "role": user.role.value if hasattr(user.role, "value") else user.role
         }
     )
     

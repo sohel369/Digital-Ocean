@@ -152,7 +152,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 # ==================== Routes ====================
 
 @app.get("/test-email")
-async def test_email_setup(email: str = "sohel0130844@gmail.com"):
+async def test_email_setup(email: str = "admin@admin.com"):
     """Force clean variables and test SMTP connection."""
     import smtplib
     from email.mime.text import MIMEText

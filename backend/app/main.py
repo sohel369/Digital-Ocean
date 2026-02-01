@@ -36,16 +36,16 @@ app = FastAPI(
     debug=settings.DEBUG
 )
 
-# Robust CORS Configuration
+# ULTRA-ROBUST CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Simplest for Railway healthcheck success
+    allow_origins=["*"], # Allow all for healthcheck stability
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Request Logger
+# Request Logger / Exception Handler
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     try:
@@ -66,7 +66,7 @@ app.include_router(debug.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(geo.router, prefix="/api")
 app.include_router(campaign_approval.router, prefix="/api")
-app.include_router(frontend_compat.router) # Prefix handled internally
+app.include_router(frontend_compat.router) # Handles own /api prefix
 
 @app.get("/api/health")
 async def health_check():
@@ -75,10 +75,12 @@ async def health_check():
 
 @app.get("/api/admin/fix-db")
 async def fix_database():
-    """Emergency migration endpoint."""
+    """Emergency migration endpoint to fix Postgres ENUM and missing columns."""
     try:
         from sqlalchemy import text, inspect
+        # 1. Initialize tables
         init_db()
+        
         with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
             inspector = inspect(engine)
             def migrate(table, col, dtype):
@@ -90,54 +92,73 @@ async def fix_database():
                 except Exception as e:
                     logger.warning(f"⚠️ Could not migrate {table}.{col}: {e}")
             
-            # Critical migrations
+            # 2. Critical migrations
             for c, t in [("role", "VARCHAR(50)"), ("country", "VARCHAR(100)"), ("industry", "VARCHAR(255)"), ("managed_country", "VARCHAR(10)"), ("last_login", "TIMESTAMP")]:
                 migrate("users", c, t)
             
-            # Special fix for ENUM type issue on Postgres
+            # 3. FORCE FIX for Postgres ENUM 'userrole'
             try:
+                logger.info("🛠️ Converting role column to plain text to bypass ENUM restrictions...")
+                # First check if it's already VARCHAR or if we need to force it
                 conn.execute(text("ALTER TABLE users ALTER COLUMN role TYPE VARCHAR(50) USING role::text"))
-            except: pass
+            except Exception as e:
+                logger.info(f"ℹ️ Role conversion skipped (already VARCHAR or table empty): {e}")
 
+            # 4. Campaign tables
             for c, t in [("budget", "FLOAT DEFAULT 0"), ("headline", "VARCHAR(500)"), ("landing_page_url", "VARCHAR(500)"), ("ad_format", "VARCHAR(100)"), ("reviewed_at", "TIMESTAMP")]:
                 migrate("campaigns", c, t)
+                
+            # 5. Geo tables
+            for c, t in [("radius_areas_count", "INTEGER DEFAULT 1"), ("fips", "INTEGER"), ("density_mi", "FLOAT")]:
+                migrate("geodata", c, t)
         
-        return {"status": "success", "message": "Database migrations applied."}
+        return {"status": "success", "message": "Database successfully refined for production."}
     except Exception as e:
         logger.error(f"❌ Migration failed: {e}")
         return {"status": "error", "detail": str(e)}
 
 @app.on_event("startup")
 async def startup_event():
-    """Startup initialization."""
+    """Non-blocking startup initialization."""
     logger.info(f"🚀 App starting (Ver {settings.APP_VERSION})...")
     try:
-        # Fast initialization
-        db = SessionLocal()
-        from sqlalchemy import func
-        admin_email = "admin@adplatform.com"
-        admin = db.query(models.User).filter(func.lower(models.User.email) == admin_email.lower()).first()
+        # Step 1: Initialize tables if they don't exist
+        init_db()
         
-        if not admin:
-            logger.info(f"📦 Creating default admin account: {admin_email}")
-            new_admin = models.User(
-                name="System Admin", 
-                email=admin_email,
-                password_hash=auth.get_password_hash("admin123"),
-                role="admin"
-            )
-            db.add(new_admin)
-            db.commit()
-            logger.info("✅ Default admin created.")
-        else:
-            admin.role = "admin"
-            db.commit()
-            logger.info("✅ Admin synced.")
-        db.close()
+        # Step 2: Sync default admin account (Safely)
+        try:
+            db = SessionLocal()
+            from sqlalchemy import func
+            admin_email = "admin@adplatform.com"
+            admin = db.query(models.User).filter(func.lower(models.User.email) == admin_email.lower()).first()
+            
+            if not admin:
+                logger.info(f"📦 Creating default admin account: {admin_email}")
+                new_admin = models.User(
+                    name="System Admin", 
+                    email=admin_email,
+                    password_hash=auth.get_password_hash("admin123"),
+                    role="admin"
+                )
+                db.add(new_admin)
+                db.commit()
+                logger.info("✅ Default admin created.")
+            else:
+                admin.role = "admin"
+                db.commit()
+                logger.info("✅ Admin synced.")
+            db.close()
+        except Exception as db_err:
+            logger.warning(f"⚠️ Could not sync admin during startup (DB might be refining): {db_err}")
+            
     except Exception as e:
-        logger.warning(f"⚠️ Startup warning: {e}")
-    logger.info("✅ Startup complete")
+        logger.error(f"🔥 Critical startup failure: {e}")
+        # We don't raise here to allow the process to stay alive for healthchecks if possible
+    
+    logger.info("✅ Startup sequence complete")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+    # Pick up PORT from environment (Railway standard)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=False)

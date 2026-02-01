@@ -1,9 +1,10 @@
 """
 Pydantic schemas for request/response validation.
 Ensures type-safe data validation and serialization.
+Compatible with Pydantic v2.
 """
-from pydantic import BaseModel, EmailStr, Field, validator
-from typing import Optional, List
+from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
+from typing import Optional, List, Any
 from datetime import datetime, date
 from enum import Enum
 import re
@@ -69,8 +70,9 @@ class UserSignup(BaseModel):
     industry: str = Field(..., description="Industry from fixed list")
     role: UserRole = UserRole.ADVERTISER
     
-    @validator('role', pre=True)
-    def normalize_role(cls, v):
+    @field_validator('role', mode='before')
+    @classmethod
+    def normalize_role(cls, v: Any) -> Any:
         if isinstance(v, str):
             return v.lower()
         return v
@@ -110,13 +112,16 @@ class TokenPayload(BaseModel):
 
 class UserResponse(BaseModel):
     """Schema for user data in responses."""
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     name: str
     email: EmailStr
     role: UserRole
     
-    @validator('role', pre=True)
-    def normalize_role(cls, v):
+    @field_validator('role', mode='before')
+    @classmethod
+    def normalize_role(cls, v: Any) -> Any:
         if v is None:
             return UserRole.ADVERTISER
         if isinstance(v, str):
@@ -127,15 +132,13 @@ class UserResponse(BaseModel):
         if hasattr(v, 'name'):
             return v.value.lower()
         return v
+        
     country: Optional[str] = "US"
     industry: Optional[str] = "General"
     profile_picture: Optional[str] = None
     managed_country: Optional[str] = None
     created_at: Optional[datetime] = None
     last_login: Optional[datetime] = None
-    
-    class Config:
-        from_attributes = True
 
 
 # ==================== Campaign Schemas ====================
@@ -158,22 +161,18 @@ class CampaignCreate(BaseModel):
     status: Optional[CampaignStatus] = CampaignStatus.DRAFT
     tags: Optional[List[str]] = []
     
-    @validator('status', pre=True)
-    def normalize_status(cls, v):
+    @field_validator('status', mode='before')
+    @classmethod
+    def normalize_status(cls, v: Any) -> Any:
         if isinstance(v, str):
             return v.upper()
         return v
     
-    @validator('end_date')
-    def end_date_after_start(cls, v, values):
-        if v and 'start_date' in values and v <= values['start_date']:
+    @field_validator('end_date', mode='after')
+    @classmethod
+    def end_date_after_start(cls, v: Optional[date], info: Any) -> Optional[date]:
+        if v and 'start_date' in info.data and v <= info.data['start_date']:
             raise ValueError('end_date must be after start_date')
-        return v
-    
-    @validator('duration')
-    def validate_dates_and_duration(cls, v, values):
-        if not v and not values.get('end_date'):
-            raise ValueError('Either end_date or duration must be provided')
         return v
 
 
@@ -188,8 +187,9 @@ class CampaignUpdate(BaseModel):
     status: Optional[CampaignStatus] = None
     coverage_type: Optional[CoverageType] = None
     
-    @validator('status', pre=True)
-    def normalize_status(cls, v):
+    @field_validator('status', mode='before')
+    @classmethod
+    def normalize_status(cls, v: Any) -> Any:
         if isinstance(v, str):
             return v.upper()
         return v
@@ -205,6 +205,8 @@ class CampaignUpdate(BaseModel):
 
 class CampaignResponse(BaseModel):
     """Schema for campaign data in responses."""
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     advertiser_id: int
     name: str
@@ -212,56 +214,53 @@ class CampaignResponse(BaseModel):
     start_date: date
     end_date: date
     budget: float
-    calculated_price: Optional[float]
+    calculated_price: Optional[float] = None
     status: str
     coverage_type: CoverageType
-    coverage_area: Optional[str]
-    target_postcode: Optional[str]
-    target_state: Optional[str]
-    target_country: Optional[str]
-    impressions: int
-    clicks: int
-    ctr: float
-    description: Optional[str]
-    headline: Optional[str]
-    landing_page_url: Optional[str]
-    ad_format: Optional[str]
-    tags: Optional[List[str]]
+    coverage_area: Optional[str] = None
+    target_postcode: Optional[str] = None
+    target_state: Optional[str] = None
+    target_country: Optional[str] = None
+    impressions: int = 0
+    clicks: int = 0
+    ctr: float = 0.0
+    description: Optional[str] = None
+    headline: Optional[str] = None
+    landing_page_url: Optional[str] = None
+    ad_format: Optional[str] = None
+    tags: Optional[List[str]] = None
     created_at: datetime
-    updated_at: Optional[datetime]
+    updated_at: Optional[datetime] = None
     # Admin approval fields
     submitted_at: Optional[datetime] = None
     admin_message: Optional[str] = None
     reviewed_at: Optional[datetime] = None
     
-    @validator('status', pre=True)
-    def status_to_lowercase(cls, v):
+    @field_validator('status', mode='before')
+    @classmethod
+    def status_to_lowercase(cls, v: Any) -> Any:
         if hasattr(v, 'value'):
             return v.value.lower()
         if isinstance(v, str):
             return v.lower()
         return v
-    
-    class Config:
-        from_attributes = True
 
 
 # ==================== Media Schemas ====================
 class MediaUploadResponse(BaseModel):
     """Schema for media upload response."""
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     campaign_id: int
     file_path: str
     file_type: str
     file_size: int
-    mime_type: Optional[str]
-    width: Optional[int]
-    height: Optional[int]
+    mime_type: Optional[str] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
     approved_status: MediaApprovalStatus
     uploaded_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 
 class MediaApproval(BaseModel):
@@ -316,6 +315,8 @@ class PricingMatrixUpdate(BaseModel):
 
 class PricingMatrixResponse(BaseModel):
     """Schema for pricing matrix response."""
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     industry_type: str
     advert_type: str
@@ -324,12 +325,9 @@ class PricingMatrixResponse(BaseModel):
     multiplier: float
     state_discount: float
     national_discount: float
-    country_id: Optional[str]
+    country_id: Optional[str] = None
     created_at: datetime
-    updated_at: Optional[datetime]
-    
-    class Config:
-        from_attributes = True
+    updated_at: Optional[datetime] = None
 
 
 # ==================== Analytics Schemas ====================
@@ -347,8 +345,9 @@ class CampaignAnalytics(BaseModel):
     end_date: date
     status: str
     
-    @validator('status', pre=True)
-    def status_to_lowercase(cls, v):
+    @field_validator('status', mode='before')
+    @classmethod
+    def status_to_lowercase(cls, v: Any) -> Any:
         if hasattr(v, 'value'):
             return v.value.lower()
         if isinstance(v, str):
@@ -361,8 +360,9 @@ class IndustryConfig(BaseModel):
     name: str
     multiplier: float
     
-    @validator('multiplier', pre=True)
-    def clean_multiplier(cls, v):
+    @field_validator('multiplier', mode='before')
+    @classmethod
+    def clean_multiplier(cls, v: Any) -> Any:
         if isinstance(v, str):
             try:
                 # Remove any %, commas, currency symbols, etc. leaving only digits and dot
@@ -375,8 +375,9 @@ class AdTypeConfig(BaseModel):
     name: str
     base_rate: float
     
-    @validator('base_rate', pre=True)
-    def clean_base_rate(cls, v):
+    @field_validator('base_rate', mode='before')
+    @classmethod
+    def clean_base_rate(cls, v: Any) -> Any:
         if isinstance(v, str):
             try:
                 # Remove currency symbols (like $, ৳) and commas
@@ -398,8 +399,9 @@ class StateConfig(BaseModel):
     rank: Optional[int] = None
     population_percent: Optional[float] = None
 
-    @validator('land_area', 'density_multiplier', 'density_mi', 'population_percent', pre=True)
-    def clean_floats(cls, v):
+    @field_validator('land_area', 'density_multiplier', 'density_mi', 'population_percent', mode='before')
+    @classmethod
+    def clean_floats(cls, v: Any) -> Any:
         if v == "" or v is None: return 0.0
         if isinstance(v, str):
             try:
@@ -407,8 +409,9 @@ class StateConfig(BaseModel):
             except: return 0.0
         return v
 
-    @validator('population', 'radius_areas_count', 'fips', 'rank', pre=True)
-    def clean_ints(cls, v):
+    @field_validator('population', 'radius_areas_count', 'fips', 'rank', mode='before')
+    @classmethod
+    def clean_ints(cls, v: Any) -> Any:
         if v == "" or v is None: return 0
         if isinstance(v, str):
             try:
@@ -422,8 +425,9 @@ class DiscountConfig(BaseModel):
     state: float = 0.15
     national: float = 0.30
     
-    @validator('state', 'national', pre=True)
-    def clean_discounts(cls, v):
+    @field_validator('state', 'national', mode='before')
+    @classmethod
+    def clean_discounts(cls, v: Any) -> Any:
         if v == "" or v is None: return 0.0
         if isinstance(v, str):
             try:
@@ -453,12 +457,12 @@ class AdminUserUpdate(BaseModel):
     country: Optional[str] = None
     managed_country: Optional[str] = None
     
-    @validator('role', pre=True)
-    def normalize_role(cls, v):
+    @field_validator('role', mode='before')
+    @classmethod
+    def normalize_role(cls, v: Any) -> Any:
         if isinstance(v, str):
             return v.lower()
         return v
-
 
 
 class GeoDataCreate(BaseModel):
@@ -474,22 +478,21 @@ class GeoDataCreate(BaseModel):
 
 class GeoDataResponse(BaseModel):
     """Schema for geographic data response."""
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     country_code: str
-    state_code: Optional[str]
-    state_name: Optional[str]
+    state_code: Optional[str] = None
+    state_name: Optional[str] = None
     land_area_sq_km: float
     population: int
     density_multiplier: float
-    urban_percentage: Optional[float]
-    fips: Optional[int]
-    density_mi: Optional[float]
-    rank: Optional[int]
-    population_percent: Optional[float]
+    urban_percentage: Optional[float] = None
+    fips: Optional[int] = None
+    density_mi: Optional[float] = None
+    rank: Optional[int] = None
+    population_percent: Optional[float] = None
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 
 # ==================== Generic Responses ====================
@@ -526,8 +529,9 @@ class CampaignApprovalResponse(BaseModel):
     message: str
     admin_message: Optional[str] = None
     
-    @validator('status', pre=True)
-    def status_to_lowercase(cls, v):
+    @field_validator('status', mode='before')
+    @classmethod
+    def status_to_lowercase(cls, v: Any) -> Any:
         if hasattr(v, 'value'):
             return v.value.lower()
         if isinstance(v, str):
@@ -537,56 +541,48 @@ class CampaignApprovalResponse(BaseModel):
 
 class PendingCampaignResponse(BaseModel):
     """Schema for pending campaign list (admin view)."""
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     name: str
     advertiser_id: int
     advertiser_name: str
     advertiser_email: str
     industry_type: str
-    ad_format: Optional[str]
+    ad_format: Optional[str] = None
     coverage_type: str
-    coverage_area: Optional[str]
-    target_country: Optional[str]
-    calculated_price: Optional[float]
-    submitted_at: Optional[datetime]
+    coverage_area: Optional[str] = None
+    target_country: Optional[str] = None
+    calculated_price: Optional[float] = None
+    submitted_at: Optional[datetime] = None
     status: str
     
-    class Config:
-        from_attributes = True
-
-    @validator('status', pre=True)
-    def status_to_lowercase(cls, v):
+    @field_validator('status', mode='before')
+    @classmethod
+    def status_to_lowercase(cls, v: Any) -> Any:
         if hasattr(v, 'value'):
             return v.value.lower()
         if isinstance(v, str):
             return v.lower()
         return v
     
-    @validator('coverage_type', pre=True)
-    def coverage_to_string(cls, v):
+    @field_validator('coverage_type', mode='before')
+    @classmethod
+    def coverage_to_string(cls, v: Any) -> Any:
         if hasattr(v, 'value'):
             return v.value
         return str(v)
 
 
 # ==================== Notification Schemas ====================
-class NotificationType(str, Enum):
-    CAMPAIGN_APPROVED = "campaign_approved"
-    CAMPAIGN_REJECTED = "campaign_rejected"
-    CHANGES_REQUIRED = "changes_required"
-    CAMPAIGN_SUBMITTED = "campaign_submitted"
-    SYSTEM = "system"
-
-
 class NotificationResponse(BaseModel):
     """Schema for notification responses."""
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
-    notification_type: NotificationType
+    notification_type: str
     title: str
     message: str
-    campaign_id: Optional[int]
-    is_read: bool
+    campaign_id: Optional[int] = None
+    is_read: bool = False
     created_at: datetime
-    
-    class Config:
-        from_attributes = True

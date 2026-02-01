@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     
     # Application
     APP_NAME: str = "Advertiser Dashboard API"
-    APP_VERSION: str = "1.1.6-final-railway"
+    APP_VERSION: str = "1.1.7-final-prod"
     DEBUG: bool = True
     
     # Database

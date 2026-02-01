@@ -531,6 +531,18 @@ async def startup_event():
             for name, dtype in campaign_cols:
                 add_column_safely("campaigns", name, dtype)
 
+            # 2b. Geodata table migrations
+            geodata_cols = [
+                ("radius_areas_count", "INTEGER DEFAULT 1"),
+                ("fips", "INTEGER"),
+                ("density_mi", "FLOAT"),
+                ("rank", "INTEGER"),
+                ("population_percent", "FLOAT"),
+                ("urban_percentage", "FLOAT")
+            ]
+            for name, dtype in geodata_cols:
+                add_column_safely("geodata", name, dtype)
+
             # 3. Handle Notifications table correctly
             try:
                 from sqlalchemy import text

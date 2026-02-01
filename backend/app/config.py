@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     
     # Application
     APP_NAME: str = "Advertiser Dashboard API"
-    APP_VERSION: str = "1.0.5-admin-fix"
+    APP_VERSION: str = "1.0.6-geodata-fix"
     DEBUG: bool = True
     
     # Database

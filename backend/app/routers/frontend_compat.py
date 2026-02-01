@@ -9,7 +9,7 @@ from datetime import datetime
 import logging
 import json
 
-from .. import models, auth
+from .. import models, schemas, auth
 from ..database import get_db
 from ..config import settings
 

@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     
     # Application
     APP_NAME: str = "Advertiser Dashboard API"
-    APP_VERSION: str = "1.1.7-final-prod"
+    APP_VERSION: str = "1.1.9-final-stable"
     DEBUG: bool = True
     
     # Database
@@ -33,8 +33,8 @@ class Settings(BaseSettings):
     # JWT - Load from environment with proper defaults
     SECRET_KEY: str = os.environ.get("JWT_SECRET", "dev_secret_key_change_me_in_production")
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))  # 24 hours default
-    REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.environ.get("REFRESH_TOKEN_EXPIRE_DAYS", "30"))  # 30 days default
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     
     # OAuth (Optional)
     GOOGLE_CLIENT_ID: str = os.environ.get("GOOGLE_CLIENT_ID", "")
@@ -65,7 +65,7 @@ class Settings(BaseSettings):
     
     # SMTP Settings (Optional)
     SMTP_HOST: str = os.environ.get("SMTP_HOST", "")
-    SMTP_PORT: int = int(os.environ.get("SMTP_PORT", "587"))
+    SMTP_PORT: int = 587
     SMTP_USER: str = os.environ.get("SMTP_USER", "")
     SMTP_PASS: str = os.environ.get("SMTP_PASS", "")
     EMAILS_FROM_EMAIL: str = os.environ.get("EMAILS_FROM_EMAIL", "support@adplatform.com")

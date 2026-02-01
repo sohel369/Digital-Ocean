@@ -127,24 +127,22 @@ def decode_token(token: str) -> dict:
 
 
 def authenticate_user(db: Session, email: str, password: str) -> Optional[models.User]:
-    """
-    Authenticate a user by email and password.
+    """Authenticate user by email and password."""
+    from sqlalchemy import func
+    # Case-insensitive email search
+    user = db.query(models.User).filter(func.lower(models.User.email) == email.lower()).first()
     
-    Args:
-        db: Database session
-        email: User email
-        password: Plain password
-    
-    Returns:
-        User object if authenticated, None otherwise
-    """
-    user = db.query(models.User).filter(models.User.email == email).first()
     if not user:
         return None
-    if not user.password_hash:  # OAuth user without password
+    
+    # If using local password
+    if user.password_hash:
+        if not verify_password(password, user.password_hash):
+            return None
+    else:
+        # OAuth user trying to log in with password?
         return None
-    if not verify_password(password, user.password_hash):
-        return None
+        
     return user
 
 

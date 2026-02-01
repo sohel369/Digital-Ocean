@@ -38,13 +38,13 @@ app = FastAPI(
 )
 
 # Robust CORS Configuration for Railway Production
-# Note: allow_origins cannot be ["*"] when allow_credentials is True
 cors_origins = [
     settings.FRONTEND_URL,
     "http://localhost:5173",
     "http://localhost:3000",
-    "https://digital-ocean-production-01ee.up.railway.app",  # Production Frontend
-    "https://digital-ocean-production-01ee.up.railway.app/" # With trailing slash
+    "https://digital-ocean-production-01ee.up.railway.app",  # Main Prod
+    "https://digital-ocean-production-01ee.up.railway.app/", # Main Prod Slash
+    "https://balanced-wholeness-production-ca00.up.railway.app" # Backend itself
 ]
 
 # Add railway deployment URL to CORS just in case
@@ -117,23 +117,32 @@ async def fix_database():
 
 @app.on_event("startup")
 async def startup_event():
-    logger.info("🚀 App starting...")
+    logger.info("🚀 App starting (Ver 1.1.1)...")
     try:
-        # Minimal startup to avoid railway timeout
         db = SessionLocal()
-        admin = db.query(models.User).filter(models.User.email == "admin@adplatform.com").first()
+        # Find admin by case-insensitive email
+        from sqlalchemy import func
+        admin = db.query(models.User).filter(func.lower(models.User.email) == "admin@adplatform.com").first()
         if not admin:
-            logger.info("Creating admin...")
+            logger.info("📦 Creating default admin account...")
             new_admin = models.User(
-                name="Admin", email="admin@adplatform.com",
+                name="System Admin", 
+                email="admin@adplatform.com",
                 password_hash=auth.get_password_hash("admin123"),
                 role="admin"
             )
             db.add(new_admin)
             db.commit()
+            logger.info("✅ Default admin created (admin@adplatform.com / admin123)")
+        else:
+            # Ensure role is 'admin' even if it was something else
+            if str(admin.role).lower() != "admin":
+                admin.role = "admin"
+                db.commit()
         db.close()
-    except: pass
-    logger.info("✅ Startup complete")
+    except Exception as e:
+        logger.warning(f"⚠️ Startup admin sync skipped: {e}")
+    logger.info("✅ Startup sequence complete")
 
 if __name__ == "__main__":
     import uvicorn

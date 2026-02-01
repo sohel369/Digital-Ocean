@@ -457,8 +457,9 @@ async def google_auth_sync(request: Request, db: Session = Depends(get_db)):
             content={"success": False, "message": "Email required"}
         )
     
-    # Check if user exists
-    user = db.query(models.User).filter(models.User.email == email).first()
+    # Check if user exists (case-insensitive)
+    from sqlalchemy import func
+    user = db.query(models.User).filter(func.lower(models.User.email) == email.lower()).first()
     
     if user:
         # Update OAuth info if needed

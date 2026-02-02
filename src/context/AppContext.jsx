@@ -327,7 +327,7 @@ export const AppProvider = ({ children }) => {
                 // Update synced set
                 setSyncedCountries(prevSet => new Set(prevSet).add(countryCode));
 
-                return {
+                const newState = {
                     ...base,
                     ...pricingUpdates,
                     industries: mergedIndustries,
@@ -336,6 +336,12 @@ export const AppProvider = ({ children }) => {
                     discounts: pricingUpdates?.discounts || base.discounts,
                     currency: pricingUpdates?.currency || base.currency
                 };
+
+                // Deep equality check to prevent unnecessary re-renders (STABILITY FIX)
+                if (JSON.stringify(prev) === JSON.stringify(newState)) {
+                    return prev;
+                }
+                return newState;
             });
 
         } catch (e) {
@@ -347,62 +353,65 @@ export const AppProvider = ({ children }) => {
     }, [syncedCountries, API_BASE_URL]);
 
 
-    const fetchData = async () => {
+    const fetchData = async (isBackgroundPoll = false) => {
         try {
             const token = localStorage.getItem('access_token');
             const hasAuth = !!token && token !== 'null' && token !== 'undefined';
             const isMock = token?.includes('mock_');
 
             // 1. Fetch Shared/Public Data first (Pricing, Payment Config)
-            // pricing/config handles optional auth internally to return contextual data
-            const pricingUrl = `${API_BASE_URL}/pricing/config?country_code=${country}`;
-            const [pricingRes, paymentRes] = await Promise.all([
-                fetch(pricingUrl, { headers: { ...getAuthHeaders() }, credentials: 'include' }),
-                fetch(`${API_BASE_URL}/payment/config`, { headers: { ...getAuthHeaders() }, credentials: 'include' })
-            ]);
+            // ON BACKGROUND POLL: Skip this to prevent pricing flicker/instability
+            if (!isBackgroundPoll) {
+                // pricing/config handles optional auth internally to return contextual data
+                const pricingUrl = `${API_BASE_URL}/pricing/config?country_code=${country}`;
+                const [pricingRes, paymentRes] = await Promise.all([
+                    fetch(pricingUrl, { headers: { ...getAuthHeaders() }, credentials: 'include' }),
+                    fetch(`${API_BASE_URL}/payment/config`, { headers: { ...getAuthHeaders() }, credentials: 'include' })
+                ]);
 
-            // Handle Pricing Data
-            if (pricingRes.ok) {
-                const rawPricing = await pricingRes.json();
-                const freshPricing = {
-                    industries: (rawPricing.industries || []).map(i => ({
-                        name: i?.name || 'Unknown',
-                        multiplier: i?.multiplier || 1.0,
-                        displayName: formatIndustryName(i?.name || 'Unknown')
-                    })),
-                    adTypes: (rawPricing.ad_types || []).map(a => ({
-                        name: a?.name || 'Display',
-                        baseRate: a?.base_rate || 100.0
-                    })),
-                    states: (rawPricing.states || []).map(s => ({
-                        name: s?.name || s?.state_name || 'Unknown',
-                        landMass: s?.land_area || 1000,
-                        densityMultiplier: s?.density_multiplier || 1.0,
-                        radiusAreasCount: s?.radius_areas_count || 1,
-                        population: s?.population || 0,
-                        stateCode: s?.state_code || '',
-                        countryCode: s?.country_code || 'US',
-                        fips: s?.fips,
-                        densityMi: s?.density_mi,
-                        rank: s?.rank,
-                        populationPercent: s?.population_percent
-                    })),
-                    discounts: rawPricing.discounts || { state: 0.15, national: 0.30 },
-                    currency: rawPricing.currency || 'USD'
-                };
-                setPricingData(freshPricing);
-                // Immediately load regions to ensure we have the full list
-                // Use silent: true for background poll to avoid disruptive UI loaders
-                await loadRegionsForCountry(country, freshPricing, true);
-            }
+                // Handle Pricing Data
+                if (pricingRes.ok) {
+                    const rawPricing = await pricingRes.json();
+                    const freshPricing = {
+                        industries: (rawPricing.industries || []).map(i => ({
+                            name: i?.name || 'Unknown',
+                            multiplier: i?.multiplier || 1.0,
+                            displayName: formatIndustryName(i?.name || 'Unknown')
+                        })),
+                        adTypes: (rawPricing.ad_types || []).map(a => ({
+                            name: a?.name || 'Display',
+                            baseRate: a?.base_rate || 100.0
+                        })),
+                        states: (rawPricing.states || []).map(s => ({
+                            name: s?.name || s?.state_name || 'Unknown',
+                            landMass: s?.land_area || 1000,
+                            densityMultiplier: s?.density_multiplier || 1.0,
+                            radiusAreasCount: s?.radius_areas_count || 1,
+                            population: s?.population || 0,
+                            stateCode: s?.state_code || '',
+                            countryCode: s?.country_code || 'US',
+                            fips: s?.fips,
+                            densityMi: s?.density_mi,
+                            rank: s?.rank,
+                            populationPercent: s?.population_percent
+                        })),
+                        discounts: rawPricing.discounts || { state: 0.15, national: 0.30 },
+                        currency: rawPricing.currency || 'USD'
+                    };
+                    // setPricingData(freshPricing); // REMOVED to prevent pricing flicker (wait for full region merge)
+                    // Immediately load regions to ensure we have the full list
+                    // Use silent: true for background poll to avoid disruptive UI loaders
+                    await loadRegionsForCountry(country, freshPricing, true);
+                }
 
-            if (paymentRes.ok) {
-                setPaymentConfig(await paymentRes.json());
-            }
+                if (paymentRes.ok) {
+                    setPaymentConfig(await paymentRes.json());
+                }
 
-            // Ensure we at least have dummy data if pricing fails
-            if (!pricingRes.ok) {
-                console.warn("⚠️ Using fallback pricing data due to API failure.");
+                // Ensure we at least have dummy data if pricing fails
+                if (!pricingRes.ok && !isBackgroundPoll) {
+                    console.warn("⚠️ Using fallback pricing data due to API failure.");
+                }
             }
 
             // 2. Fetch Sensitive Data ONLY if we have a real token
@@ -541,7 +550,7 @@ export const AppProvider = ({ children }) => {
         // Polling for new notifications every 30 seconds
         const interval = setInterval(() => {
             if (localStorage.getItem('user')) {
-                fetchData();
+                fetchData(true);
             }
         }, 30000);
 
@@ -1179,6 +1188,35 @@ export const AppProvider = ({ children }) => {
             toast.error(`Payment Failed: ${error.message}`);
         }
     };
+
+    const initiatePaymentIntent = async (campaignId, targetCurrency) => {
+        try {
+            const requestBody = {
+                campaign_id: Number(campaignId),
+                currency: targetCurrency || currency
+            };
+
+            const res = await fetch(`${API_BASE_URL}/payment/create-payment-intent`, {
+                method: 'POST',
+                headers: {
+                    ...getAuthHeaders(),
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.detail || 'Failed to initialize payment intent');
+            }
+
+            return await res.json(); // Returns { clientSecret, id, amount }
+        } catch (error) {
+            console.error("Payment Intent Error:", error);
+            throw error;
+        }
+    };
     const saveGeoSettings = (newSettings) => {
         const settingsWithTime = { ...newSettings, lastUpdated: new Date().toISOString() };
         setGeoSettings(settingsWithTime);
@@ -1211,6 +1249,7 @@ export const AppProvider = ({ children }) => {
             updateCampaign,
             submitCampaignForReview,
             initiatePayment,
+            initiatePaymentIntent,
             formatCurrency: (amount) => formatCurrency(amount, currency),
             convertPrice: (amount, sourceCurrency) => convertCurrency(amount, sourceCurrency || 'USD', currency),
             t,

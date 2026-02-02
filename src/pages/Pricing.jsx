@@ -181,19 +181,40 @@ const Pricing = () => {
     const handleNextStep = async () => {
         setIsCreating(true);
         try {
+            // FIX: Ensure budget is never 0 and format numeric values correctly
+            const cleanBudget = calculation.finalPrice > 0 ? calculation.finalPrice : 1.0;
+
+            // FIX: Map frontend status "state" to match backend CoverageType enum ("state")
+            // Backend Enum: RADIUS_30="30-mile", STATE="state", COUNTRY="country"
+            let backendCoverageType = '30-mile';
+            if (coverageArea === 'state') backendCoverageType = 'state';
+            if (coverageArea === 'national') backendCoverageType = 'country';
+
             const campaignData = {
                 name: `Campaign: ${selectedIndustry.name} - ${new Date().toLocaleDateString()}`,
-                budget: calculation.finalPrice,
-                startDate: new Date().toISOString().split('T')[0],
-                endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
-                status: 'draft',
-                format: selectedAdType.name,
-                industry: selectedIndustry.name,
+
+                // Mapped Fields for Backend Schema (CampaignCreate)
+                industry_type: selectedIndustry.name,               // was 'industry'
+                start_date: new Date().toISOString().split('T')[0], // was 'startDate'
+                end_date: new Date(new Date().setMonth(new Date().getMonth() + parseInt(duration))).toISOString().split('T')[0], // was 'endDate', added dynamic duration
+                duration: parseInt(duration),
+                budget: cleanBudget,
+                coverage_type: backendCoverageType,                 // New required field
+                ad_format: selectedAdType.name,                     // was 'format'
+
+                // Optional/Meta fields
+                target_state: coverageArea === 'state' ? selectedState.name : null,
+                target_postcode: postcode || null,
+                target_country: country,
+                status: 'DRAFT',
                 headline: `Special Offer from ${selectedIndustry.name}`,
                 description: `Experience the premium reach of ${selectedIndustry.name} demographics.`,
                 landing_page_url: "https://example.com",
-                meta: { industry: selectedIndustry.name, coverage: coverageArea, location: coverageArea === 'state' ? selectedState.name : (postcode || '90210'), country, cta: "Learn More" }
+                tags: ["quick-launch"]
             };
+
+            console.log("🚀 Submitting Campaign Payload:", campaignData);
+
             const saved = await addCampaign(campaignData);
             if (saved?.id) {
                 setTempCampaignId(saved.id);

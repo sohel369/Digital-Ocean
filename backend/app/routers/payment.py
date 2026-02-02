@@ -119,6 +119,26 @@ async def create_checkout_session(
     
     amount_smallest_unit = int(base_price * multiplier)
     
+    # STRIPE LIMIT HANDLING (BDT)
+    # Stripe BDT limit is ~999,999.99 BDT. If amount exceeds this, we MUST process in USD.
+    if target_currency == 'bdt' and amount_smallest_unit > 99999999:
+        logger.warning(f"⚠️ [PAYMENT] Amount {amount_smallest_unit} BDT exceeds Stripe limit. Converting to USD.")
+        # Approximate Rate: 1 USD = 120 BDT (Safe fallback)
+        usd_amount = base_price / 120.0
+        target_currency = 'usd'
+        amount_smallest_unit = int(usd_amount * 100) # USD cents
+        logger.info(f"🔄 [PAYMENT] Converted to {amount_smallest_unit} cents (USD)")
+
+    # GLOBAL STRIPE LIMIT CHECK (Max 8 digits: 99,999,999 units)
+    # This applies to USD ($999,999.99) and others.
+    STRIPE_MAX_UNIT = 99999999
+    if amount_smallest_unit > STRIPE_MAX_UNIT:
+        if 'sk_test' in settings.STRIPE_SECRET_KEY or not is_stripe_configured():
+            logger.warning(f"⚠️ [TEST MODE] Amount {amount_smallest_unit} exceeds global Stripe limit. Capping at 99,999,999 for success.")
+            amount_smallest_unit = STRIPE_MAX_UNIT
+        else:
+             raise HTTPException(status_code=400, detail="Transaction amount exceeds the online payment limit ($999,999.99). Please contact sales for wire transfer.")
+
     if amount_smallest_unit < 50 and multiplier == 100: # Stripe minimum $0.50
         amount_smallest_unit = 50
     elif amount_smallest_unit <= 0:
@@ -134,25 +154,23 @@ async def create_checkout_session(
                 "session_id": mock_id
             }
 
-        # Create Stripe Checkout Session (SUBSCRIPTION MODE for Auto-Renewal)
+        # Create Stripe Checkout Session (ONE-TIME PAYMENT)
+        # We use mode='payment' to support all currencies (including BDT) without complex subscription mandates.
         checkout_session = stripe.checkout.Session.create(
-            # Use explicit payment methods to avoid 'unknown parameter' errors
+            # Force Card to ensure support for BDT and others
             payment_method_types=['card'],
             line_items=[{
                 'price_data': {
                     'currency': target_currency,
                     'product_data': {
                         'name': campaign.name,
-                        'description': f"Monthly subscription for {campaign.industry_type} in {campaign.coverage_area}",
+                        'description': f"Advertising Campaign: {campaign.industry_type} - {campaign.coverage_area}",
                     },
                     'unit_amount': amount_smallest_unit,
-                    'recurring': {
-                        'interval': 'month',
-                    },
                 },
                 'quantity': 1,
             }],
-            mode='subscription',  # Changed from 'payment' to 'subscription'
+            mode='payment',
             success_url=success_url + (("&" if "?" in success_url else "?") + "session_id={CHECKOUT_SESSION_ID}"),
             cancel_url=cancel_url,
             customer_email=current_user.email,
@@ -161,7 +179,7 @@ async def create_checkout_session(
                 'campaign_id': campaign_id,
                 'user_id': current_user.id,
                 'environment': 'test' if 'sk_test' in settings.STRIPE_SECRET_KEY else 'production',
-                'type': 'monthly_subscription'
+                'type': 'one_time_payment'
             }
         )
 
@@ -188,6 +206,90 @@ async def create_checkout_session(
     except Exception as e:
         logger.error(f"🔥 [CRASH] Unexpected error in payment: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error during payment initialization")
+
+class PaymentIntentRequest(BaseModel):
+    campaign_id: int
+    currency: str = "usd"
+
+@router.post("/create-payment-intent")
+async def create_payment_intent(
+    request_data: PaymentIntentRequest,
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a Stripe Payment Intent for embedded elements.
+    """
+    campaign_id = request_data.campaign_id
+    currency = request_data.currency
+
+    logger.info(f"💳 [INTENT] Creating for Campaign {campaign_id} | User: {current_user.email} | Currency: {currency}")
+
+    # Get campaign
+    campaign = db.query(models.Campaign).filter(models.Campaign.id == campaign_id).first()
+    
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    # Auth Check
+    role = str(current_user.role).lower() if current_user.role else ""
+    is_admin = role == "admin"
+    is_country_admin = role == "country_admin" and campaign.target_country == current_user.managed_country
+    
+    if not (campaign.advertiser_id == current_user.id or is_admin or is_country_admin):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # Check existing payment
+    existing_payment = db.query(models.PaymentTransaction).filter(
+        models.PaymentTransaction.campaign_id == campaign_id,
+        models.PaymentTransaction.status == "succeeded"
+    ).first()
+    
+    if existing_payment:
+        raise HTTPException(status_code=400, detail="Campaign already paid")
+
+    # Calculate Amount
+    target_currency = currency.lower()
+    zero_decimal_currencies = ['vnd', 'jpy', 'krw', 'bif', 'clp', 'djf', 'gnf', 'kmf', 'mga', 'pyg', 'rwf', 'ugx', 'vuv', 'xaf', 'xof', 'xpf']
+    multiplier = 1 if target_currency in zero_decimal_currencies else 100
+    
+    base_price = campaign.budget
+    amount_smallest_unit = int(base_price * multiplier)
+    
+    if amount_smallest_unit < 50 and multiplier == 100:
+        amount_smallest_unit = 50
+    elif amount_smallest_unit <= 0:
+        amount_smallest_unit = 1
+
+    try:
+        if not is_stripe_configured():
+            # Mock Intent for dev/test without keys
+            return { "clientSecret": f"pi_mock_{campaign_id}_secret_{current_user.id}", "amount": amount_smallest_unit }
+
+        intent = stripe.PaymentIntent.create(
+            amount=amount_smallest_unit,
+            currency=target_currency,
+            # automatic_payment_methods={"enabled": True}, # Causing issues with some currencies (BDT)
+            payment_method_types=['card'], # Force card to ensure global support
+            metadata={
+                'campaign_id': campaign_id,
+                'user_id': current_user.id,
+                'environment': 'test' if 'sk_test' in settings.STRIPE_SECRET_KEY else 'production'
+            }
+        )
+
+        return { 
+            "clientSecret": intent.client_secret, 
+            "id": intent.id,
+            "amount": amount_smallest_unit
+        }
+
+    except stripe.error.StripeError as e:
+        logger.error(f"❌ [STRIPE] Intent Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"🔥 [CRASH] Intent Error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal Error")
 
 @router.get("/session/{session_id}")
 async def get_checkout_session(session_id: str, current_user: models.User = Depends(auth.get_current_active_user), db: Session = Depends(get_db)):

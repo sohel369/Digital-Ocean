@@ -55,13 +55,13 @@ const ResetPassword = () => {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#050810] p-4">
                 <div className="max-w-[440px] w-full bg-[#0a0f1d] p-10 rounded-[2.5rem] shadow-2xl border border-white/5 text-center">
-                    <div className="inline-flex items-center justify-center p-4 rounded-full bg-green-500/10 text-green-500 mb-6 font-bold">
+                    <div className="inline-flex items-center justify-center p-4 rounded-full bg-blue-500/10 text-blue-500 mb-6 font-bold">
                         <CheckCircle2 size={48} />
                     </div>
                     <h1 className="text-3xl font-extrabold text-white mb-4">Password Updated</h1>
                     <p className="text-slate-400 mb-8">Access restored. You are being redirected to the terminal login.</p>
                     <div className="flex justify-center">
-                        <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+                        <div className="w-8 h-8 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
                     </div>
                 </div>
             </div>
@@ -87,7 +87,7 @@ const ResetPassword = () => {
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-emerald-500 transition-all font-bold text-sm placeholder:text-slate-700"
+                                className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-bold text-sm placeholder:text-slate-700"
                                 placeholder="••••••••"
                                 required minLength={8}
                             />
@@ -102,7 +102,7 @@ const ResetPassword = () => {
                                 type="password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-emerald-500 transition-all font-bold text-sm placeholder:text-slate-700"
+                                className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-bold text-sm placeholder:text-slate-700"
                                 placeholder="••••••••"
                                 required
                             />

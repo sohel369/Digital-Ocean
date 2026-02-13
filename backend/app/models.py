@@ -147,6 +147,7 @@ class Campaign(Base):
     advertiser = relationship("User", back_populates="campaigns", foreign_keys=[advertiser_id])
     reviewer = relationship("User", back_populates="reviewed_campaigns", foreign_keys=[reviewed_by])
     media_files = relationship("Media", back_populates="campaign", cascade="all, delete-orphan")
+    invoices = relationship("Invoice", back_populates="campaign", cascade="all, delete-orphan")
     payment_transactions = relationship("PaymentTransaction", back_populates="campaign", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="campaign", cascade="all, delete-orphan")
     
@@ -159,6 +160,37 @@ class Campaign(Base):
     
     def __repr__(self):
         return f"<Campaign {self.name} ({self.status})>"
+
+
+class Invoice(Base):
+    """Invoice model for monthly billing."""
+    __tablename__ = "invoices"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    invoice_number = Column(String(50), unique=True, index=True, nullable=False)
+    
+    amount = Column(Float, nullable=False)
+    tax_rate = Column(Float, default=0.0)
+    tax_amount = Column(Float, default=0.0)
+    total_amount = Column(Float, nullable=False)
+    currency = Column(String(10), default="USD")
+    
+    billing_date = Column(DateTime(timezone=True), nullable=False)
+    due_date = Column(DateTime(timezone=True), nullable=False)
+    status = Column(String(20), default="pending") # pending, paid, cancelled
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    paid_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Relationships
+    campaign = relationship("Campaign", back_populates="invoices")
+    user = relationship("User")
+
+    def __repr__(self):
+        return f"<Invoice {self.invoice_number} ({self.status})>"
 
 
 class Media(Base):
@@ -238,16 +270,15 @@ class GeoData(Base):
     land_area_sq_km = Column(Float, nullable=False)  # Total area
     population = Column(Integer, nullable=False)
     radius_areas_count = Column(Integer, default=1) # No of 30 mile radius areas
-    density_multiplier = Column(Float, default=1.0)  # Population density factor
+    density_multiplier = Column(Float, default=1.0) # Relative to control (e.g. California)
+    urban_percentage = Column(Float, nullable=True)
+    tax_rate = Column(Float, default=0.0) # Support for country/state specific tax
     
-    # Extra demographic data
+    # Cache fields for performance
     fips = Column(Integer, nullable=True)
     density_mi = Column(Float, nullable=True)
     rank = Column(Integer, nullable=True)
     population_percent = Column(Float, nullable=True)
-    
-    # Urban/Rural split (optional)
-    urban_percentage = Column(Float, nullable=True)
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

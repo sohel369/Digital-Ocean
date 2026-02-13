@@ -265,7 +265,7 @@ const Pricing = () => {
                                             className={`group relative py-3 rounded-xl text-sm font-bold border transition-all ${duration === opt.val ? 'bg-primary text-white border-primary' : 'bg-slate-900 border-white/5 text-slate-400 hover:bg-white/5'}`}
                                         >
                                             {opt.label}
-                                            {opt.discount !== '0%' && <span className="block text-[10px] text-emerald-400">Save {opt.discount}</span>}
+                                            {opt.discount !== '0%' && <span className="block text-[10px] text-blue-400">Save {opt.discount}</span>}
 
                                             {/* Tooltip for Step 4 */}
                                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
@@ -339,10 +339,10 @@ const Pricing = () => {
 
 
                         {coverageArea === 'national' && (
-                            <div className="mt-6 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 flex gap-4 items-center animate-in fade-in slide-in-from-top-2">
-                                <Globe size={32} className="text-emerald-400" />
+                            <div className="mt-6 bg-blue-500/10 border border-blue-500/20 rounded-2xl p-6 flex gap-4 items-center animate-in fade-in slide-in-from-top-2">
+                                <Globe size={32} className="text-blue-400" />
                                 <div>
-                                    <h4 className="font-black text-emerald-400 text-sm uppercase">{t('pricing.national_bulk_discount', { discount: (pricingData.discounts?.national * 100).toFixed(0) })}</h4>
+                                    <h4 className="font-black text-blue-400 text-sm uppercase">{t('pricing.national_bulk_discount', { discount: (pricingData.discounts?.national * 100).toFixed(0) })}</h4>
                                     <p className="text-xs text-slate-400 font-medium italic">Applied automatically for full nationwide reach.</p>
                                 </div>
                             </div>
@@ -362,7 +362,7 @@ const Pricing = () => {
                             {calculation.discountAmt > 0 && (
                                 <div className="space-y-3">
                                     <div className="flex justify-between text-sm"><span className="text-slate-400">{t('pricing.subtotal')}</span><span className="font-bold text-white">{formatCurrency(calculation.basePrice)}</span></div>
-                                    <div className="flex justify-between text-sm text-emerald-400 italic"><span>{t('pricing.saving')} ({calculation.discountPercent}%)</span><span className="font-bold">-{formatCurrency(calculation.discountAmt)}</span></div>
+                                    <div className="flex justify-between text-sm text-blue-400 italic"><span>{t('pricing.saving')} ({calculation.discountPercent}%)</span><span className="font-bold">-{formatCurrency(calculation.discountAmt)}</span></div>
                                 </div>
                             )}
                             <div className="pt-6">
@@ -372,7 +372,7 @@ const Pricing = () => {
                                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                                             {t('pricing.monthly_est', { discount: calculation.discountPercent })}
                                         </span>
-                                        {duration === '12' && <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Locked in for 12 months</span>}
+                                        {duration === '12' && <span className="text-[10px] text-blue-500 font-bold uppercase tracking-widest">Locked in for 12 months</span>}
                                     </div>
                                 </div>
                                 <button onClick={handleNextStep} disabled={isCreating} className="w-full premium-btn py-4 rounded-xl text-lg font-black group shadow-lg shadow-primary/20 italic flex items-center justify-center gap-2 transition-all disabled:opacity-50">

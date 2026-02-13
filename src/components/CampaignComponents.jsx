@@ -9,7 +9,7 @@ const StatusBadge = ({ status }) => {
         draft: 'bg-slate-700/50 text-slate-400 border-slate-600',
         review: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
         approved: 'bg-primary/10 text-primary-light border-primary/20',
-        live: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
+        live: 'bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.2)]'
     };
 
     const labels = {
@@ -26,7 +26,7 @@ const StatusBadge = ({ status }) => {
       inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border
       transition-all duration-300 ${styles[statusKey] || styles.draft}
     `}>
-            <span className={`w-1.5 h-1.5 rounded-full ${statusKey === 'live' ? 'bg-emerald-400 animate-pulse' : 'bg-current'}`} />
+            <span className={`w-1.5 h-1.5 rounded-full ${statusKey === 'live' ? 'bg-blue-400 animate-pulse' : 'bg-current'}`} />
             {labels[statusKey] || status}
         </span>
     );
@@ -105,7 +105,7 @@ export const ActivityFeed = ({ activities }) => {
                 );
             case 'payment':
                 return (
-                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/10">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/10">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                     </div>
                 );

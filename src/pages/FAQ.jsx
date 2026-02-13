@@ -19,8 +19,8 @@ const MetricCard = ({ title, icon: Icon, children }) => (
 
 const BenchmarkRow = ({ industry, value, change, isPositiveGood = true }) => {
     const isGood = isPositiveGood ? change > 0 : change < 0;
-    const color = isGood ? 'text-emerald-400' : 'text-red-400';
-    const bg = isGood ? 'bg-emerald-400/10' : 'bg-red-400/10';
+    const color = isGood ? 'text-blue-400' : 'text-red-400';
+    const bg = isGood ? 'bg-blue-400/10' : 'bg-red-400/10';
 
     return (
         <div className="flex justify-between items-center text-sm border-b border-white/5 pb-2 last:border-0 last:pb-0">

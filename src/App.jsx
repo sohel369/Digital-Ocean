@@ -21,7 +21,7 @@ import ResetPassword from './pages/ResetPassword';
 
 const AdminGuard = ({ children }) => {
     const { user } = useApp();
-    const isAdmin = user?.role === 'admin' || user?.role === 'country_admin';
+    const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'country_admin';
     if (!isAdmin) {
         return <Navigate to="/" replace />;
     }
@@ -36,7 +36,7 @@ const MainLayout = ({ children }) => {
         return (
             <div className="min-h-screen bg-[#050810] flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-emerald-600/20 border-t-emerald-600 rounded-full animate-spin"></div>
+                    <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
                     <p className="text-slate-500 font-mono text-sm animate-pulse uppercase tracking-widest">Initializing Session...</p>
                 </div>
             </div>
@@ -73,7 +73,7 @@ function App() {
                     element={
                         <MainLayout>
                             <Routes>
-                                <Route path="/" element={(user?.role === 'admin' || user?.role === 'country_admin') ? <AdminDashboard /> : <Dashboard />} />
+                                <Route path="/" element={(user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'country_admin') ? <AdminDashboard /> : <Dashboard />} />
                                 <Route path="/campaigns/new" element={<CampaignCreation />} />
                                 <Route path="/campaigns/new/:id" element={<CampaignCreation />} />
                                 <Route path="/geo-targeting" element={<GeoTargeting />} />

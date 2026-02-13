@@ -47,10 +47,10 @@ export const STATUS_CONFIG = {
     },
     [CAMPAIGN_STATUS.APPROVED]: {
         label: 'Approved',
-        color: 'emerald',
-        bgColor: 'bg-emerald-500/10',
-        textColor: 'text-emerald-400',
-        borderColor: 'border-emerald-500/20',
+        color: 'blue',
+        bgColor: 'bg-blue-500/10',
+        textColor: 'text-blue-400',
+        borderColor: 'border-blue-500/20',
         icon: '✅',
         description: 'Campaign approved, ready to activate',
         nextStates: ['active'],
@@ -67,10 +67,10 @@ export const STATUS_CONFIG = {
     },
     [CAMPAIGN_STATUS.ACTIVE]: {
         label: 'Active',
-        color: 'green',
-        bgColor: 'bg-green-500/10',
-        textColor: 'text-green-400',
-        borderColor: 'border-green-500/20',
+        color: 'blue',
+        bgColor: 'bg-blue-500/10',
+        textColor: 'text-blue-400',
+        borderColor: 'border-blue-500/20',
         icon: '🟢',
         description: 'Campaign is live',
         nextStates: ['paused', 'completed'],
@@ -118,7 +118,7 @@ export const NOTIFICATION_CONFIG = {
     [NOTIFICATION_TYPES.CAMPAIGN_APPROVED]: {
         title: 'Campaign Approved',
         icon: '✅',
-        color: 'green',
+        color: 'blue',
         priority: 'high',
     },
     [NOTIFICATION_TYPES.CAMPAIGN_REJECTED]: {
@@ -130,7 +130,7 @@ export const NOTIFICATION_CONFIG = {
     [NOTIFICATION_TYPES.CAMPAIGN_ACTIVATED]: {
         title: 'Campaign Activated',
         icon: '🚀',
-        color: 'emerald',
+        color: 'blue',
         priority: 'high',
     },
     [NOTIFICATION_TYPES.BUDGET_WARNING]: {

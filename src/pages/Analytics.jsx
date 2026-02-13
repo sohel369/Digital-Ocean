@@ -36,7 +36,7 @@ const Analytics = () => {
     const deviceData = [
         { name: t('campaign.mobile') || 'Mobile', value: 65, color: '#3b82f6' },
         { name: t('campaign.desktop') || 'Desktop', value: 25, color: '#8b5cf6' },
-        { name: t('common.tablet') || 'Tablet', value: 10, color: '#10b981' },
+        { name: t('common.tablet') || 'Tablet', value: 10, color: '#3B82F6' },
     ];
 
     const handleExportPDF = () => {
@@ -105,7 +105,7 @@ const Analytics = () => {
                                     formatter={(value) => [`${value}%`, 'Engagement Rate (Indicativeonly)']}
                                 />
                                 <Legend verticalAlign="top" height={36} iconType="circle" />
-                                <Line type="monotone" dataKey="ctr" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} name="Eng. Rate %" animationDuration={1000} />
+                                <Line type="monotone" dataKey="ctr" stroke="#3B82F6" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} name="Eng. Rate %" animationDuration={1000} />
                             </LineChart>
                         </ResponsiveContainer>
                         <p className="text-[10px] text-slate-600 text-center mt-2 italic">* Metrics are indicative and not used for billing.</p>

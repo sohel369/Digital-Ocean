@@ -279,6 +279,7 @@ class PricingCalculateRequest(BaseModel):
     target_state: Optional[str] = None
     target_country: Optional[str] = None
     duration_days: int = Field(..., gt=0)
+    radius: Optional[int] = Field(30, ge=1, le=500)
 
 
 class PricingCalculateResponse(BaseModel):

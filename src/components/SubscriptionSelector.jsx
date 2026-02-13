@@ -12,24 +12,24 @@ import React, { useState } from 'react';
  */
 export const SubscriptionSelector = ({ selectedDuration, onChange }) => {
   const options = [
-    { 
-      value: 3, 
-      label: '3 Months', 
-      subtext: 'Standard', 
-      discount: null 
+    {
+      value: 3,
+      label: '3 Months',
+      subtext: 'Standard',
+      discount: null
     },
-    { 
-      value: 6, 
-      label: '6 Months', 
-      subtext: '15% Savings', 
+    {
+      value: 6,
+      label: '6 Months',
+      subtext: '15% Savings',
       discount: 15,
       popular: true
     },
-    { 
-      value: 12, 
-      label: '12 Months', 
-      subtext: '25% Best Value', 
-      discount: 25 
+    {
+      value: 12,
+      label: '12 Months',
+      subtext: '25% Best Value',
+      discount: 25
     }
   ];
 
@@ -38,7 +38,7 @@ export const SubscriptionSelector = ({ selectedDuration, onChange }) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {options.map((option) => {
           const isSelected = selectedDuration === option.value;
-          
+
           return (
             <div
               key={option.value}
@@ -47,8 +47,8 @@ export const SubscriptionSelector = ({ selectedDuration, onChange }) => {
                 relative cursor-pointer rounded-xl border p-4 transition-all duration-200
                 flex flex-col items-center justify-center text-center gap-2
                 hover:shadow-lg
-                ${isSelected 
-                  ? 'border-indigo-500 bg-indigo-500/10 shadow-indigo-500/10' 
+                ${isSelected
+                  ? 'border-indigo-500 bg-indigo-500/10 shadow-indigo-500/10'
                   : 'border-white/10 bg-slate-900/40 hover:bg-slate-800/60 hover:border-white/20'
                 }
               `}
@@ -76,7 +76,7 @@ export const SubscriptionSelector = ({ selectedDuration, onChange }) => {
                   {option.discount}% OFF
                 </div>
               )}
-              
+
               {/* Label */}
               <div className="text-lg font-bold text-slate-100">
                 {option.label}
@@ -93,15 +93,15 @@ export const SubscriptionSelector = ({ selectedDuration, onChange }) => {
 
       {/* Helper Note */}
       <div className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-500">
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          width="16" 
-          height="16" 
-          viewBox="0 0 24 24" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2" 
-          strokeLinecap="round" 
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
           strokeLinejoin="round"
           className="opacity-70"
         >
@@ -122,7 +122,7 @@ export const SubscriptionSelector = ({ selectedDuration, onChange }) => {
 export default function PricingPageMock() {
   const [radius, setRadius] = useState(30);
   const [duration, setDuration] = useState(6); // Default to 6 months
-  
+
   // Constants
   const BASE_FEE = 200;
   const COST_PER_5_MILES = 50;
@@ -149,11 +149,11 @@ export default function PricingPageMock() {
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
+
           {/* Configuration Panel */}
           <div className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
             <h2 className="text-xl font-bold mb-8 pb-4 border-b border-white/5">Campaign Configuration</h2>
-            
+
             <div className="space-y-8">
               {/* Radius Slider (Mock) */}
               <div>
@@ -161,12 +161,12 @@ export default function PricingPageMock() {
                   <label className="text-slate-300 font-medium">Target Radius</label>
                   <span className="text-indigo-400 font-bold">{radius} miles</span>
                 </div>
-                <input 
-                  type="range" 
-                  min="5" 
-                  max="50" 
+                <input
+                  type="range"
+                  min="5"
+                  max="50"
                   step="5"
-                  value={radius} 
+                  value={radius}
                   onChange={(e) => setRadius(parseInt(e.target.value))}
                   className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400"
                 />
@@ -179,9 +179,9 @@ export default function PricingPageMock() {
               {/* NEW Subscription Selector */}
               <div>
                 <label className="block text-slate-300 font-medium mb-4">Subscription Duration</label>
-                <SubscriptionSelector 
-                  selectedDuration={duration} 
-                  onChange={setDuration} 
+                <SubscriptionSelector
+                  selectedDuration={duration}
+                  onChange={setDuration}
                 />
               </div>
             </div>
@@ -191,7 +191,7 @@ export default function PricingPageMock() {
           <div className="bg-slate-800/40 backdrop-blur-md border border-indigo-500/20 rounded-2xl p-8 relative overflow-hidden">
             {/* Gradient Glow */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[80px] -translate-y-1/2 translate-x-1/2 rounded-full pointer-events-none" />
-            
+
             <h2 className="text-xl font-bold mb-6 pb-4 border-b border-white/5 relative z-10">Cost Breakdown</h2>
 
             <div className="space-y-4 relative z-10">
@@ -203,14 +203,14 @@ export default function PricingPageMock() {
                 <span>Radius Cost ({radius} miles)</span>
                 <span>${radiusCost}</span>
               </div>
-              
+
               <div className="pt-4 mt-2 border-t border-white/5 flex justify-between font-semibold text-slate-200">
                 <span>Subtotal</span>
                 <span>${subtotal}</span>
               </div>
 
               {/* Dynamic Discount Row */}
-              <div className={`flex justify-between transition-colors duration-300 ${discountAmount > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>
+              <div className={`flex justify-between transition-colors duration-300 ${discountAmount > 0 ? 'text-blue-400' : 'text-slate-500'}`}>
                 <span>Duration Discount ({discountPercent}%)</span>
                 <span>-${discountAmount}</span>
               </div>

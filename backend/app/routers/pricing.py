@@ -44,7 +44,8 @@ async def calculate_pricing(
         duration_days=pricing_request.duration_days,
         target_postcode=pricing_request.target_postcode,
         target_state=pricing_request.target_state,
-        target_country=pricing_request.target_country
+        target_country=pricing_request.target_country,
+        radius=pricing_request.radius
     )
     
     return pricing_result

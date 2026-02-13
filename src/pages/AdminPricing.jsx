@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Save, RefreshCcw, TrendingUp, Map, Briefcase, ChevronDown, Check } from 'lucide-react';
+import { Save, RefreshCcw, TrendingUp, Map, Briefcase, ChevronDown, Check, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 
 const AdminPricing = () => {
@@ -87,11 +87,14 @@ const AdminPricing = () => {
                     return;
                 }
             }
-            loadRegionsForCountry(selectedCountry);
+            // Use silent=true if we already have some state for this country to avoid flicker
+            const hasData = localPricing?.states?.some(s => s.countryCode === selectedCountry);
+            loadRegionsForCountry(selectedCountry, null, hasData);
         }
-    }, [selectedCountry, loadRegionsForCountry, user]);
+    }, [selectedCountry, loadRegionsForCountry, user, !!localPricing]);
 
-    // Early return if data is not loaded yet
+    // Early return ONLY if we have absolutely no data at all (first load)
+    // If we have some industries/adTypes, we show the page even if regions are loading
     if (!localPricing || !localPricing.industries || localPricing.industries.length === 0) {
         return (
             <div className="min-h-[400px] flex flex-col items-center justify-center gap-4 text-slate-500 font-bold animate-pulse uppercase tracking-widest">
@@ -202,15 +205,15 @@ const AdminPricing = () => {
         }
     };
 
-    // CSV Template Data - STEP 2: Updated Columns
-    // Columns: Country | Region | Population | Density | RadiusAreas | Price factor
-    const csvTemplate = "Country,Region,Population,Density,RadiusAreas,PriceFactor\nUS,California,39538223,1.0,297,1.5\nUS,New York,20201249,1.67,372,2.0";
+    // CSV Template Data - Standardized for Global Data Import
+    // Consistent with the buyer's requested format
+    const csvTemplate = "CountryCode,StateName,Population,DensityMultiplier,RadiusAreasCount\nUS,California,39538223,1.0,297\nES,Madrid,6663394,1.5,52\nGB,London,8982000,2.1,120";
     const downloadTemplate = () => {
         const blob = new Blob([csvTemplate], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'regions_template.csv';
+        a.download = 'global_pricing_template.csv';
         a.click();
         window.URL.revokeObjectURL(url);
     };
@@ -259,21 +262,14 @@ const AdminPricing = () => {
                                     const headers = lines[0].split(',');
                                     const newStates = lines.slice(1).filter(l => l.trim()).map(line => {
                                         const values = line.split(',');
-                                        // STEP 2: Updated Columns map: Country, Region, Population, Density, Price factor
-                                        // Using smart detection or strict index-based mapping
                                         return {
-                                            countryCode: values[0]?.trim(), // Country (e.g. US)
-                                            name: values[1]?.trim(),        // Region (e.g. California)
-                                            population: parseFloat(values[2]) || 0, // Population
-                                            densityMultiplier: parseFloat(values[3]) || 1.0, // Density Factor
-                                            radiusAreasCount: parseInt(values[4]) || 1, // Radius Areas
-                                            priceFactor: parseFloat(values[5]) || 1.0, // Price Factor
+                                            countryCode: values[0]?.trim().toUpperCase(),
+                                            name: values[1]?.trim(),
+                                            population: parseFloat(values[2]?.replace(/,/g, '')) || 1,
+                                            densityMultiplier: parseFloat(values[3]) || 1.0,
+                                            radiusAreasCount: parseInt(values[4]) || 1,
                                         };
-                                    }).map(s => ({
-                                        ...s,
-                                        // Combine density and price factor into the internal densityMultiplier field
-                                        densityMultiplier: s.priceFactor || s.densityMultiplier || 1.0
-                                    }));
+                                    });
 
                                     if (newStates.length > 0) {
                                         setLocalPricing(prev => {
@@ -343,7 +339,7 @@ const AdminPricing = () => {
                 {/* Ad Type Base Rates */}
                 <div className="glass-panel rounded-[2rem] p-8 space-y-6 relative overflow-hidden flex flex-col">
                     <div className="flex items-center gap-3 border-b border-white/5 pb-4 mb-2 sticky top-0 z-20 bg-slate-900/80 backdrop-blur-md">
-                        <TrendingUp className="text-emerald-500" size={24} />
+                        <TrendingUp className="text-blue-500" size={24} />
                         <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">{t('admin.base_rates')}</h2>
                     </div>
 
@@ -358,7 +354,7 @@ const AdminPricing = () => {
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">{currentCurrency.symbol}</span>
                                         <input
                                             type="number"
-                                            className="w-28 bg-slate-950 border border-slate-700 rounded-xl pl-6 pr-3 py-2 text-emerald-400 font-black outline-none"
+                                            className="w-28 bg-slate-950 border border-slate-700 rounded-xl pl-6 pr-3 py-2 text-blue-400 font-black outline-none"
                                             value={ad.baseRate}
                                             onChange={(e) => handleBaseRateChange(ad.name, e.target.value)}
                                         />

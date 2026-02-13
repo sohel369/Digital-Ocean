@@ -34,16 +34,16 @@ const StatusBadge = ({ status }) => {
         },
         active: {
             label: 'Active',
-            bg: 'bg-emerald-500/10',
-            text: 'text-emerald-400',
-            border: 'border-emerald-500/20',
+            bg: 'bg-blue-500/10',
+            text: 'text-blue-400',
+            border: 'border-blue-500/20',
             icon: CheckCircle2
         },
         approved: {
             label: 'Approved',
-            bg: 'bg-emerald-500/10',
-            text: 'text-emerald-400',
-            border: 'border-emerald-500/20',
+            bg: 'bg-blue-500/10',
+            text: 'text-blue-400',
+            border: 'border-blue-500/20',
             icon: CheckCircle2
         },
         rejected: {
@@ -123,7 +123,7 @@ const AdminCampaigns = () => {
     };
 
     useEffect(() => {
-        const isAdmin = user?.role === 'admin' || user?.role === 'country_admin';
+        const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'country_admin';
         if (isAdmin) {
             fetchPendingCampaigns();
         }
@@ -192,7 +192,7 @@ const AdminCampaigns = () => {
         c.advertiser_email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const isAdmin = user?.role === 'admin' || user?.role === 'country_admin';
+    const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'country_admin';
     if (!isAdmin) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -254,7 +254,7 @@ const AdminCampaigns = () => {
                 </div>
                 <div className="glass-panel p-6 rounded-2xl">
                     <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400">
+                        <div className="p-3 rounded-xl bg-blue-500/10 text-blue-400">
                             <CheckCircle2 size={24} />
                         </div>
                         <div>
@@ -285,8 +285,8 @@ const AdminCampaigns = () => {
                     </div>
                 ) : pendingCampaigns.length === 0 ? (
                     <div className="p-20 text-center">
-                        <div className="w-20 h-20 bg-emerald-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-emerald-500/20">
-                            <CheckCircle2 className="text-emerald-500" size={40} />
+                        <div className="w-20 h-20 bg-blue-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-blue-500/20">
+                            <CheckCircle2 className="text-blue-500" size={40} />
                         </div>
                         <h3 className="text-2xl font-black text-white italic uppercase tracking-tight mb-2">Zero Latency</h3>
                         <p className="text-slate-500 font-bold">No initiatives awaiting validation.</p>
@@ -368,7 +368,7 @@ const AdminCampaigns = () => {
                                                     <div className="flex items-center justify-center gap-2">
                                                         <button
                                                             onClick={() => openActionModal(campaign, 'approve')}
-                                                            className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all shadow-lg shadow-emerald-500/10 group/btn"
+                                                            className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all shadow-lg shadow-blue-500/10 group/btn"
                                                             title="Approve Submission"
                                                         >
                                                             <Check size={18} />
@@ -435,7 +435,7 @@ const AdminCampaigns = () => {
                                                                 <div className="space-y-3 bg-black/20 p-5 rounded-3xl border border-white/5">
                                                                     <div className="flex justify-between items-center">
                                                                         <span className="text-[11px] text-slate-500 font-bold uppercase">Monthly Yield:</span>
-                                                                        <span className="text-lg font-black text-emerald-400 italic tracking-tighter">{formatCurrency(campaign.calculated_price || 0)}</span>
+                                                                        <span className="text-lg font-black text-blue-400 italic tracking-tighter">{formatCurrency(campaign.calculated_price || 0)}</span>
                                                                     </div>
                                                                     <button
                                                                         onClick={() => openActionModal(campaign, 'request_changes')}
@@ -489,7 +489,7 @@ const AdminCampaigns = () => {
                                     <div className="flex items-center gap-2">
                                         <button
                                             onClick={(e) => { e.stopPropagation(); openActionModal(campaign, 'approve'); }}
-                                            className="flex-1 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all"
+                                            className="flex-1 py-2.5 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20 font-black text-[10px] uppercase tracking-widest hover:bg-blue-500 hover:text-white transition-all"
                                         >
                                             Approve
                                         </button>
@@ -546,8 +546,8 @@ const AdminCampaigns = () => {
                     <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-300">
                         <div className="flex items-center gap-4 mb-6">
                             {actionModal.action === 'approve' && (
-                                <div className="p-3 rounded-xl bg-emerald-500/10">
-                                    <CheckCircle2 className="text-emerald-400" size={28} />
+                                <div className="p-3 rounded-xl bg-blue-500/10">
+                                    <CheckCircle2 className="text-blue-400" size={28} />
                                 </div>
                             )}
                             {actionModal.action === 'reject' && (
@@ -597,7 +597,7 @@ const AdminCampaigns = () => {
                                 onClick={handleAction}
                                 disabled={processing}
                                 className={`flex-1 px-6 py-3 rounded-xl font-bold transition-colors ${actionModal.action === 'approve'
-                                    ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                                    ? 'bg-blue-500 text-white hover:bg-blue-600'
                                     : actionModal.action === 'reject'
                                         ? 'bg-red-500 text-white hover:bg-red-600'
                                         : 'bg-orange-500 text-white hover:bg-orange-600'

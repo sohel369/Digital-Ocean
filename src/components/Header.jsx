@@ -29,12 +29,12 @@ const Header = () => {
 
                 <div>
                     <h1 className="text-lg md:text-xl font-bold text-slate-100 italic tracking-tight">
-                        {user?.role === 'admin' ? 'Admin Dashboard' : t('sidebar.dashboard')}
+                        {(user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'country_admin') ? 'Admin Dashboard' : t('sidebar.dashboard')}
                     </h1>
                     <div className="flex items-center gap-2 mt-0.5">
-                        <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            {user?.role === 'admin' ? 'SYSTEM ONLINE' : 'LIVE'}
+                        <span className="flex items-center gap-1.5 text-[10px] font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                            {(user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'country_admin') ? 'SYSTEM ONLINE' : 'LIVE'}
                         </span>
                         <span className="text-slate-400 text-xs flex items-center gap-1 font-medium hidden sm:flex truncate max-w-[150px]">
                             <Globe size={10} />
@@ -93,7 +93,7 @@ const Header = () => {
                                 <div className="fixed left-4 right-4 top-20 sm:absolute sm:top-14 sm:right-0 sm:left-auto sm:w-[380px] bg-background-elevated rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-slate-700 z-[70] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                                     <div className="p-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-900/50">
                                         <div className="flex items-center gap-2">
-                                            <h3 className="font-bold text-slate-100">{user?.role === 'admin' ? 'Admin Notifications' : t('dashboard.approval_status')}</h3>
+                                            <h3 className="font-bold text-slate-100">{(user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'country_admin') ? 'Admin Notifications' : t('dashboard.approval_status')}</h3>
                                             <span className="bg-primary/20 text-primary-light text-xs font-bold px-2 py-0.5 rounded-full">{unreadCount}</span>
                                         </div>
                                         <button onClick={markAllRead} className="text-xs text-primary-light font-medium hover:underline hover:text-primary">Mark all read</button>
@@ -106,7 +106,7 @@ const Header = () => {
                                         ) : (
                                             notifications.map(n => (
                                                 <div key={n.id} className={`p-3 rounded-xl flex gap-3 ${!n.read ? 'bg-slate-800/80 border border-slate-700/50' : 'hover:bg-slate-800/30'}`}>
-                                                    <div className={`mt-1 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${n.type === 'approval' ? 'bg-emerald-500/10 text-emerald-500' : n.type === 'warning' ? 'bg-amber-500/10 text-amber-500' : 'bg-primary/10 text-primary-light'}`}>
+                                                    <div className={`mt-1 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${n.type === 'approval' ? 'bg-blue-500/10 text-blue-500' : n.type === 'warning' ? 'bg-amber-500/10 text-amber-500' : 'bg-primary/10 text-primary-light'}`}>
                                                         {n.type === 'approval' ? <Check size={14} /> : <Info size={14} />}
                                                     </div>
                                                     <div>
@@ -126,7 +126,7 @@ const Header = () => {
                         )}
                     </div>
 
-                    {user?.role !== 'admin' && (
+                    {user?.role?.toLowerCase() !== 'admin' && user?.role?.toLowerCase() !== 'country_admin' && (
                         <Link to="/campaigns/new" className="flex items-center gap-1 sm:gap-2 premium-btn text-white text-[10px] sm:text-sm font-semibold px-2 sm:px-4 py-1.5 sm:py-2.5 rounded-xl transition-all active:scale-95 shadow-lg shadow-primary/25">
                             <PlusCircle size={14} className="sm:w-4 sm:h-4" />
                             <span className="hidden xs:inline">{t('sidebar.new_campaign')}</span>

@@ -113,14 +113,14 @@ const AdminDashboard = () => {
                     value={formatCurrency(stats?.totalSpend || 0)}
                     subtext="Gross Validated Revenue"
                     icon={DollarSign}
-                    colorClass="emerald-500"
+                    colorClass="blue-500"
                 />
                 <AdminStatCard
                     title="System Reach"
                     value={`${((stats?.impressions || 0) / 1000).toFixed(1)}K`}
                     subtext="Total Impressions Distributed"
                     icon={TrendingUp}
-                    colorClass="emerald-500"
+                    colorClass="blue-500"
                 />
                 <AdminStatCard
                     title="Pending Approvals"
@@ -170,10 +170,10 @@ const AdminDashboard = () => {
                             </div>
                         ) : (
                             <div className="space-y-6">
-                                <div className="w-20 h-20 bg-emerald-500/10 rounded-3xl flex items-center justify-center mx-auto border border-emerald-500/20">
-                                    <CheckCircle2 className="text-emerald-500" size={40} />
+                                <div className="w-20 h-20 bg-blue-500/10 rounded-3xl flex items-center justify-center mx-auto border border-blue-500/20">
+                                    <CheckCircle2 className="text-blue-500" size={40} />
                                 </div>
-                                <h3 className="text-2xl font-black text-white italic uppercase text-emerald-400">Queue Clear</h3>
+                                <h3 className="text-2xl font-black text-white italic uppercase text-blue-400">Queue Clear</h3>
                                 <p className="text-slate-500 font-medium max-w-sm mx-auto">
                                     All campaign initiatives have been processed. Systems are running at optimal latency.
                                 </p>

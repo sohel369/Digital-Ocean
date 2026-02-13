@@ -361,9 +361,9 @@ const CampaignCreation = () => {
                                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">{t('geo.coverage_area')}</p>
                                 </div>
                             </div>
-                            <Link to="/geo-targeting" className="group flex items-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500 hover:text-white border border-emerald-500/30 rounded-xl transition-all shadow-lg shadow-emerald-500/5">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500 group-hover:text-white">Edit in Geo Targeting</span>
-                                <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform text-emerald-500 group-hover:text-white" />
+                            <Link to="/geo-targeting" className="group flex items-center gap-2 px-4 py-2 bg-blue-500/10 hover:bg-blue-500 hover:text-white border border-blue-500/30 rounded-xl transition-all shadow-lg shadow-blue-500/5">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-blue-500 group-hover:text-white">Edit in Geo Targeting</span>
+                                <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform text-blue-500 group-hover:text-white" />
                             </Link>
                         </div>
 
@@ -411,8 +411,8 @@ const CampaignCreation = () => {
                                 </div>
                                 <div className="flex items-center justify-between text-[10px]">
                                     {geoSettings.lastUpdated ? (
-                                        <div className="flex items-center gap-1 text-emerald-400 font-bold uppercase tracking-wider bg-emerald-400/5 px-2 py-1 rounded-lg border border-emerald-400/10">
-                                            <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse"></div>
+                                        <div className="flex items-center gap-1 text-blue-400 font-bold uppercase tracking-wider bg-blue-400/5 px-2 py-1 rounded-lg border border-blue-400/10">
+                                            <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse"></div>
                                             Live & Real Data
                                         </div>
                                     ) : (
@@ -428,10 +428,10 @@ const CampaignCreation = () => {
                             </div>
                         </div>
 
-                        <div className="mt-4 flex items-center gap-3 px-5 py-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl">
-                            <Info size={16} className="text-emerald-400 shrink-0" />
+                        <div className="mt-4 flex items-center gap-3 px-5 py-3 bg-blue-500/5 border border-blue-500/10 rounded-xl">
+                            <Info size={16} className="text-blue-400 shrink-0" />
                             <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase tracking-wider">
-                                Location configurations are managed in the <Link to="/geo-targeting" className="text-emerald-500 hover:underline underline-offset-4">Geo Targeting tab</Link> to ensure precise mapping and radius accuracy.
+                                Location configurations are managed in the <Link to="/geo-targeting" className="text-blue-500 hover:underline underline-offset-4">Geo Targeting tab</Link> to ensure precise mapping and radius accuracy.
                             </p>
                         </div>
                     </div>
@@ -635,13 +635,13 @@ const CampaignCreation = () => {
                                                     const dur = parseInt(formData.duration || '3');
                                                     if (dur === 12) return (
                                                         <div className="flex flex-col items-end gap-1">
-                                                            <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-md border border-emerald-500/20 font-black tracking-tighter shadow-[0_0_10px_rgba(16,185,129,0.1)]">50% DISCOUNT RECEIVED</span>
+                                                            <span className="text-[9px] bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-md border border-blue-500/20 font-black tracking-tighter shadow-[0_0_10px_rgba(59,130,246,0.1)]">50% DISCOUNT RECEIVED</span>
                                                             <span className="text-[8px] text-slate-500 italic">Total cost divided by 12 installments</span>
                                                         </div>
                                                     );
                                                     if (dur === 6) return (
                                                         <div className="flex flex-col items-end gap-1">
-                                                            <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-md border border-emerald-500/20 font-black tracking-tighter shadow-[0_0_10px_rgba(16,185,129,0.1)]">25% DISCOUNT RECEIVED</span>
+                                                            <span className="text-[9px] bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-md border border-blue-500/20 font-black tracking-tighter shadow-[0_0_10px_rgba(59,130,246,0.1)]">25% DISCOUNT RECEIVED</span>
                                                             <span className="text-[8px] text-slate-500 italic">Total cost divided by 6 installments</span>
                                                         </div>
                                                     );
@@ -723,10 +723,10 @@ const CampaignCreation = () => {
 
                                 {/* Step 1 */}
                                 <div className="relative z-10 flex flex-col items-center gap-2">
-                                    <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                                    <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
                                         <CheckCircle2 size={20} />
                                     </div>
-                                    <span className="text-[9px] font-black text-emerald-400 uppercase tracking-tighter">Submit</span>
+                                    <span className="text-[9px] font-black text-blue-400 uppercase tracking-tighter">Submit</span>
                                 </div>
 
                                 {/* Step 2 */}

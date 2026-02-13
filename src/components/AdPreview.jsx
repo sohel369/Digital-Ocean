@@ -120,7 +120,7 @@ export const AdPreview = ({ formData = {} }) => {
             <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-700/50 bg-slate-900/50 gap-4 flex-wrap">
                 <div className="flex items-center gap-3">
                     <h3 className="font-bold text-slate-200 text-sm sm:text-base border-l-2 border-primary pl-3 whitespace-nowrap">{t('campaign.live_preview')}</h3>
-                    <span className="hidden sm:inline-block px-2 py-1 bg-emerald-500/10 rounded text-[10px] font-black text-emerald-500 border border-emerald-500/30 tracking-widest uppercase italic shadow-[0_0_10px_rgba(16,185,129,0.1)]">{styles.label}</span>
+                    <span className="hidden sm:inline-block px-2 py-1 bg-blue-500/10 rounded text-[10px] font-black text-blue-500 border border-blue-500/30 tracking-widest uppercase italic shadow-[0_0_10px_rgba(59,130,246,0.1)]">{styles.label}</span>
                 </div>
 
                 <div className="flex p-0.5 sm:p-1 bg-slate-800 rounded-xl border border-slate-700/50">
@@ -147,7 +147,7 @@ export const AdPreview = ({ formData = {} }) => {
             <div ref={containerRef} className="flex-1 bg-slate-950 relative overflow-hidden flex flex-col items-center justify-center p-8">
 
                 {/* Dimensions Overlay (Mobile friendly) */}
-                <div className="absolute top-4 right-4 text-[9px] font-bold text-emerald-400 uppercase tracking-widest z-10 sm:hidden bg-slate-900/50 px-2 py-1 rounded backdrop-blur-sm border border-emerald-500/20">
+                <div className="absolute top-4 right-4 text-[9px] font-bold text-blue-400 uppercase tracking-widest z-10 sm:hidden bg-slate-900/50 px-2 py-1 rounded backdrop-blur-sm border border-blue-500/20">
                     {styles.label}
                 </div>
 
@@ -183,7 +183,7 @@ export const AdPreview = ({ formData = {} }) => {
                         {/* Text Area */}
                         <div className={`flex flex-col flex-1 min-w-0 ${styles.text}`}>
                             {styles.h > 80 && (
-                                <div className="text-emerald-500 text-[8px] font-bold uppercase tracking-widest mb-1">{t('preview.recommended')}</div>
+                                <div className="text-blue-500 text-[8px] font-bold uppercase tracking-widest mb-1">{t('preview.recommended')}</div>
                             )}
                             <h2 className={`font-bold text-slate-900 leading-tight ${activeTab === 'email' ? 'font-serif' : ''} 
                                 ${styles.h <= 50 ? 'text-[10px] mb-0 truncate' : styles.h <= 90 ? 'text-xs mb-0' : 'text-xl mb-2'}`}>
@@ -210,7 +210,7 @@ export const AdPreview = ({ formData = {} }) => {
                 )}
 
                 {activeTab === 'email' && (
-                    <div className="mt-8 text-[11px] text-emerald-400 text-center max-w-[600px] px-4 opacity-90 uppercase tracking-widest font-black bg-emerald-500/10 py-4 rounded-2xl border border-emerald-500/20">
+                    <div className="mt-8 text-[11px] text-blue-400 text-center max-w-[600px] px-4 opacity-90 uppercase tracking-widest font-black bg-blue-500/10 py-4 rounded-2xl border border-blue-500/20">
                         <p>{t('preview.newsletter_tip')}</p>
                     </div>
                 )}

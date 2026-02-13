@@ -227,8 +227,8 @@ const GeoTargeting = () => {
                     <p className="text-slate-400 mt-1 text-sm sm:text-base font-medium">{t('geo.subtitle')}</p>
                 </div>
                 {geoSettings.lastUpdated ? (
-                    <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400 text-[10px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                    <div className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-blue-400 text-[10px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(59,130,246,0.1)]">
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
                         Live & Real Data Synchronized
                     </div>
                 ) : (
@@ -251,7 +251,7 @@ const GeoTargeting = () => {
                                     key={opt.id}
                                     onClick={() => setSettings(p => ({ ...p, coverageArea: opt.id }))}
                                     className={`flex items-center gap-3 px-5 py-4 rounded-2xl text-sm font-black transition-all border-2 ${settings.coverageArea === opt.id
-                                        ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+                                        ? 'bg-blue-500/10 border-blue-500 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]'
                                         : 'bg-slate-900/50 border-slate-800 text-slate-500 hover:border-slate-700'
                                         }`}
                                 >
@@ -266,14 +266,14 @@ const GeoTargeting = () => {
                     <div className={`space-y-8 transition-all duration-300 ${settings.coverageArea !== 'radius' ? 'hidden' : 'animate-in fade-in slide-in-from-top-2'}`}>
                         <div className="space-y-4">
                             <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                                <MapPin size={16} className="text-emerald-500" />
+                                <MapPin size={16} className="text-blue-500" />
                                 {t('geo.location')}
                             </h2>
                             <div className="flex flex-col sm:flex-row gap-3 items-stretch">
                                 <input
                                     type="text"
                                     disabled={settings.coverageArea !== 'radius'}
-                                    className="w-full bg-slate-900/50 border border-slate-700/50 rounded-2xl px-5 py-4 text-sm text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500/50 placeholder:text-slate-500 transition-all font-bold"
+                                    className="w-full bg-slate-900/50 border border-slate-700/50 rounded-2xl px-5 py-4 text-sm text-slate-100 outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500 transition-all font-bold"
                                     placeholder={t('geo.placeholder')}
                                     value={settings.postcode}
                                     onChange={(e) => setSettings(p => ({ ...p, postcode: e.target.value }))}
@@ -282,7 +282,7 @@ const GeoTargeting = () => {
                                 <button
                                     onClick={handlePostcodeSearch}
                                     disabled={settings.coverageArea !== 'radius'}
-                                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-4 rounded-2xl transition-all flex items-center justify-center shrink-0 shadow-lg shadow-emerald-900/20 active:scale-95 group disabled:bg-slate-800 disabled:text-slate-600"
+                                    className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-4 rounded-2xl transition-all flex items-center justify-center shrink-0 shadow-lg shadow-blue-900/20 active:scale-95 group disabled:bg-slate-800 disabled:text-slate-600"
                                 >
                                     <Navigation size={20} className="group-hover:translate-x-0.5 transition-transform" />
                                 </button>
@@ -292,14 +292,14 @@ const GeoTargeting = () => {
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
                                 <h2 className="text-sm font-bold text-slate-100">{t('geo.radius')}</h2>
-                                <span className="text-emerald-400 font-black bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl text-sm shadow-sm font-mono">
+                                <span className="text-blue-400 font-black bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-xl text-sm shadow-sm font-mono">
                                     {settings.radius} {t('geo.miles')}
                                 </span>
                             </div>
                             <input
                                 type="range" min="5" max="100"
                                 disabled={settings.coverageArea !== 'radius'}
-                                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
                                 value={settings.radius}
                                 onChange={(e) => setSettings(p => ({ ...p, radius: parseInt(e.target.value) }))}
                             />
@@ -313,12 +313,12 @@ const GeoTargeting = () => {
                     {/* 3. State Selection (Hidden if not 'state') */}
                     <div className={`space-y-4 transition-all duration-300 ${settings.coverageArea !== 'state' ? 'hidden' : 'animate-in fade-in slide-in-from-top-2'}`}>
                         <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                            <Building2 size={16} className="text-emerald-500" />
+                            <Building2 size={16} className="text-blue-500" />
                             Select Target State
                         </h2>
                         <Dropdown
                             label="Choose a State"
-                            icon={<MapPin size={16} className="text-emerald-500" />}
+                            icon={<MapPin size={16} className="text-blue-500" />}
                             options={filteredStates.map(s => ({ value: s.name, name: s.name }))}
                             value={settings.targetState}
                             onChange={(val) => setSettings(p => ({ ...p, targetState: val }))}
@@ -335,11 +335,11 @@ const GeoTargeting = () => {
 
                     {/* Stats Result (Reach/Population) */}
                     <div className="bg-slate-900/50 border border-slate-700/50 rounded-2xl p-6 text-white text-center space-y-4 relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                        <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
                         <div>
-                            <p className="text-emerald-400 text-[10px] uppercase tracking-[0.2em] font-black mb-2 opacity-80">ESTIMATED POPULATION</p>
-                            <p className="text-4xl font-black text-white drop-shadow-[0_0_15px_rgba(16,185,129,0.3)] italic tracking-tighter">
+                            <p className="text-blue-400 text-[10px] uppercase tracking-[0.2em] font-black mb-2 opacity-80">ESTIMATED POPULATION</p>
+                            <p className="text-4xl font-black text-white drop-shadow-[0_0_15px_rgba(59,130,246,0.3)] italic tracking-tighter">
                                 {(() => {
                                     if (settings.coverageArea === 'national') {
                                         const total = pricingData.states
@@ -366,7 +366,7 @@ const GeoTargeting = () => {
                     </div>
 
                     <div className="space-y-4">
-                        <button className="w-full py-4 premium-btn-green rounded-2xl font-black shadow-lg shadow-emerald-900/20 transition-all hover:scale-[1.02] italic uppercase tracking-widest"
+                        <button className="w-full py-4 premium-btn-blue rounded-2xl font-black shadow-lg shadow-blue-900/20 transition-all hover:scale-[1.02] italic uppercase tracking-widest"
                             onClick={() => saveGeoSettings(settings)}>
                             {t('geo.apply')}
                         </button>
@@ -382,8 +382,8 @@ const GeoTargeting = () => {
                     ) : (
                         <div className="w-full h-full flex items-center justify-center bg-slate-900/80">
                             <div className="text-center space-y-4">
-                                <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20">
-                                    {settings.coverageArea === 'state' ? <Building2 size={40} className="text-emerald-500" /> : <Globe size={40} className="text-emerald-500" />}
+                                <div className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto border border-blue-500/20">
+                                    {settings.coverageArea === 'state' ? <Building2 size={40} className="text-blue-500" /> : <Globe size={40} className="text-blue-500" />}
                                 </div>
                                 <h3 className="text-xl font-bold text-white uppercase italic tracking-tighter">
                                     {settings.coverageArea === 'state' ? `Targeting ${settings.targetState || 'Region'}` : 'Full National Targeting'}
@@ -396,8 +396,8 @@ const GeoTargeting = () => {
                     )}
 
                     {settings.coverageArea === 'radius' && (
-                        <div className="absolute top-4 left-10 bg-slate-900/90 backdrop-blur px-4 py-2 rounded-lg text-[10px] md:text-xs font-black text-emerald-400 shadow-xl border border-emerald-500/20 flex items-center gap-2 z-[1000] uppercase tracking-widest italic">
-                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                        <div className="absolute top-4 left-10 bg-slate-900/90 backdrop-blur px-4 py-2 rounded-lg text-[10px] md:text-xs font-black text-blue-400 shadow-xl border border-blue-500/20 flex items-center gap-2 z-[1000] uppercase tracking-widest italic">
+                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
                             <span>Active Map Sequence</span>
                         </div>
                     )}

@@ -98,7 +98,7 @@ const ActionItem = ({ campaign, onApprove, onReject, onEdit }) => {
                             <>
                                 <button
                                     onClick={() => onApprove(campaign.id)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition-all"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition-all"
                                 >
                                     <CheckCircleIcon className="w-4 h-4" />
                                     Approve
@@ -147,7 +147,7 @@ const ActionItem = ({ campaign, onApprove, onReject, onEdit }) => {
                         {campaign.status === CAMPAIGN_STATUS.APPROVED && (
                             <button
                                 onClick={() => onEdit(campaign.id)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-semibold rounded-lg transition-all"
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition-all"
                             >
                                 Activate Campaign
                             </button>
@@ -228,7 +228,7 @@ export const ActionCenter = ({ campaigns = [], onApprove, onReject, onEdit }) =>
                 {/* Approved - Ready to Activate */}
                 {approved.length > 0 && (
                     <div>
-                        <h3 className="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-3 mt-6">
+                        <h3 className="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-3 mt-6">
                             Approved - Ready to Activate ({approved.length})
                         </h3>
                         <div className="space-y-2">

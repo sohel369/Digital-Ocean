@@ -321,6 +321,13 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None, 
             if campaign:
                 campaign.status = models.CampaignStatus.PENDING_REVIEW
                 campaign.submitted_at = db.func.now()
+                
+                # Generate monthly invoices for the contract
+                try:
+                    from .. import invoice_service
+                    invoice_service.generate_monthly_invoices(db, campaign)
+                except Exception as e:
+                    logger.error(f"Failed to generate invoices: {str(e)}")
             db.commit()
     return {"status": "success"}
 

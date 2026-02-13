@@ -201,7 +201,7 @@ const Login = () => {
                             type="text"
                             value={isLogin && isForgot ? email : (isLogin ? email : username)}
                             onChange={(e) => isLogin ? setEmail(e.target.value) : setUsername(e.target.value)}
-                            className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-emerald-500 transition-all font-bold text-sm placeholder:text-slate-700"
+                            className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-bold text-sm placeholder:text-slate-700"
                             placeholder={isLogin ? (isForgot ? "Enter your registered email" : "admin@adplatform.com") : "NEW_OPERATOR_01"}
                             required autoComplete="off"
                         />
@@ -215,7 +215,7 @@ const Login = () => {
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-emerald-500 transition-all font-bold text-sm placeholder:text-slate-700"
+                                    className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-bold text-sm placeholder:text-slate-700"
                                     placeholder="operator@adplatform.com"
                                     required
                                 />
@@ -257,7 +257,7 @@ const Login = () => {
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-emerald-500 transition-all font-bold text-sm placeholder:text-slate-700"
+                                className="w-full bg-[#111622] border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-bold text-sm placeholder:text-slate-700"
                                 placeholder="••••••••"
                                 required={!isForgot}
                             />
@@ -266,7 +266,7 @@ const Login = () => {
 
                     {isLogin && !isForgot && (
                         <div className="flex justify-end">
-                            <button type="button" onClick={() => setIsForgot(true)} className="text-[11px] font-bold text-slate-500 hover:text-emerald-500 transition-colors uppercase tracking-wider">
+                            <button type="button" onClick={() => setIsForgot(true)} className="text-[11px] font-bold text-slate-500 hover:text-blue-500 transition-colors uppercase tracking-wider">
                                 Forgot Password?
                             </button>
                         </div>

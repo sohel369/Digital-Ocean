@@ -11,7 +11,10 @@ import {
     Clock,
     AlertCircle,
     ChevronRight,
-    Search
+    Search,
+    XCircle,
+    MessageSquare,
+    PartyPopper
 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { Link } from 'react-router-dom';
@@ -31,14 +34,14 @@ const StatCard = ({ title, value, subtext, icon: Icon, trend, colorClass }) => (
                     <AreaChart data={sparklineData}>
                         <defs>
                             <linearGradient id={`grad-${title}`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor={trend === 'up' ? '#10b981' : '#059669'} stopOpacity={0.2} />
-                                <stop offset="100%" stopColor={trend === 'up' ? '#10b981' : '#059669'} stopOpacity={0} />
+                                <stop offset="0%" stopColor={trend === 'up' ? '#3B82F6' : '#2563EB'} stopOpacity={0.2} />
+                                <stop offset="100%" stopColor={trend === 'up' ? '#3B82F6' : '#2563EB'} stopOpacity={0} />
                             </linearGradient>
                         </defs>
                         <Area
                             type="monotone"
                             dataKey="v"
-                            stroke={trend === 'up' ? '#10b981' : '#059669'}
+                            stroke={trend === 'up' ? '#3B82F6' : '#2563EB'}
                             strokeWidth={2}
                             fill={`url(#grad-${title})`}
                         />
@@ -51,7 +54,7 @@ const StatCard = ({ title, value, subtext, icon: Icon, trend, colorClass }) => (
             <div className="flex flex-wrap items-baseline gap-1.5 sm:gap-2">
                 <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-black text-white tracking-tighter truncate max-w-full" title={typeof value === 'string' ? value : ''}>{value}</p>
                 {trend && (
-                    <span className={`text-[10px] sm:text-xs font-black italic ${trend === 'up' ? 'text-emerald-400' : 'text-primary-light'}`}>
+                    <span className={`text-[10px] sm:text-xs font-black italic ${trend === 'up' ? 'text-blue-400' : 'text-primary-light'}`}>
                         {trend === 'up' ? '↑ 12%' : '↓ 3%'}
                     </span>
                 )}
@@ -90,6 +93,39 @@ const Dashboard = () => {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-700">
             {/* Admin Feedback Banners */}
             <div className="space-y-4">
+                {/* Approved Campaign Banner */}
+                {campaigns.filter(c => c.status === 'approved').map(camp => (
+                    <div key={camp.id} className="p-4 rounded-2xl border bg-emerald-500/10 border-emerald-500/20 animate-in fade-in slide-in-from-top-2 duration-500">
+                        <div className="flex items-start gap-4">
+                            <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400">
+                                <CheckCircle2 size={20} />
+                            </div>
+                            <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                                        <span>Campaign Approved!</span>
+                                        <span className="text-emerald-400">🎉</span>
+                                        <span className="text-slate-400">—</span>
+                                        <span className="text-emerald-300">{camp.name}</span>
+                                    </h3>
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                        {camp.reviewed_at ? new Date(camp.reviewed_at).toLocaleDateString() : 'Recently'}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-400 mt-1">
+                                    <span className="font-bold text-emerald-300">Admin Message:</span> "{camp.admin_message || 'Your campaign has been approved and is now active.'}"
+                                </p>
+                                <div className="mt-3 flex gap-2">
+                                    <Link to={`/campaigns/new/${camp.id}`} className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black rounded-lg uppercase tracking-wider transition-colors">
+                                        View Campaign
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+
+                {/* Rejected / Changes Required Campaign Banners */}
                 {campaigns.filter(c => c.status === 'changes_required' || c.status === 'rejected').map(camp => (
                     <div key={camp.id} className={`p-4 rounded-2xl border ${camp.status === 'rejected' ? 'bg-red-500/10 border-red-500/20' : 'bg-orange-500/10 border-orange-500/20'} animate-in fade-in slide-in-from-top-2 duration-500`}>
                         <div className="flex items-start gap-4">
@@ -136,10 +172,11 @@ const Dashboard = () => {
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 w-full">
                 <div className="space-y-1">
                     <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase italic leading-none">
-                        {t('dashboard.title')} <span className="text-primary drop-shadow-[0_0_15px_rgba(16,185,129,0.3)]">{t('dashboard.subtitle')}</span>
+                        {t('dashboard.title')} <span className="text-primary drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]">{t('dashboard.subtitle')}</span>
                     </h1>
-                    <p className="text-slate-500 font-bold text-xs md:text-sm uppercase tracking-widest opacity-80 pl-1">
+                    <p className="text-slate-400 font-bold text-xs md:text-sm uppercase tracking-widest pl-1">
                         {t('dashboard.monitoring', { count: activeCampaignsCount })}
+                        <span className="text-primary-light ml-2 inline-block animate-pulse">●</span>
                     </p>
                 </div>
 
@@ -164,7 +201,7 @@ const Dashboard = () => {
                         </button>
 
                         {/* New Campaign CTA */}
-                        <Link to="/campaigns/new" className="premium-btn flex-1 sm:w-56 h-[52px] rounded-2xl text-[10px] sm:text-xs md:text-sm italic font-black flex items-center justify-center gap-2.5 shadow-[0_10px_25px_-5px_rgba(16,185,129,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0">
+                        <Link to="/campaigns/new" className="premium-btn flex-1 sm:w-56 h-[52px] rounded-2xl text-[10px] sm:text-xs md:text-sm italic font-black flex items-center justify-center gap-2.5 shadow-[0_10px_25px_-5px_rgba(59,130,246,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0">
                             <div className="bg-white/20 p-1 rounded-lg">
                                 <Plus size={16} strokeWidth={3} />
                             </div>
@@ -181,7 +218,7 @@ const Dashboard = () => {
                     value={formatCurrency(stats?.totalSpend || 0)}
                     subtext={t('dashboard.monthly_est') || 'Monthly Estimated'}
                     icon={Activity}
-                    colorClass="emerald-500"
+                    colorClass="blue-500"
                 />
                 <StatCard
                     title="Estimated Population"
@@ -189,7 +226,7 @@ const Dashboard = () => {
                     subtext={`Population Target`}
                     icon={Eye}
                     trend="up"
-                    colorClass="emerald-500"
+                    colorClass="blue-500"
                 />
                 <StatCard
                     title={t('dashboard.total_clicks')}
@@ -205,7 +242,7 @@ const Dashboard = () => {
                     subtext={`${t('dashboard.target')}: 3.5%`}
                     icon={TrendingUp}
                     trend="down"
-                    colorClass="emerald-500"
+                    colorClass="blue-500"
                 />
             </div>
 
@@ -216,8 +253,8 @@ const Dashboard = () => {
                         <h2 className="text-xl font-bold text-white flex items-center gap-2">
                             {t('dashboard.recent_campaigns')} <span className="text-primary font-black">{t('dashboard.recent_campaigns_sub')}</span>
                         </h2>
-                        <Link to="/campaigns" className="text-sm font-bold text-primary hover:text-primary-light flex items-center gap-1 transition-colors">
-                            {t('common.view_all')} <ChevronRight size={16} />
+                        <Link to="/campaigns" className="text-xs font-black text-blue-500 hover:text-blue-400 flex items-center gap-1.5 transition-all group/view bg-blue-500/5 px-3 py-1.5 rounded-xl border border-blue-500/10">
+                            {t('common.view_all')} <ChevronRight size={14} className="group-hover/view:translate-x-1 transition-transform" />
                         </Link>
                     </div>
 
@@ -261,8 +298,8 @@ const Dashboard = () => {
                                             <td className="px-6 py-5">
                                                 <div className="flex items-center gap-2">
                                                     {camp.status === 'live' || camp.status === 'active' || camp.status === 'approved' ? (
-                                                        <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-[9px] font-black uppercase tracking-widest italic">
-                                                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shrink-0" />
+                                                        <span className="flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full text-[9px] font-black uppercase tracking-widest italic">
+                                                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse shrink-0" />
                                                             LIVE
                                                         </span>
                                                     ) : camp.status === 'pending_review' || camp.status === 'submitted' ? (
@@ -321,7 +358,7 @@ const Dashboard = () => {
                                     </div>
                                     <div className="shrink-0">
                                         {camp.status === 'live' || camp.status === 'active' || camp.status === 'approved' ? (
-                                            <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                            <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
                                         ) : camp.status === 'pending_review' || camp.status === 'submitted' ? (
                                             <Clock size={16} className="text-amber-500" />
                                         ) : (
@@ -346,17 +383,41 @@ const Dashboard = () => {
                                 <p>{t('common.no_data')}</p>
                             </div>
                         ) : (
-                            notifications.slice(0, 4).map((n, i) => (
-                                <div key={i} className="flex gap-4 p-3 rounded-2xl hover:bg-slate-800/30 transition-all border border-transparent hover:border-slate-800 cursor-help">
-                                    <div className={`mt-1 h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${n.type === 'approval' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-primary/10 text-primary-light'}`}>
-                                        {n.type === 'approval' ? <CheckCircle2 size={20} /> : <TrendingUp size={20} />}
+                            notifications.slice(0, 4).map((n, i) => {
+                                const notifType = n.type || n.notification_type || '';
+                                const isApproved = notifType.includes('approved');
+                                const isRejected = notifType.includes('rejected');
+                                const isChanges = notifType.includes('changes');
+
+                                let iconBg = 'bg-primary/10 text-primary-light';
+                                let NotifIcon = TrendingUp;
+
+                                if (isApproved) {
+                                    iconBg = 'bg-emerald-500/10 text-emerald-400';
+                                    NotifIcon = CheckCircle2;
+                                } else if (isRejected) {
+                                    iconBg = 'bg-red-500/10 text-red-400';
+                                    NotifIcon = XCircle;
+                                } else if (isChanges) {
+                                    iconBg = 'bg-orange-500/10 text-orange-400';
+                                    NotifIcon = MessageSquare;
+                                }
+
+                                return (
+                                    <div key={n.id || i} className={`flex gap-4 p-3 rounded-2xl hover:bg-slate-800/30 transition-all border border-transparent hover:border-slate-800 cursor-help ${!n.is_read ? 'bg-slate-800/20 border-l-2 border-l-primary' : ''}`}>
+                                        <div className={`mt-1 h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${iconBg}`}>
+                                            <NotifIcon size={20} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-bold text-slate-200 line-clamp-1">{n.title}</p>
+                                            {n.message && (
+                                                <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{n.message}</p>
+                                            )}
+                                            <p className="text-[10px] text-slate-600 mt-1 font-bold">{n.time}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-slate-200 line-clamp-1">{n.title}</p>
-                                        <p className="text-xs text-slate-500 mt-1">{n.time} • {t('common.operator')}</p>
-                                    </div>
-                                </div>
-                            ))
+                                );
+                            })
                         )}
 
                         <div className="pt-4 mt-2 border-t border-slate-800">

@@ -8,19 +8,19 @@ export default {
         extend: {
             colors: {
                 primary: {
-                    DEFAULT: "#059669", // Deep Emerald
-                    dark: "#047857",    // Darker Emerald
-                    light: "#10B981",   // Bright Emerald
+                    DEFAULT: "#3B82F6", // Blue 500
+                    dark: "#2563EB",    // Blue 600
+                    light: "#60A5FA",   // Blue 400
                 },
                 secondary: "#64748b",
                 accent: {
-                    DEFAULT: "#D97706", // Warm Amber Gold
-                    light: "#FBBF24",   // Bright Gold
-                    dark: "#B45309",    // Deep Bronze
+                    DEFAULT: "#3B82F6", // Changed to Blue for consistency
+                    light: "#60A5FA",
+                    dark: "#2563EB",
                 },
                 success: {
-                    DEFAULT: "#059669", // Deep Emerald
-                    light: "#10B981",   // Bright Emerald
+                    DEFAULT: "#3B82F6", // Blue 500
+                    light: "#60A5FA",   // Blue 400
                 },
                 warning: {
                     DEFAULT: "#D97706", // Rich Amber

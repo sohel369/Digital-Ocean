@@ -55,7 +55,8 @@ class PricingEngine:
         duration_days: int,
         target_postcode: Optional[str] = None,
         target_state: Optional[str] = None,
-        target_country: Optional[str] = None
+        target_country: Optional[str] = None,
+        radius: int = 30
     ) -> schemas.PricingCalculateResponse:
         """
         Calculate total campaign price based on all parameters.
@@ -99,6 +100,12 @@ class PricingEngine:
             else:
                 coverage_multiplier = self.COVERAGE_MULTIPLIERS.get(models.CoverageType.COUNTRY, 5.0)
 
+        # 2b. Factor in custom radius scale if target is Radius
+        if coverage_type == models.CoverageType.RADIUS_30 and radius != 30:
+            # Scale multiplier by area ratio (R/30)^2
+            radius_scale = (radius / 30.0) ** 2
+            coverage_multiplier *= radius_scale
+
         # 3. Calculate Monthly Gross Price (Base Monthly * Industry * Coverage)
         base_rate = pricing_matrix.base_rate
         industry_multiplier = pricing_matrix.multiplier
@@ -120,14 +127,16 @@ class PricingEngine:
         # Final Monthly Price
         monthly_price = max(monthly_gross - discount_amount, 0)
         
-        # 6. Calculate Duration and Duration Discounts
+        # Calculate Duration and Duration Discounts
         duration_months = math.ceil(duration_days / 30.0)
         commitment_discount_percent = 0.0
         if duration_months >= 12:
-            commitment_discount_percent = 15.0
+            commitment_discount_percent = 50.0 # User requested 50% for 12 months
         elif duration_months >= 6:
-            commitment_discount_percent = 10.0
+            commitment_discount_percent = 25.0 # User requested 25% for 6 months
         elif duration_months >= 3:
+            commitment_discount_percent = 10.0
+        elif duration_months >= 2:
             commitment_discount_percent = 5.0
             
         gross_total = monthly_price * duration_months
@@ -229,8 +238,8 @@ class PricingEngine:
         For country: country population
         """
         if coverage_type == models.CoverageType.RADIUS_30:
-            # Calculate area: π × 30²
-            radius_miles = 30
+            # Calculate area: π × R²
+            radius_miles = radius
             area_sq_miles = math.pi * (radius_miles ** 2)
             
             # Get density from geodata if available

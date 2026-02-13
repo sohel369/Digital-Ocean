@@ -329,7 +329,8 @@ async def get_global_pricing_config(
         "US": "USD", "TH": "THB", "VN": "VND", "PH": "PHP", 
         "GB": "GBP", "FR": "EUR", "DE": "EUR", "CA": "CAD", 
         "AU": "AUD", "IN": "INR", "ID": "IDR", "JP": "JPY",
-        "CN": "CNY", "IT": "EUR", "ES": "EUR"
+        "CN": "CNY", "IT": "EUR", "ES": "EUR", "BD": "BDT",
+        "MY": "MYR", "SG": "SGD", "NZ": "NZD", "ZA": "ZAR"
     }
     
     # Heuristic: If we found specific rates for the requested country, return that currency.

@@ -82,6 +82,11 @@ GEO_DATA = {
     "PH": [
         {"name": "Metro Manila", "code": "NCR"}, {"name": "Cebu", "code": "CEB"}, {"name": "Davao", "code": "DAV"},
         {"name": "CALABARZON", "code": "4A"}, {"name": "Central Luzon", "code": "3"}
+    ],
+    "BD": [
+        {"name": "Dhaka", "code": "DHK"}, {"name": "Chittagong", "code": "CTG"}, {"name": "Sylhet", "code": "SYL"},
+        {"name": "Rajshahi", "code": "RAJ"}, {"name": "Khulna", "code": "KHL"}, {"name": "Barisal", "code": "BAR"},
+        {"name": "Rangpur", "code": "RNG"}, {"name": "Mymensingh", "code": "MYM"}
     ]
 }
 

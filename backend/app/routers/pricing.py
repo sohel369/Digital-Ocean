@@ -188,170 +188,165 @@ async def get_global_pricing_config(
     db: Session = Depends(get_db)
 ):
     """
-    Fetch pricing configuration.
-    If country_code is provided, tries to find country-specific pricing (Currency Override).
-    Falls back to US/Global pricing if no specific override exists.
+    Fetch pricing configuration with robust fallbacks.
     """
-    from sqlalchemy import func, or_
+    import logging
+    logger = logging.getLogger(__name__)
     
-    target_country = country_code.upper() if country_code else "US"
-    
-    # helper to getting rates with fallback
-    def get_matrix_entries(filters):
-        # Try specific country first
-        query = db.query(models.PricingMatrix)
-        for k, v in filters.items():
-            query = query.filter(getattr(models.PricingMatrix, k) == v)
-            
-        specific = query.filter(models.PricingMatrix.country_id == target_country).all()
-        if specific:
-            return specific, True # Found specific
-            
-        # Fallback to US or NULL
-        fallback = query.filter(
-            or_(models.PricingMatrix.country_id == "US", models.PricingMatrix.country_id.is_(None))
-        ).all()
-        return fallback, False # Found fallback
-
-    # 1. Industries & Multipliers
-    # We fetch all unique industries first to ensure we allow selection
-    all_industries = db.query(models.PricingMatrix.industry_type).distinct().all()
-    industries = []
-    
-    if all_industries:
-        for (ind_name,) in all_industries:
-            # For each industry, find the effective multiplier for this country
-            entries, _ = get_matrix_entries({"industry_type": ind_name})
-            # Use max multiplier to be safe/conservative if duplicates exist
-            mult_list = [e.multiplier for e in entries if e.multiplier is not None]
-            mult = max(mult_list) if mult_list else 1.0
-            industries.append(schemas.IndustryConfig(name=ind_name, multiplier=mult))
-    
-    # Ensure we always have at least some industries if DB is fresh
-    if not industries:
-        default_industries = [
-            "Tyres And Wheels", "Vehicle Servicing And Maintenance", "Panel Beating And Smash Repairs",
-            "Automotive Finance Solutions", "Vehicle Insurance Products", "Auto Parts Tools And Accessories",
-            "Fleet Management Tools", "Workshop Technology And Equipment", "Telematics Systems And Vehicle Tracking Solutions",
-            "Fuel Cards And Fuel Management Services", "Vehicle Cleaning And Detailing Services", "Logistics And Scheduling Software",
-            "Safety And Compliance Solutions", "Driver Training And Induction Programs", "Roadside Assistance Programs",
-            "Gps Navigation And Route Optimisation Tools", "Ev Charging Infrastructure And Electric Vehicle Solutions",
-            "Mobile Device Integration And Communications Equipment", "Asset Recovery And Anti Theft Technologies"
-        ]
-        industries = [schemas.IndustryConfig(name=name, multiplier=1.0) for name in default_industries]
-
-    # Filter industries for non-admin users
-    if current_user and current_user.role != models.UserRole.ADMIN and hasattr(current_user, 'industry') and current_user.industry:
-        user_ind = current_user.industry.lower()
-        # Filter strictly
-        filtered = [i for i in industries if i.name.lower() == user_ind]
-        if filtered:
-            industries = filtered
-        else:
-            # Fallback if industry not found in matrix
-            industries = [schemas.IndustryConfig(name=current_user.industry, multiplier=1.0)]
-
-    # 2. Ad Types & Base Rates
-    # Similar logic: check if this country has a specific base rate
-    all_ad_types = db.query(models.PricingMatrix.advert_type).distinct().all()
-    ad_types = []
-    
-    if all_ad_types:
-        for (ad_name,) in all_ad_types:
-            entries, _ = get_matrix_entries({"advert_type": ad_name})
-            rate_list = [e.base_rate for e in entries if e.base_rate is not None]
-            rate = max(rate_list) if rate_list else 100.0
-            ad_types.append(schemas.AdTypeConfig(name=ad_name, base_rate=rate))
+    try:
+        from sqlalchemy import func, or_
         
-    if not ad_types:
-        ad_types = [
-            schemas.AdTypeConfig(name="Leaderboard (728x90)", base_rate=150.0),
-            schemas.AdTypeConfig(name="Skyscraper (160x600)", base_rate=180.0),
-            schemas.AdTypeConfig(name="Medium Rectangle (300x250)", base_rate=200.0),
-            schemas.AdTypeConfig(name="Mobile Leaderboard (320x50)", base_rate=100.0),
-            schemas.AdTypeConfig(name="Email Newsletter (600x200)", base_rate=250.0)
-        ]
+        target_country = (country_code.upper() if country_code else "US").strip()
+        logger.info(f"📊 Fetching pricing config for: {target_country} (User: {current_user.email if current_user else 'Guest'})")
+        
+        # helper to getting rates with fallback
+        def get_matrix_entries(filters):
+            try:
+                # Try specific country first
+                query = db.query(models.PricingMatrix)
+                for k, v in filters.items():
+                    query = query.filter(getattr(models.PricingMatrix, k) == v)
+                    
+                specific = query.filter(models.PricingMatrix.country_id == target_country).all()
+                if specific:
+                    return specific, True # Found specific
+                    
+                # Fallback to US or NULL
+                fallback = query.filter(
+                    or_(models.PricingMatrix.country_id == "US", models.PricingMatrix.country_id.is_(None))
+                ).all()
+                return fallback, False # Found fallback
+            except Exception as e:
+                logger.warning(f"⚠️ Matrix lookup failed: {e}")
+                return [], False
 
-    # 3. Geo Data (Existing Logic)
-    geo_query = db.query(models.GeoData)
-    
-    # PERMISSION CHECK: Country Admins only see their own country's states
-    if current_user and current_user.role == models.UserRole.COUNTRY_ADMIN:
-        managed = (current_user.managed_country or "").upper()
-        if managed:
-            geo_query = geo_query.filter(models.GeoData.country_code == managed)
-    else:
-        # Default filtering by target country for advertisers/admins
-        geo_query = geo_query.filter(models.GeoData.country_code == target_country)
+        # 1. Industries & Multipliers
+        industries = []
+        try:
+            all_industries = db.query(models.PricingMatrix.industry_type).distinct().all()
+            if all_industries:
+                for (ind_name,) in all_industries:
+                    if not ind_name: continue
+                    entries, _ = get_matrix_entries({"industry_type": ind_name})
+                    mult_list = [e.multiplier for e in entries if e.multiplier is not None]
+                    mult = max(mult_list) if mult_list else 1.0
+                    industries.append(schemas.IndustryConfig(name=ind_name, multiplier=mult))
+        except Exception as e:
+            logger.warning(f"⚠️ Industry fetch failed: {e}")
+        
+        # Ensure we always have at least some industries if DB is fresh
+        if not industries:
+            default_industries = [
+                "Tyres And Wheels", "Vehicle Servicing And Maintenance", "Panel Beating And Smash Repairs",
+                "Automotive Finance Solutions", "Vehicle Insurance Products", "Auto Parts Tools And Accessories",
+                "Workshop Technology And Equipment", "Fuel Cards And Fuel Management Services", 
+                "Vehicle Cleaning And Detailing Services", "Logistics And Scheduling Software",
+                "Safety And Compliance Solutions", "Ev Charging Infrastructure"
+            ]
+            industries = [schemas.IndustryConfig(name=name, multiplier=1.0) for name in default_industries]
+
+        # Filter industries for non-admin users
+        if current_user and current_user.role != "admin" and hasattr(current_user, 'industry') and current_user.industry:
+            user_ind = current_user.industry.lower()
+            filtered = [i for i in industries if i.name.lower() == user_ind]
+            if filtered:
+                industries = filtered
+            else:
+                industries = [schemas.IndustryConfig(name=current_user.industry, multiplier=1.0)]
+
+        # 2. Ad Types & Base Rates
+        ad_types = []
+        try:
+            all_ad_types = db.query(models.PricingMatrix.advert_type).distinct().all()
+            if all_ad_types:
+                for (ad_name,) in all_ad_types:
+                    if not ad_name: continue
+                    entries, _ = get_matrix_entries({"advert_type": ad_name})
+                    rate_list = [e.base_rate for e in entries if e.base_rate is not None]
+                    rate = max(rate_list) if rate_list else 100.0
+                    ad_types.append(schemas.AdTypeConfig(name=ad_name, base_rate=rate))
+        except Exception as e:
+            logger.warning(f"⚠️ Ad type fetch failed: {e}")
             
-    states_data = geo_query.all()
-    states = [
-        schemas.StateConfig(
-            name=row.state_name or row.state_code or row.country_code or "Unknown",
-            land_area=row.land_area_sq_km or 0.0,
-            population=row.population or 0,
-            radius_areas_count=row.radius_areas_count or 1,
-            density_multiplier=row.density_multiplier or 1.0,
-            state_code=row.state_code or "UNKNOWN",
-            country_code=row.country_code or target_country
+        if not ad_types:
+            ad_types = [
+                schemas.AdTypeConfig(name="Leaderboard (728x90)", base_rate=150.0),
+                schemas.AdTypeConfig(name="Skyscraper (160x600)", base_rate=180.0),
+                schemas.AdTypeConfig(name="Medium Rectangle (300x250)", base_rate=200.0),
+                schemas.AdTypeConfig(name="Mobile Leaderboard (320x50)", base_rate=100.0)
+            ]
+
+        # 3. Geo Data
+        states = []
+        try:
+            geo_query = db.query(models.GeoData)
+            if current_user and str(current_user.role).lower() == "country_admin":
+                managed = (current_user.managed_country or "").upper()
+                if managed:
+                    geo_query = geo_query.filter(models.GeoData.country_code == managed)
+            else:
+                geo_query = geo_query.filter(models.GeoData.country_code == target_country)
+                
+            states_data = geo_query.all()
+            states = [
+                schemas.StateConfig(
+                    name=row.state_name or row.state_code or row.country_code or "Unknown",
+                    land_area=row.land_area_sq_km or 0.0,
+                    population=row.population or 0,
+                    radius_areas_count=row.radius_areas_count or 1,
+                    density_multiplier=row.density_multiplier or 1.0,
+                    state_code=row.state_code or "UNKNOWN",
+                    country_code=row.country_code or target_country
+                )
+                for row in states_data
+            ]
+        except Exception as e:
+            logger.warning(f"⚠️ Geo data fetch failed: {e}")
+            
+        if not states:
+            states = [
+                schemas.StateConfig(name=f"Standard Region ({target_country})", land_area=10000, population=1000000, density_multiplier=1.0, state_code="STD", country_code=target_country)
+            ]
+
+        # 4. Discounts
+        discounts = schemas.DiscountConfig(state=0.15, national=0.30)
+        try:
+            disc_entries, _ = get_matrix_entries({})
+            if disc_entries:
+                states_d = [e.state_discount for e in disc_entries if e.state_discount is not None]
+                nats_d = [e.national_discount for e in disc_entries if e.national_discount is not None]
+                if states_d: discounts.state = states_d[0]
+                if nats_d: discounts.national = nats_d[0]
+        except Exception as e:
+            logger.warning(f"⚠️ Discount fetch failed: {e}")
+
+        # Currency mapping
+        currency_map = {
+            "US": "USD", "TH": "THB", "VN": "VND", "PH": "PHP", 
+            "GB": "GBP", "FR": "EUR", "DE": "EUR", "CA": "CAD", 
+            "AU": "AUD", "IN": "INR", "ID": "IDR", "JP": "JPY",
+            "CN": "CNY", "IT": "EUR", "ES": "EUR", "BD": "BDT"
+        }
+        
+        response_currency = currency_map.get(target_country, "USD")
+
+        return schemas.GlobalPricingConfig(
+            industries=industries,
+            ad_types=ad_types,
+            states=states,
+            discounts=discounts,
+            currency=response_currency
         )
-        for row in states_data
-    ]
-    if not states:
-        # Provide a contextual fallback based on requested country
-        states = [
-            schemas.StateConfig(name=f"Standard Region ({target_country})", land_area=10000, population=1000000, density_multiplier=1.0, state_code="STD", country_code=target_country)
-        ]
-
-    # 4. Discounts (Country specific or default)
-    disc_entries, _ = get_matrix_entries({}) # Just get any for this country
-    
-    # Safely pick first valid discount or use defaults
-    s_discount = 0.15
-    n_discount = 0.30
-    
-    if disc_entries:
-        # Filter out Nones
-        states_d = [e.state_discount for e in disc_entries if e.state_discount is not None]
-        nats_d = [e.national_discount for e in disc_entries if e.national_discount is not None]
-        
-        if states_d: s_discount = states_d[0]
-        if nats_d: n_discount = nats_d[0]
-    
-    discounts = schemas.DiscountConfig(
-        state=s_discount,
-        national=n_discount
-    )
-
-    # Determine currency based on context
-    # basic mapping, in prod this should be in a DB table
-    currency_map = {
-        "US": "USD", "TH": "THB", "VN": "VND", "PH": "PHP", 
-        "GB": "GBP", "FR": "EUR", "DE": "EUR", "CA": "CAD", 
-        "AU": "AUD", "IN": "INR", "ID": "IDR", "JP": "JPY",
-        "CN": "CNY", "IT": "EUR", "ES": "EUR", "BD": "BDT",
-        "MY": "MYR", "SG": "SGD", "NZ": "NZD", "ZA": "ZAR"
-    }
-    
-    # Heuristic: If we found specific rates for the requested country, return that currency.
-    # Otherwise return USD.
-    # We check if any of the lookups returned specific data
-    industry_specific = any(get_matrix_entries({"industry_type": i.name})[1] for i in industries)
-    ad_specific = any(get_matrix_entries({"advert_type": a.name})[1] for a in ad_types)
-    
-    is_specific_pricing = industry_specific or ad_specific
-    
-    response_currency = "USD"
-    if is_specific_pricing and target_country in currency_map:
-        response_currency = currency_map[target_country]
-
-    return schemas.GlobalPricingConfig(
-        industries=industries,
-        ad_types=ad_types,
-        states=states,
-        discounts=discounts,
-        currency=response_currency
-    )
+    except Exception as e:
+        logger.error(f"🔥 CRITICAL: get_global_pricing_config failed: {e}", exc_info=True)
+        # Final emergency fallback to avoid 500 error
+        return schemas.GlobalPricingConfig(
+            industries=[schemas.IndustryConfig(name="General", multiplier=1.0)],
+            ad_types=[schemas.AdTypeConfig(name="Display", base_rate=100.0)],
+            states=[schemas.StateConfig(name="Default", land_area=1.0, population=1, density_multiplier=1.0, state_code="DEF", country_code="US")],
+            discounts=schemas.DiscountConfig(state=0.1, national=0.2),
+            currency="USD"
+        )
 
 
 @router.post("/admin/config", response_model=schemas.MessageResponse)

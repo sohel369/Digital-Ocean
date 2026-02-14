@@ -19,13 +19,15 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(title="AdPlatform API")
 
 # CORS - Must be before health check
-ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "").split(",") if os.environ.get("ALLOWED_ORIGINS") else [
+BASE_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://digital-ocean-production-01ee.up.railway.app",
     "https://balanced-wholeness-production-ca00.up.railway.app"
 ]
-ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS if origin.strip()]
+
+env_origins = os.environ.get("ALLOWED_ORIGINS", "").split(",") if os.environ.get("ALLOWED_ORIGINS") else []
+ALLOWED_ORIGINS = list(set(BASE_ALLOWED_ORIGINS + [o.strip() for o in env_origins if o.strip()]))
 
 logger.info(f"🌐 CORS Allowed Origins: {ALLOWED_ORIGINS}")
 
@@ -38,6 +40,21 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"]
 )
+
+# Request logging middleware
+@app.middleware("http")
+async def log_requests(request, call_next):
+    start_time = time.time()
+    origin = request.headers.get("origin")
+    path = request.url.path
+    method = request.method
+    
+    response = await call_next(request)
+    
+    process_time = (time.time() - start_time) * 1000
+    logger.info(f"REQ: {method} {path} | Origin: {origin} | Status: {response.status_code} | Time: {process_time:.2f}ms")
+    
+    return response
 
 # CRITICAL: Health check BEFORE heavy imports
 @app.get("/api/health")

@@ -95,29 +95,39 @@ async def get_regions(country_code: str, db: Session = Depends(get_db)):
     """
     Get administrative regions (States/Provinces) for a specific country.
     """
-    code = country_code.upper()
+    import logging
+    logger = logging.getLogger(__name__)
     
-    # 1. Try fetching from database first
-    db_regions = db.query(models.GeoData).filter(models.GeoData.country_code == code).all()
-    if db_regions:
-        return [
-            Region(
-                name=r.state_name or r.state_code or code or "Unknown", 
-                code=r.state_code or "UNKNOWN", 
-                country_code=code,
-                population=r.population or 0,
-                land_area=r.land_area_sq_km or 0.0,
-                density_multiplier=r.density_multiplier or 1.0,
-                fips=r.fips,
-                density_mi=r.density_mi,
-                rank=r.rank,
-                population_percent=r.population_percent,
-                radius_areas_count=r.radius_areas_count or 1
-            ) for r in db_regions
-        ]
+    code = (country_code or "US").upper().strip()
+    logger.info(f"📍 Fetching regions for country: {code}")
+    
+    try:
+        # 1. Try fetching from database first
+        db_regions = db.query(models.GeoData).filter(models.GeoData.country_code == code).all()
+        if db_regions:
+            logger.info(f"✅ Found {len(db_regions)} regions in database for {code}")
+            return [
+                Region(
+                    name=r.state_name or r.state_code or code or "Unknown", 
+                    code=r.state_code or "UNKNOWN", 
+                    country_code=code,
+                    population=r.population or 0,
+                    land_area=r.land_area_sq_km or 0.0,
+                    density_multiplier=r.density_multiplier or 1.0,
+                    fips=r.fips,
+                    density_mi=r.density_mi,
+                    rank=r.rank,
+                    population_percent=r.population_percent,
+                    radius_areas_count=r.radius_areas_count or 1
+                ) for r in db_regions
+            ]
+    except Exception as e:
+        logger.warning(f"⚠️ Database geo lookup failed: {e}")
     
     # 2. Fallback to static data if DB is empty for this country
+    logger.info(f"ℹ️ Using static fallback data for {code}")
     if code not in GEO_DATA:
+        logger.warning(f"❌ No static data available for country: {code}")
         return []
     
     regions = GEO_DATA[code]

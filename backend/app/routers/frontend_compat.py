@@ -474,76 +474,90 @@ async def google_auth_sync(request: Request, db: Session = Depends(get_db)):
     Sync Firebase authenticated user with backend.
     Creates or updates user record and returns user data.
     """
-    data = await request.json()
-    
-    email = data.get("email")
-    username = data.get("username")
-    photo_url = data.get("photoURL")
-    uid = data.get("uid")
-    industry = data.get("industry")
-    country = data.get("country")
-    
-    if not email:
-        return JSONResponse(
-            status_code=400,
-            content={"success": False, "message": "Email required"}
-        )
-    
-    # Check if user exists (case-insensitive)
-    from sqlalchemy import func
-    user = db.query(models.User).filter(func.lower(models.User.email) == email.lower()).first()
-    
-    if user:
-        # Update OAuth info if needed
-        if not user.oauth_id:
-            user.oauth_provider = 'google'
-            user.oauth_id = uid
-            user.profile_picture = photo_url
+    try:
+        data = await request.json()
         
-        # update country/industry if provided (e.g. during signup flow for existing google user)
-        if country:
-            user.country = country
-        if industry:
-            user.industry = industry
+        email = data.get("email")
+        username = data.get("username")
+        photo_url = data.get("photoURL")
+        uid = data.get("uid")
+        industry = data.get("industry")
+        country = data.get("country")
+        
+        logger.info(f"🔄 Google Auth Sync attempt for: {email}")
+        
+        if not email:
+            return JSONResponse(
+                status_code=400,
+                content={"success": False, "message": "Email required"}
+            )
+        
+        # Check if user exists (case-insensitive)
+        from sqlalchemy import func
+        user = db.query(models.User).filter(func.lower(models.User.email) == email.lower()).first()
+        
+        if user:
+            # Update OAuth info if needed
+            if not user.oauth_id:
+                user.oauth_provider = 'google'
+                user.oauth_id = uid
+                user.profile_picture = photo_url
             
-        user.last_login = datetime.utcnow()
-    else:
-        # Create new user
-        user = models.User(
-            name=username or email.split('@')[0],
-            email=email,
-            oauth_provider='google',
-            oauth_id=uid,
-            profile_picture=photo_url,
-            role=models.UserRole.ADVERTISER,
-            industry=industry,
-            country=country,
-            last_login=datetime.utcnow()
-        )
-        db.add(user)
-    
-    db.commit()
-    db.refresh(user)
-    
-    # Return user data in frontend format + JWT tokens
-    logger.info(f"✅ User synced: {user.email}")
-    tokens = auth.create_user_tokens(user)
-    
-    return {
-        "success": True,
-        "access_token": tokens.access_token,
-        "refresh_token": tokens.refresh_token,
-        "token_type": "bearer",
-        "user": {
-            "id": user.id,
-            "username": user.name,
-            "email": user.email,
-            "avatar": user.profile_picture,
-            "role": user.role.value if hasattr(user.role, 'value') else user.role,
-            "country": user.country,
-            "industry": user.industry
+            # update country/industry if provided (e.g. during signup flow for existing google user)
+            if country:
+                user.country = country
+            if industry:
+                user.industry = industry
+                
+            user.last_login = datetime.utcnow()
+        else:
+            # Create new user
+            logger.info(f"🆕 Creating NEW user from Google: {email}")
+            user = models.User(
+                name=username or email.split('@')[0],
+                email=email,
+                oauth_provider='google',
+                oauth_id=uid,
+                profile_picture=photo_url,
+                role=models.UserRole.ADVERTISER,
+                industry=industry,
+                country=country,
+                last_login=datetime.utcnow()
+            )
+            db.add(user)
+        
+        db.commit()
+        db.refresh(user)
+        
+        # Return user data in frontend format + JWT tokens
+        logger.info(f"✅ User synced successfully: {user.email}")
+        tokens = auth.create_user_tokens(user)
+        
+        return {
+            "success": True,
+            "access_token": tokens.access_token,
+            "refresh_token": tokens.refresh_token,
+            "token_type": "bearer",
+            "user": {
+                "id": user.id,
+                "username": user.name,
+                "email": user.email,
+                "avatar": user.profile_picture,
+                "role": str(user.role.value) if hasattr(user.role, 'value') else str(user.role),
+                "country": user.country,
+                "industry": user.industry
+            }
         }
-    }
+    except Exception as e:
+        logger.error(f"🔥 Google Auth Sync failed: {str(e)}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False, 
+                "message": "Internal Sync Error", 
+                "detail": str(e)
+            }
+        )
 
 
 

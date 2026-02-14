@@ -31,6 +31,30 @@ ALLOWED_ORIGINS = list(set(BASE_ALLOWED_ORIGINS + [o.strip() for o in env_origin
 
 logger.info(f"🌐 CORS Allowed Origins: {ALLOWED_ORIGINS}")
 
+# Request logging middleware
+@app.middleware("http")
+async def log_requests(request, call_next):
+    start_time = time.time()
+    origin = request.headers.get("origin")
+    path = request.url.path
+    method = request.method
+    
+    try:
+        response = await call_next(request)
+        process_time = (time.time() - start_time) * 1000
+        logger.info(f"REQ: {method} {path} | Origin: {origin} | Status: {response.status_code} | Time: {process_time:.2f}ms")
+        return response
+    except Exception as e:
+        process_time = (time.time() - start_time) * 1000
+        logger.error(f"REQ ERROR: {method} {path} | Origin: {origin} | Error: {str(e)} | Time: {process_time:.2f}ms", exc_info=True)
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal Server Error", "error": str(e)},
+            headers={"Access-Control-Allow-Origin": origin or "*", "Access-Control-Allow-Credentials": "true"}
+        )
+
+# CORS - Add LAST so it's the OUTERMOST middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -40,21 +64,6 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"]
 )
-
-# Request logging middleware
-@app.middleware("http")
-async def log_requests(request, call_next):
-    start_time = time.time()
-    origin = request.headers.get("origin")
-    path = request.url.path
-    method = request.method
-    
-    response = await call_next(request)
-    
-    process_time = (time.time() - start_time) * 1000
-    logger.info(f"REQ: {method} {path} | Origin: {origin} | Status: {response.status_code} | Time: {process_time:.2f}ms")
-    
-    return response
 
 # CRITICAL: Health check BEFORE heavy imports
 @app.get("/api/health")

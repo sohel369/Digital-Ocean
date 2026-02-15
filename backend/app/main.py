@@ -13,6 +13,7 @@ print(f"🔥 [DEBUG] PORT: {os.environ.get('PORT', '8000')}", flush=True)
 print(f"🔥 [DEBUG] CWD: {os.getcwd()}", flush=True)
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 # Create app IMMEDIATELY for health checks
@@ -47,18 +48,24 @@ async def log_requests(request, call_next):
     except Exception as e:
         process_time = (time.time() - start_time) * 1000
         logger.error(f"REQ ERROR: {method} {path} | Origin: {origin} | Error: {str(e)} | Time: {process_time:.2f}ms", exc_info=True)
-        from fastapi.responses import JSONResponse
         return JSONResponse(
             status_code=500,
-            content={"detail": "Internal Server Error", "error": str(e)},
-            headers={"Access-Control-Allow-Origin": origin or "*", "Access-Control-Allow-Credentials": "true"}
+            content={"detail": "Internal Server Error", "error": str(e)}
         )
 
-# CORS - Allow ALL temporarily for testing as requested by user
-# This fixes "Digital Ocean frontend not connecting" issues
+# CORS - Proper configuration for credentials
+# If ALLOWED_ORIGINS contains "*", we must be careful with allow_credentials=True
+# FastAPI's CORSMiddleware handles this by reflecting the origin if allow_origins is a list.
+# We ensure "*" is NOT the only origin if we want credentials.
+
+# Filter out "*" from origins list if it exists, as it's invalid with allow_credentials=True
+origins_list = [o for o in ALLOWED_ORIGINS if o != "*"]
+allow_all_origins = "*" in ALLOWED_ORIGINS
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Temporarily allow all for testing
+    allow_origins=origins_list if not allow_all_origins else [],
+    allow_origin_regex=".*" if allow_all_origins else None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

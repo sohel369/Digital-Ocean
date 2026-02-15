@@ -29,24 +29,40 @@ app.get('/', (req, res, next) => {
     next();
 });
 
-// 3. Backend URL
-// 3. Backend URL - DEFAULT TO ENV VARS
-// IF YOU SEE THIS, YOU MUST SET 'VITE_API_URL' IN RAILWAY FRONTEND SERVICE VARIABLES
-const BACKEND_URL = process.env.BACKEND_URL || process.env.VITE_API_URL || 'http://localhost:8000';
-console.log(`🔌 Proxy Configured: /api -> ${BACKEND_URL}`);
+// 3. Backend URL - AUTO-DETECT & ROBUST CONFIG
+const RAILWAY_INTERNAL_BACKEND = 'http://balanced-wholeness.railway.internal:8000';
+const BACKEND_URL = process.env.VITE_API_URL || process.env.BACKEND_URL || RAILWAY_INTERNAL_BACKEND;
+
+console.log(`🔌 Initializing Proxy...`);
+console.log(`📡 Target Backend: ${BACKEND_URL}`);
+
+// Clean target: Remove trailing /api if present as the middleware adds it back
 const API_TARGET = BACKEND_URL.replace(/\/api$/, '');
 
-// 4. API Proxy
+// 4. API Proxy Middleware
 app.use('/api', createProxyMiddleware({
     target: API_TARGET,
     changeOrigin: true,
     secure: false,
+    pathRewrite: (path, req) => {
+        // Ensure path always starts with /api when going to backend
+        return path.startsWith('/api') ? path : `/api${path}`;
+    },
     onProxyReq: (proxyReq, req, res) => {
-        // Essential logging for debug
+        console.log(`➡️ [PROXY] ${req.method} ${req.url} -> ${API_TARGET}${proxyReq.path}`);
+    },
+    onProxyRes: (proxyRes, req, res) => {
+        if (proxyRes.statusCode === 404) {
+            console.error(`❌ [404] Backend returned 404 for: ${proxyReq.path}`);
+        }
     },
     onError: (err, req, res) => {
-        console.error('Proxy Error:', err.message);
-        res.status(502).json({ error: 'Backend Unreachable' });
+        console.error('🔥 Proxy Error:', err.message);
+        res.status(502).json({
+            error: 'Backend Unreachable',
+            details: err.message,
+            target: API_TARGET
+        });
     }
 }));
 

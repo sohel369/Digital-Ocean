@@ -54,11 +54,11 @@ async def log_requests(request, call_next):
             headers={"Access-Control-Allow-Origin": origin or "*", "Access-Control-Allow-Credentials": "true"}
         )
 
-# CORS - Add LAST so it's the OUTERMOST middleware
+# CORS - Allow ALL temporarily for testing as requested by user
+# This fixes "Digital Ocean frontend not connecting" issues
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_origin_regex=r"https://.*\.up\.railway\.app",
+    allow_origins=["*"], # Temporarily allow all for testing
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -95,8 +95,11 @@ try:
     
     # 3. Initialize database
     logger.info("🗄️ Initializing database...")
-    init_db()
-    logger.info("✅ Database initialized")
+    db_success = init_db()
+    if db_success:
+        logger.info("✅ Database initialized successfully")
+    else:
+        logger.error("❌ Database initialization FAILED")
     
     # 4. Register routers
     logger.info("🔌 Registering API routers...")

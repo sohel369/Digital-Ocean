@@ -55,11 +55,36 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-def init_db():
+def init_db() -> bool:
     """
-    Initialize database tables.
-    Creates all tables defined in models.
+    Initialize database tables and test connection.
+    Returns True if successful, False otherwise.
     """
-    # Import all models here to ensure they're registered with Base
-    from . import models  # noqa
-    Base.metadata.create_all(bind=engine)
+    try:
+        # Sanitize URL for logging (hide password)
+        raw_url = settings.DATABASE_URL
+        if "@" in raw_url:
+            prefix, rest = raw_url.split("://", 1)
+            creds, host = rest.split("@", 1)
+            sanitized_url = f"{prefix}://****@{host}"
+        else:
+            sanitized_url = raw_url
+            
+        logger.info(f"🔗 Testing connection to: {sanitized_url}")
+        
+        # Import all models here to ensure they're registered with Base
+        from . import models  # noqa
+        
+        # Create tables
+        Base.metadata.create_all(bind=engine)
+        
+        # Test connection with a simple query
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        
+        logger.info("✅ Database connection test: SUCCESS")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Database connection test: FAILED - {e}")
+        return False

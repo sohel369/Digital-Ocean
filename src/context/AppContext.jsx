@@ -79,10 +79,18 @@ export const AppProvider = ({ children }) => {
 
     // Base URL configuration for API calls
     const getBaseUrl = () => {
-        // 1. Try environment variables (Vite - baked into build)
+        // 1. SMART FALLBACK FOR RAILWAY/PRODUCTION (CRITICAL)
+        // If we are on Railway, we MUST use relative /api because serve.js acts as a reverse proxy.
+        // This is the MOST RELIABLE way to avoid CORS and domain mismatch issues.
+        const hostname = window.location.hostname;
+        if (hostname.includes('railway.app') || hostname.includes('ondigitalocean.app')) {
+            return '/api';
+        }
+
+        // 2. Try environment variables (Local/Build-time)
         const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
 
-        // 2. Try window global (runtime injection potential)
+        // 3. Try window global (Runtime)
         const globalUrl = window.VITE_API_URL;
 
         const priorityUrl = envUrl || globalUrl;
@@ -92,21 +100,12 @@ export const AppProvider = ({ children }) => {
             return cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
         }
 
-        // 3. Handle Local Development
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        // 4. Handle Local Development
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
             return '/api';
         }
 
-        // 4. Smart Fallback for Railway/Production
-        const hostname = window.location.hostname;
-
-        // If we are on Railway, we use relative /api because serve.js now acts as a reverse proxy.
-        // This is the most reliable way to avoid hardcoded domain mismatches.
-        if (hostname.includes('railway.app')) {
-            return '/api';
-        }
-
-        // 5. Ultimate Fallback (Default to relative)
+        // 5. Ultimate Fallback
         return '/api';
     };
     const API_BASE_URL = getBaseUrl();

@@ -55,17 +55,13 @@ async def log_requests(request, call_next):
 
 # CORS - Proper configuration for credentials
 # If ALLOWED_ORIGINS contains "*", we must be careful with allow_credentials=True
-# FastAPI's CORSMiddleware handles this by reflecting the origin if allow_origins is a list.
-# We ensure "*" is NOT the only origin if we want credentials.
-
-# Filter out "*" from origins list if it exists, as it's invalid with allow_credentials=True
 origins_list = [o for o in ALLOWED_ORIGINS if o != "*"]
 allow_all_origins = "*" in ALLOWED_ORIGINS
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins_list if not allow_all_origins else [],
-    allow_origin_regex=".*" if allow_all_origins else None,
+    allow_origin_regex="https?://.*" if allow_all_origins else None, # More specific regex
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -171,13 +171,14 @@ class Invoice(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     invoice_number = Column(String(50), unique=True, index=True, nullable=False)
     
-    amount = Column(Float, nullable=False)
+    amount = Column(Float, nullable=False) # amount_ex_tax
     tax_rate = Column(Float, default=0.0)
     tax_amount = Column(Float, default=0.0)
     total_amount = Column(Float, nullable=False)
     currency = Column(String(10), default="USD")
+    country = Column(String(100), nullable=True) # Added to match buyer requirement
     
-    billing_date = Column(DateTime(timezone=True), nullable=False)
+    billing_date = Column(DateTime(timezone=True), nullable=False) # invoice_month
     due_date = Column(DateTime(timezone=True), nullable=False)
     status = Column(String(20), default="pending") # pending, paid, cancelled
     

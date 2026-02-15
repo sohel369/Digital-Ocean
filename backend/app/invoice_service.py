@@ -51,6 +51,7 @@ def generate_monthly_invoices(db: Session, campaign: models.Campaign):
             tax_amount=tax_amt,
             total_amount=total_amt,
             currency="USD", # Should be campaign currency if we add it
+            country=campaign.target_country,
             billing_date=billing_date,
             due_date=due_date,
             status="paid" if i == 0 and campaign.status != "DRAFT" else "pending"

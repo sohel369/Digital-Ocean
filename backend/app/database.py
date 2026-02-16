@@ -82,6 +82,35 @@ def init_db() -> bool:
         from sqlalchemy import text
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
+            
+            # --- RAILWAY ENUM FIX ---
+            # If we are on Postgres, ensure the 'role' column is VARCHAR(50) 
+            # to avoid (psycopg2.errors.InvalidTextRepresentation) for Enums
+            if "postgresql" in settings.DATABASE_URL.lower():
+                try:
+                    logger.info("🔍 Checking 'role' column type for ENUM issues...")
+                    # Use a separate autocommit connection for ALTER TYPE/TABLE
+                    with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as fix_conn:
+                        res = fix_conn.execute(text("""
+                            SELECT data_type, udt_name 
+                            FROM information_schema.columns 
+                            WHERE table_name = 'users' AND column_name = 'role'
+                        """)).fetchone()
+                        
+                        if res and (res[0] == 'USER-DEFINED' or res[1] == 'userrole'):
+                            logger.warn("⚠️  Detected ENUM type for 'role'. Converting to VARCHAR(50)...")
+                            fix_conn.execute(text("ALTER TABLE users ALTER COLUMN role TYPE VARCHAR(50) USING role::text"))
+                            logger.info("✅ 'role' column successfully converted to VARCHAR(50)")
+                            
+                            # Also ensure the enum has the values just in case other parts of DB use it
+                            roles = ['admin', 'country_admin', 'user', 'advertiser']
+                            for r in roles:
+                                try:
+                                    fix_conn.execute(text(f"ALTER TYPE userrole ADD VALUE IF NOT EXISTS '{r}'"))
+                                except: pass
+                except Exception as fix_err:
+                    logger.error(f"⚠️  Role column fix failed (not critical): {fix_err}")
+            # ------------------------
         
         logger.info("✅ Database connection test: SUCCESS")
         return True

@@ -129,58 +129,57 @@ const CampaignCreation = () => {
         e.preventDefault();
         const file = e.dataTransfer?.files[0] || e.target.files[0];
         if (file) {
+            const isVideo = file.type.startsWith('video/');
+            const isImage = file.type.startsWith('image/');
+
+            if (!isImage && !isVideo) {
+                alert("Please upload an image or video file.");
+                return;
+            }
+
             const reader = new FileReader();
             reader.onloadend = () => {
-                // Image Validation
-                const img = new Image();
-                img.onload = () => {
-                    // 1. Find the expected dimensions based on selected format
-                    const formatString = formData.format || '';
-                    const formatKey = formatString.toLowerCase().replace(/ /g, '_').replace(/[()0-9x]/g, '').replace(/__+/g, '_').replace(/_$/, '');
+                if (isImage) {
+                    const img = new Image();
+                    img.onload = () => {
+                        const formatString = formData.format || '';
+                        const formatKey = formatString.toLowerCase().replace(/ /g, '_').replace(/[()0-9x]/g, '').replace(/__+/g, '_').replace(/_$/, '');
 
-                    // Standard Dimensions Lookup
-                    const standardDims = {
-                        'leaderboard': [728, 90],
-                        'skyscraper': [160, 600],
-                        'medium_rectangle': [300, 250],
-                        'mobile_leaderboard': [320, 50],
-                        'email_newsletter': [600, 200]
+                        const standardDims = {
+                            'leaderboard': [728, 90],
+                            'skyscraper': [160, 600],
+                            'medium_rectangle': [300, 250],
+                            'mobile_leaderboard': [320, 50],
+                            'email_newsletter': [600, 200]
+                        };
+
+                        let targetW, targetH;
+                        const match = formatString.match(/(\d+)x(\d+)/);
+
+                        if (match) {
+                            targetW = parseInt(match[1]);
+                            targetH = parseInt(match[2]);
+                        } else {
+                            const foundKey = Object.keys(standardDims).find(k => formatKey.includes(k));
+                            if (foundKey) {
+                                [targetW, targetH] = standardDims[foundKey];
+                            }
+                        }
+
+                        if (targetW && targetH) {
+                            const targetRatio = targetW / targetH;
+                            const actualRatio = img.width / img.height;
+                            if (Math.abs(actualRatio - targetRatio) > 0.1) {
+                                alert(`❌ WRONG ASPECT RATIO!\n\nTargeting ${targetW}x${targetH} ratio. Your image is ${img.width}x${img.height}.`);
+                            }
+                        }
+                        setFormData(prev => ({ ...prev, image: reader.result }));
                     };
-
-                    let targetW, targetH;
-                    const match = formatString.match(/(\d+)x(\d+)/);
-
-                    if (match) {
-                        targetW = parseInt(match[1]);
-                        targetH = parseInt(match[2]);
-                    } else {
-                        // Fallback to lookup
-                        const foundKey = Object.keys(standardDims).find(k => formatKey.includes(k));
-                        if (foundKey) {
-                            [targetW, targetH] = standardDims[foundKey];
-                        }
-                    }
-
-                    if (targetW && targetH) {
-                        const targetRatio = targetW / targetH;
-                        const actualRatio = img.width / img.height;
-                        const ratioTolerance = 0.05; // 5% tolerance for aspect ratio
-
-                        // Exact dimension check for better professional results
-                        const isExactWidth = Math.abs(img.width - targetW) < 5;
-                        const isExactHeight = Math.abs(img.height - targetH) < 5;
-                        const isExactRatio = Math.abs(actualRatio - targetRatio) < ratioTolerance;
-
-                        if (!isExactRatio) {
-                            alert(`❌ WRONG DIMENSIONS!\n\nThe selected format "${formatString}" requires a ${targetW}x${targetH} aspect ratio.\n\nYour image is ${img.width}x${img.height} (Ratio: ${(img.width / img.height).toFixed(2)})\nTarget Ratio: ${targetRatio.toFixed(2)}\n\nPlease resize your creative to exactly ${targetW}x${targetH}px for optimal display.`);
-                        } else if (!isExactWidth || !isExactHeight) {
-                            // Correct ratio but different size (e.g. 2x retina)
-                            console.log("Image has correct ratio but higher resolution (Retina/High-res). This is acceptable.");
-                        }
-                    }
+                    img.src = reader.result;
+                } else {
+                    // Video - skip dimension validation for now or add simple check
                     setFormData(prev => ({ ...prev, image: reader.result }));
-                };
-                img.src = reader.result;
+                }
             };
             reader.readAsDataURL(file);
         }
@@ -451,7 +450,7 @@ const CampaignCreation = () => {
                                 disabled={isReadOnly}
                                 className={`absolute inset-0 w-full h-full opacity-0 ${isReadOnly ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                                 onChange={handleFileDrop}
-                                accept="image/png, image/jpeg, image/gif"
+                                accept="image/*,video/*"
                             />
                             <div className="flex flex-col items-center">
                                 <div className={`w-14 h-14 bg-primary/10 text-primary-light rounded-2xl flex items-center justify-center mb-4 transition-transform ${!isReadOnly && 'group-hover:scale-110'}`}>
@@ -464,7 +463,11 @@ const CampaignCreation = () => {
 
                         {formData.image && (
                             <div className="relative inline-block mt-4 animate-in zoom-in-95">
-                                <img src={formData.image} alt={t('campaign.live_preview')} className="h-24 w-auto rounded-2xl border border-white/10 shadow-2xl" />
+                                {formData.image.startsWith('data:video/') ? (
+                                    <video src={formData.image} className="h-24 w-auto rounded-2xl border border-white/10 shadow-2xl" controls muted />
+                                ) : (
+                                    <img src={formData.image} alt={t('campaign.live_preview')} className="h-24 w-auto rounded-2xl border border-white/10 shadow-2xl" />
+                                )}
                                 {!isReadOnly && (
                                     <button
                                         type="button"
@@ -521,13 +524,11 @@ const CampaignCreation = () => {
                                         value={formData.format}
                                         onChange={handleInputChange}
                                     >
-                                        {pricingData.adTypes
-                                            .filter(a => a.name !== 'Video')
-                                            .map(a => (
-                                                <option key={a.name} value={a.name} className="bg-[#0f172a] text-slate-100">
-                                                    {t(`formats.${a.name.split('(')[0].trim().toLowerCase().replace(/ /g, '_')}`) || a.name}
-                                                </option>
-                                            ))}
+                                        {pricingData.adTypes.map(a => (
+                                            <option key={a.name} value={a.name} className="bg-[#0f172a] text-slate-100">
+                                                {t(`formats.${a.name.split('(')[0].trim().toLowerCase().replace(/ /g, '_')}`) || a.name}
+                                            </option>
+                                        ))}
                                     </select>
                                     <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 group-focus-within:text-primary transition-colors">
                                         <ChevronDown size={16} />

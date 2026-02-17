@@ -138,7 +138,9 @@ export const translations = {
             skyscraper: "Skyscraper (160x600)",
             medium_rectangle: "Medium Rectangle (300x250)",
             mobile_leaderboard: "Mobile Leaderboard (320x50)",
-            email_newsletter: "Email Newsletter (600x200)"
+            email_newsletter: "Email Newsletter (600x200)",
+            video: "Video",
+            video_content: "Video Content"
         },
         geo: {
             title: "Geo Targeting",
@@ -381,7 +383,9 @@ export const translations = {
             skyscraper: "स्काईस्क्रेपर (160x600)",
             medium_rectangle: "मध्यम आयत (300x250)",
             mobile_leaderboard: "मोबाइल लीडरबोर्ड (320x50)",
-            email_newsletter: "ईमेल न्यूज़लेटर (600x200)"
+            email_newsletter: "ईमेल न्यूज़लेटर (600x200)",
+            video: "वीडियो",
+            video_content: "वीडियो सामग्री"
         },
         geo: {
             title: "जियो टारगेटिंग",

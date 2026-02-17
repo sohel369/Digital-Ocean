@@ -53,7 +53,7 @@ app.use('/api', createProxyMiddleware({
     },
     onProxyRes: (proxyRes, req, res) => {
         if (proxyRes.statusCode === 404) {
-            console.error(`❌ [404] Backend returned 404 for: ${proxyReq.path}`);
+            console.error(`❌ [404] Backend returned 404 for: ${req.url}`);
         }
     },
     onError: (err, req, res) => {

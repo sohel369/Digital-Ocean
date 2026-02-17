@@ -69,6 +69,9 @@ export const AdPreview = ({ formData = {} }) => {
         if (fmt.includes('email_newsletter') || fmt.includes('email newsletter')) {
             return { w: 600, h: 200, label: '600 x 200px', layout: 'flex-row', imgW: 'w-1/3', text: 'p-4' };
         }
+        if (fmt.includes('video')) {
+            return { w: 640, h: 360, label: 'Video (16:9)', layout: 'flex-col', imgH: 'h-full', text: 'absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black/90 via-black/40 to-transparent text-white z-10', isVideo: true };
+        }
 
         // 2. Default Device Views (If no specific format matches)
         if (activeTab === 'mobile') return { w: 320, h: 480, label: 'Mobile Full', layout: 'flex-col', imgH: 'h-[200px]', text: 'p-6' };
@@ -176,8 +179,11 @@ export const AdPreview = ({ formData = {} }) => {
                     <div className={`flex ${styles.layout} h-full group`}>
                         {/* Image Area */}
                         <div className={`relative overflow-hidden bg-slate-100 ${styles.imgW ? `${styles.imgW}` : 'w-full'} ${styles.imgH ? `${styles.imgH}` : 'h-full'}`}>
-                            <img src={displayImage} alt="" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                            {/* AD Badge Removed per feedback */}
+                            {displayImage.startsWith('data:video/') || (typeof displayImage === 'string' && displayImage.match(/\.(mp4|webm|ogg|mov)$/i)) ? (
+                                <video src={displayImage} className="w-full h-full object-cover transition-transform group-hover:scale-105" autoPlay loop muted playsInline />
+                            ) : (
+                                <img src={displayImage} alt="" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                            )}
                         </div>
 
                         {/* Text Area */}
@@ -185,16 +191,16 @@ export const AdPreview = ({ formData = {} }) => {
                             {styles.h > 80 && (
                                 <div className="text-blue-500 text-[8px] font-bold uppercase tracking-widest mb-1">{t('preview.recommended')}</div>
                             )}
-                            <h2 className={`font-bold text-slate-900 leading-tight ${activeTab === 'email' ? 'font-serif' : ''} 
+                            <h2 className={`font-bold leading-tight ${activeTab === 'email' ? 'font-serif' : ''} ${styles.isVideo ? 'text-white' : 'text-slate-900'} 
                                 ${styles.h <= 50 ? 'text-[10px] mb-0 truncate' : styles.h <= 90 ? 'text-xs mb-0' : 'text-xl mb-2'}`}>
                                 {displayHeadline}
                             </h2>
-                            <p className={`text-slate-600 text-[11px] leading-snug mb-3 
+                            <p className={`${styles.isVideo ? 'text-slate-200' : 'text-slate-600'} text-[11px] leading-snug mb-3 
                                 ${styles.h <= 80 ? 'hidden' : 'block line-clamp-2'}`}>
                                 {displayDescription}
                             </p>
                             <button className={`font-black uppercase tracking-tighter whitespace-nowrap transition-all 
-                                ${activeTab === 'email' ? 'bg-primary text-white' : 'bg-slate-950 text-white hover:bg-slate-800'}
+                                ${activeTab === 'email' ? 'bg-primary text-white' : (styles.isVideo ? 'bg-primary text-white hover:bg-primary-light' : 'bg-slate-950 text-white hover:bg-slate-800')}
                                 ${styles.h <= 50 ? 'py-1 px-2 text-[8px] ml-auto self-center' : styles.h <= 90 ? 'py-1.5 px-3 text-[10px] ml-auto self-center' : 'py-2 px-4 rounded-lg self-start text-xs'}`}>
                                 {t(`campaign.${cta}`) || cta}
                             </button>

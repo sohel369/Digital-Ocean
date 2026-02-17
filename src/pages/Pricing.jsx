@@ -85,8 +85,7 @@ const Pricing = () => {
             if (defaultInd) setSelectedIndustry(defaultInd);
         }
         if (pricingData?.adTypes?.length > 0 && selectedAdType.name === 'Display') {
-            const validTypes = pricingData.adTypes.filter(a => a.name !== 'Video');
-            if (validTypes.length > 0) setSelectedAdType(validTypes[0]);
+            setSelectedAdType(pricingData.adTypes[0]);
         }
     }, [pricingData, user]);
 
@@ -253,7 +252,7 @@ const Pricing = () => {
                             </div>
                             <div className="space-y-3">
                                 <label className="block text-xs font-black text-slate-500 uppercase tracking-widest px-1">&nbsp;</label>
-                                <CustomSelect value={selectedAdType.name} options={pricingData.adTypes.filter(a => a.name !== 'Video')} onChange={setSelectedAdType} t={t} formatName={(n) => n} type="formats" placeholder="Select Format" />
+                                <CustomSelect value={selectedAdType.name} options={pricingData.adTypes} onChange={setSelectedAdType} t={t} formatName={(n) => n} type="formats" placeholder="Select Format" />
                             </div>
                             <div className="md:col-span-2 space-y-3">
                                 <label className="block text-xs font-black text-slate-500 uppercase tracking-widest px-1">Commitment Duration (Save up to 50%)</label>
